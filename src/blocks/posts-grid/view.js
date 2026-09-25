@@ -7,16 +7,48 @@
  */
 import { store } from '@wordpress/interactivity';
 
+/**
+ * Picks the same "medium" image size the server-rendered first paint uses
+ * (via the_post_thumbnail('medium')) rather than the full-resolution
+ * original, and carries its real width/height so the <img> can reserve
+ * layout space before it loads — without this, every filtered re-render
+ * would cause a layout shift (a Core Web Vitals CLS regression) as each
+ * image's true aspect ratio is discovered.
+ */
+function getThumbnail( post ) {
+	const media = post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ];
+	if ( ! media ) {
+		return null;
+	}
+	const medium = media.media_details?.sizes?.medium;
+	if ( medium ) {
+		return { url: medium.source_url, width: medium.width, height: medium.height };
+	}
+	if ( media.source_url ) {
+		return {
+			url: media.source_url,
+			width: media.media_details?.width,
+			height: media.media_details?.height,
+		};
+	}
+	return null;
+}
+
 function renderPostCard( post ) {
-	const image = post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ]?.source_url;
+	const thumb = getThumbnail( post );
 	const title = post.title?.rendered || '';
 	const excerpt = post.excerpt?.rendered || '';
+	const altText = title.replace( /<[^>]+>/g, '' );
+
+	const img = thumb
+		? `<a href="${ post.link }" class="pgf-grid__thumb"><img src="${ thumb.url }" alt="${ altText }"` +
+		  ( thumb.width && thumb.height ? ` width="${ thumb.width }" height="${ thumb.height }"` : '' ) +
+		  ' loading="lazy" decoding="async" /></a>'
+		: '';
 
 	return (
 		'<article class="pgf-grid__card">' +
-		( image
-			? `<a href="${ post.link }" class="pgf-grid__thumb"><img src="${ image }" alt="" /></a>`
-			: '' ) +
+		img +
 		`<h3 class="pgf-grid__title"><a href="${ post.link }">${ title }</a></h3>` +
 		`<div class="pgf-grid__excerpt">${ excerpt }</div>` +
 		'</article>'
@@ -50,7 +82,12 @@ const { state, actions } = store( 'posts-grid-filter', {
 			const params = new URLSearchParams();
 			params.set( 'per_page', state.config?.postsPerPage || 6 );
 			params.set( 'page', state.page );
-			params.set( '_embed', '1' );
+			// Scoped embed: only pull in the featured-media relation, not
+			// author/terms/replies too — smaller response, faster parse.
+			params.set( '_embed', 'wp:featuredmedia' );
+			// Only the fields the card template actually reads — cuts out
+			// guid, modified, template, class_list, meta, etc.
+			params.set( '_fields', 'id,link,title,excerpt,_links,_embedded' );
 			state.selectedCategories.forEach( ( id ) =>
 				params.append( 'pgf_category[]', id )
 			);

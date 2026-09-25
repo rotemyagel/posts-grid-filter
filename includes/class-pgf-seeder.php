@@ -176,6 +176,7 @@ class PGF_Seeder {
 			$attachment_id = $this->create_placeholder_image( $post_id, $primary_category, $index );
 			if ( $attachment_id ) {
 				set_post_thumbnail( $post_id, $attachment_id );
+				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
 			}
 
 			$post_ids[] = $post_id;
