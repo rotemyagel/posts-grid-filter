@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "pgf/posts-filter",
+  "title": "Posts Filter",
+  "category": "widgets",
+  "icon": "filter",
+  "description": "Category and tag checkboxes that filter the Posts Grid block. Can be placed anywhere on the page, not just next to the grid.",
+  "keywords": [
+    "filter",
+    "category",
+    "tag"
+  ],
+  "textdomain": "posts-grid-filter",
+  "attributes": {
+    "heading": {
+      "type": "string",
+      "default": "Filter posts"
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "viewScriptModule": "file:./view.js",
+  "style": "file:./style-index.css",
+  "render": "file:./render.php"
+}

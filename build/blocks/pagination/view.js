@@ -1,0 +1,1 @@
+import{store as e}from"@wordpress/interactivity";const{state:t,actions:a}=e("posts-grid-filter",{state:{get isFirstPage(){return t.page<=1},get isLastPage(){return t.page>=t.totalPages},get paginationLabel(){return`Page ${t.page} of ${t.totalPages}`}},actions:{goToPreviousPage(){t.page>1&&(t.page-=1,a.refresh())},goToNextPage(){t.page<t.totalPages&&(t.page+=1,a.refresh())}}});

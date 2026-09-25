@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pgf/posts-grid",
+	"title": "Posts Grid",
+	"category": "widgets",
+	"icon": "grid-view",
+	"description": "Displays Grid Posts in a configurable grid. Sync with a Posts Filter block placed anywhere on the page.",
+	"keywords": [ "posts", "grid", "query" ],
+	"textdomain": "posts-grid-filter",
+	"attributes": {
+		"columns": { "type": "number", "default": 3 },
+		"postsPerPage": { "type": "number", "default": 6 }
+	},
+	"providesContext": {
+		"posts-grid-filter/postsPerPage": "postsPerPage"
+	},
+	"supports": { "html": false },
+	"editorScript": "file:./index.js",
+	"viewScriptModule": "file:./view.js",
+	"style": "file:./style-index.css",
+	"render": "file:./render.php"
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "pgf/pagination",
+  "title": "Posts Grid Pagination",
+  "category": "widgets",
+  "icon": "controls-forward",
+  "description": "Prev/next pagination for the Posts Grid block. Only usable inside a Posts Grid block.",
+  "textdomain": "posts-grid-filter",
+  "parent": [
+    "pgf/posts-grid"
+  ],
+  "usesContext": [
+    "posts-grid-filter/postsPerPage"
+  ],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js",
+  "viewScriptModule": "file:./view.js",
+  "style": "file:./style-index.css",
+  "render": "file:./render.php"
+}

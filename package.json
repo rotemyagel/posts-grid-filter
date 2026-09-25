@@ -1,0 +1,17 @@
+{
+  "name": "posts-grid-filter",
+  "version": "1.0.0",
+  "description": "Posts Grid + Posts Filter Gutenberg blocks with Interactivity API sync.",
+  "private": true,
+  "scripts": {
+    "build": "cross-env WP_EXPERIMENTAL_MODULES=1 wp-scripts build",
+    "start": "cross-env WP_EXPERIMENTAL_MODULES=1 wp-scripts start",
+    "format": "wp-scripts format",
+    "lint:js": "wp-scripts lint-js",
+    "packages-update": "wp-scripts packages-update"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0",
+    "cross-env": "^7.0.3"
+  }
+}
