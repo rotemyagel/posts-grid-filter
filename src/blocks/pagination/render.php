@@ -21,9 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$posts_per_page = isset( $block->context['posts-grid-filter/postsPerPage'] )
-	? (int) $block->context['posts-grid-filter/postsPerPage']
-	: 6;
+$posts_per_page = PGF_Blocks::sanitize_posts_per_page( $block->context['posts-grid-filter/postsPerPage'] ?? 6 );
 $current_page   = PGF_Blocks::get_requested_page();
 
 $count_query = new WP_Query(

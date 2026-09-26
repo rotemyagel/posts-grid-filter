@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $columns        = isset( $attributes['columns'] ) ? (int) $attributes['columns'] : 3;
-$posts_per_page = isset( $attributes['postsPerPage'] ) ? (int) $attributes['postsPerPage'] : 6;
+$posts_per_page = PGF_Blocks::sanitize_posts_per_page( $attributes['postsPerPage'] ?? 6 );
 $current_page   = PGF_Blocks::get_requested_page();
 
 if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
