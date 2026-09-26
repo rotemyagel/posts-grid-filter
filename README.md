@@ -96,6 +96,12 @@ While building the above, `pgf/posts-grid`'s `view.js` originally declared `page
 
 The grid steps down from 3/4 columns to 2 at tablet widths before collapsing to a single column on phones, rather than jumping straight from N columns to 1. Filter checkboxes and pagination buttons have a 44px-minimum tap target for touch devices.
 
+### Validation and audit logging
+
+`columns` was already validated against a `[2, 3, 4]` allow-list, but `postsPerPage` was only cast to `(int)` with no range check, in both `posts-grid/render.php` (the main query) and `pagination/render.php` (its own count query). Block attributes live in the post's `post_content` and can be edited directly — via the REST API, a hand-edited import, anything with `edit_posts` — without ever touching the editor's RangeControl, and an untrusted value flows straight into `WP_Query`'s `posts_per_page`, where `-1` means "return every post." Added `PGF_Blocks::sanitize_posts_per_page()`, clamped to `[1, 24]` (matching the RangeControl's own bounds) and used by both render.php files so they can't disagree; verified directly by setting a tampered post's `postsPerPage` to `-1` and to `999999` and confirming the rendered page count stayed correctly bounded both times.
+
+Every failure path in the seeder (a term, post, image, or the demo page that couldn't be created) previously failed via a silent `continue`, with no way to tell afterward why an install ended up with, say, 8 posts instead of 12. Added `PGF_Blocks::log()`, which writes via `error_log()` only when `WP_DEBUG_LOG` is enabled — the standard WordPress convention, silent by default on any site that hasn't opted into debug logging — called from every failure branch, plus a one-line summary at the end of `seed()` if the final counts came up short.
+
 ## Known limitations
 
 - **REST URL is not permalink-structure-agnostic beyond the standard case.** The frontend fetch uses `rest_url()` (server-provided, not hardcoded), so it works with any permalink structure WordPress itself is configured with — but it hasn't been tested against a site running the "plain" `?rest_route=` fallback.
