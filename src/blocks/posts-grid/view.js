@@ -15,7 +15,7 @@ import { store } from '@wordpress/interactivity';
  * would cause a layout shift (a Core Web Vitals CLS regression) as each
  * image's true aspect ratio is discovered.
  */
-function getThumbnail( post ) {
+const getThumbnail = ( post ) => {
 	const media = post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ];
 	if ( ! media ) {
 		return null;
@@ -32,9 +32,9 @@ function getThumbnail( post ) {
 		};
 	}
 	return null;
-}
+};
 
-function renderPostCard( post ) {
+const renderPostCard = ( post ) => {
 	const thumb = getThumbnail( post );
 	const title = post.title?.rendered || '';
 	const excerpt = post.excerpt?.rendered || '';
@@ -53,13 +53,18 @@ function renderPostCard( post ) {
 		`<div class="pgf-grid__excerpt">${ excerpt }</div>` +
 		'</article>'
 	);
-}
+};
 
 const { state, actions } = store( 'posts-grid-filter', {
+	// `page` and `totalPages` are deliberately NOT declared here with a
+	// literal default (e.g. `page: 1`): both are always server-seeded via
+	// wp_interactivity_state() in render.php (posts-grid seeds `page` from
+	// the ?pgf-page= URL, pagination seeds `totalPages`), and depending on
+	// script module evaluation order, a client-declared "initial" value can
+	// clobber the already-hydrated server value back to its default. Only
+	// state that is genuinely client-only (never server-seeded) belongs here.
 	state: {
 		isLoading: false,
-		page: 1,
-		totalPages: 1,
 		selectedCategories: [],
 		selectedTags: [],
 	},

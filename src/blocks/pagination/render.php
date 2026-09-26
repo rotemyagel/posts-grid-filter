@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $posts_per_page = isset( $block->context['posts-grid-filter/postsPerPage'] )
 	? (int) $block->context['posts-grid-filter/postsPerPage']
 	: 6;
+$current_page   = PGF_Blocks::get_requested_page();
 
 $count_query = new WP_Query(
 	array(
@@ -43,33 +44,53 @@ wp_interactivity_state(
 	)
 );
 
+/*
+ * Real, crawlable prev/next URLs, not just JS click handlers: with
+ * JavaScript disabled these are plain links a browser or a crawler can
+ * follow directly, and posts-grid's render.php reads the same ?pgf-page=
+ * parameter to server-render the matching page. The Interactivity API
+ * directives below layer an AJAX-driven, no-reload experience on top
+ * (pagination/view.js intercepts the click and calls preventDefault()),
+ * but the underlying href is what makes page 2+ reachable at all without
+ * it -- the specific gap plain "load more"/infinite-scroll patterns are
+ * usually criticized for.
+ */
+$prev_href = $current_page > 1 ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) ) : '';
+$next_href = $current_page < $total_pages ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) ) : '';
+
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagination' ) );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="posts-grid-filter">
-	<button
-		type="button"
+	<a
 		class="pgf-pagination__prev"
+		rel="prev"
+		<?php echo $prev_href ? 'href="' . esc_url( $prev_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-on--click="actions.goToPreviousPage"
-		data-wp-bind--disabled="state.isFirstPage"
+		data-wp-bind--href="state.prevHref"
+		data-wp-bind--aria-disabled="state.isFirstPage"
+		data-wp-class--is-disabled="state.isFirstPage"
 	>
 		<?php esc_html_e( '‹ Prev', 'posts-grid-filter' ); ?>
-	</button>
+	</a>
 	<span class="pgf-pagination__status" data-wp-text="state.paginationLabel">
 		<?php
 		printf(
 			/* translators: 1: current page, 2: total pages */
 			esc_html__( 'Page %1$d of %2$d', 'posts-grid-filter' ),
-			1,
+			$current_page,
 			$total_pages
 		);
 		?>
 	</span>
-	<button
-		type="button"
+	<a
 		class="pgf-pagination__next"
+		rel="next"
+		<?php echo $next_href ? 'href="' . esc_url( $next_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-on--click="actions.goToNextPage"
-		data-wp-bind--disabled="state.isLastPage"
+		data-wp-bind--href="state.nextHref"
+		data-wp-bind--aria-disabled="state.isLastPage"
+		data-wp-class--is-disabled="state.isLastPage"
 	>
 		<?php esc_html_e( 'Next ›', 'posts-grid-filter' ); ?>
-	</button>
+	</a>
 </div>

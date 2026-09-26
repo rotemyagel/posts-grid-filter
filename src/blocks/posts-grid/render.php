@@ -8,6 +8,13 @@
  * Filter block (anywhere else on the page) or the pagination controls
  * change the shared client-side state.
  *
+ * The page number itself comes from a plain `?pgf-page=` query string
+ * parameter (PGF_Blocks::get_requested_page()), not just from client-side
+ * state: this is what makes page 2+ a real, crawlable URL that renders the
+ * correct content on its own, with or without JavaScript, rather than
+ * content that only exists after a client-side fetch (the classic
+ * infinite-scroll/"load more" SEO pitfall).
+ *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner blocks (the pagination block).
  * @var WP_Block $block      Block instance.
@@ -21,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $columns        = isset( $attributes['columns'] ) ? (int) $attributes['columns'] : 3;
 $posts_per_page = isset( $attributes['postsPerPage'] ) ? (int) $attributes['postsPerPage'] : 6;
+$current_page   = PGF_Blocks::get_requested_page();
 
 if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
@@ -30,7 +38,7 @@ $query = new WP_Query(
 	array(
 		'post_type'      => PGF_Post_Type::POST_TYPE,
 		'posts_per_page' => $posts_per_page,
-		'paged'          => 1,
+		'paged'          => $current_page,
 		'post_status'    => 'publish',
 	)
 );
@@ -41,8 +49,9 @@ wp_interactivity_state(
 		'config' => array(
 			'postsPerPage' => $posts_per_page,
 			'restUrl'      => esc_url_raw( rest_url( 'wp/v2/' . PGF_Post_Type::POST_TYPE ) ),
+			'pageParam'    => PGF_Blocks::PAGE_PARAM,
 		),
-		'page'   => 1,
+		'page'   => $current_page,
 	)
 );
 

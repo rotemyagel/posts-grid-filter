@@ -69,12 +69,41 @@ Demo images are generated on activation with PHP's GD extension (a solid color p
 
 Pagination is Prev / "Page X of Y" / Next, not a numbered page list with ellipses. This satisfies "pagination must be implemented as an inner block" without the extra complexity of rebuilding a variable-length button list on every filter change (which would still need to happen declaratively or imperatively regardless of style).
 
+### SEO-friendly pagination: real crawlable URLs, AJAX layered on top
+
+Pagination started as a pure client-side interaction — clicking "Next" fetched new posts via the REST API with no URL change at all. That's the same pattern SEO guidance on infinite scroll / "load more" widgets specifically warns against: with JavaScript disabled (the test a crawler effectively runs), page 2+ never existed as a reachable URL, so it could never be indexed.
+
+Fixed with the standard two-layer approach:
+
+- **Foundation layer (works with no JS):** Prev/Next are real `<a href="?pgf-page=2">` links, not buttons. `pgf/posts-grid`'s `render.php` reads that same `?pgf-page=` parameter (`PGF_Blocks::get_requested_page()`) and server-renders the matching page of posts directly — a crawler, or a visitor with JavaScript off, gets full, correct content at that URL with a normal page load. `rel="next"`/`rel="prev"` are set on the links too.
+- **Enhancement layer (JS):** `pagination/view.js` intercepts the click (`event.preventDefault()`), updates state, fetches via the REST API as before, and calls `history.pushState()` so the address bar, browser back/forward, and "copy link" all reflect the current page — without an actual reload.
+
+Verified both ends: `curl` against `?pgf-page=1` vs `?pgf-page=2` returns two genuinely different, fully server-rendered sets of posts (no JS involved at all); and in a real browser, clicking Next/Prev updates the URL via `pushState` and swaps content with no page reload.
+
+One thing intentionally *not* built: `<link rel="next"/"prev">` tags in `<head>` and per-page self-referential canonical tags. Google itself deprecated using `rel=next`/`prev` as a crawling/indexing signal in 2019, and computing an accurate canonical/total-page-count from `<head>` (rendered before any block's `render.php` runs) would mean parsing arbitrary post content for the block's attributes — real complexity for a signal with diminishing value. The anchors still carry `rel="next"/"prev"` directly, which is enough for the tools that still read it, without that extra machinery.
+
+### A hydration bug worth documenting: don't re-declare server-seeded state on the client
+
+While building the above, `pgf/posts-grid`'s `view.js` originally declared `page: 1, totalPages: 1` as part of its client-side `store()` call's "initial" state — alongside genuinely client-only defaults like `isLoading: false`. Both `page` and `totalPages` are also always seeded server-side via `wp_interactivity_state()`, and depending on script-module evaluation timing, the client's literal `1` could win over the already-correct server-hydrated value, silently resetting a direct `?pgf-page=2` load's live pagination state back to page 1 after hydration (server-rendered HTML was always correct; only the post-hydration DOM was wrong, and only intermittently, which made it easy to miss). Caught by comparing the raw hydration JSON (`{"page":2,"totalPages":2,...}`, correct) against the live DOM after JS ran (showing page 1, wrong) in the same request. Fixed by simply not declaring `page`/`totalPages` on the client at all — they're only ever meant to come from the server, so there's nothing for the client to clobber them with.
+
+### Performance and Core Web Vitals
+
+- **Layout shift (CLS):** the server-rendered first paint already gets `width`/`height`, `loading`, and `decoding` attributes on images for free from `the_post_thumbnail()`. The client-side re-render path (after a filter/page change) didn't — a real regression on every filtered update, fixed by reading the REST response's `media_details.sizes.medium` (the same size the SSR path uses) and carrying its width/height, `loading="lazy"`, and `decoding="async"` through to the client-rendered markup, plus a CSS `aspect-ratio` backstop.
+- **Payload size:** the filtered fetch scopes `_embed` to `wp:featuredmedia` only (not author/terms/replies) and trims response fields via `_fields` to just what the card template reads — measured roughly a 52% reduction (46.8KB → 22.5KB for 6 posts) versus the unscoped defaults.
+- **Accessibility/SEO:** seeded images now get real alt text (`_wp_attachment_image_alt`, set to the post title) — previously unset, so even the server-rendered path had empty `alt=""` on every image.
+
+### Responsive layout
+
+The grid steps down from 3/4 columns to 2 at tablet widths before collapsing to a single column on phones, rather than jumping straight from N columns to 1. Filter checkboxes and pagination buttons have a 44px-minimum tap target for touch devices.
+
 ## Known limitations
 
 - **REST URL is not permalink-structure-agnostic beyond the standard case.** The frontend fetch uses `rest_url()` (server-provided, not hardcoded), so it works with any permalink structure WordPress itself is configured with — but it hasn't been tested against a site running the "plain" `?rest_route=` fallback.
 - **No `data-wp-each` for the post list** (see above) — the tradeoff is documented, not hidden.
 - **One grid + one filter per page** is the supported scope, not multiple independent pairs.
 - **GD is required** for demo image generation on activation; on a PHP build without GD, posts still seed correctly but without featured images.
+- **Filtered views aren't independently crawlable/indexable** — only the base, unfiltered paginated grid has real per-page URLs. This is deliberate, not an oversight: indexing every possible category/tag combination as its own URL is a well-known faceted-navigation anti-pattern (thin/duplicate content, wasted crawl budget), so only the canonical listing is made crawlable.
+- **No `<link rel="next"/"prev">` or per-page canonical tags in `<head>`** — see the SEO pagination section above for why.
 
 ## Verification performed
 
@@ -82,4 +111,8 @@ Pagination is Prev / "Page X of Y" / Next, not a numbered page list with ellipse
 - Reactivation is idempotent (no duplicate content).
 - REST API filtering tested directly (`curl`) confirming OR-within/AND-across taxonomy semantics against known term counts.
 - Live browser testing: checking a category filters the grid in place (no reload); adding a tag narrows results further (AND); unchecking restores the full set; pagination recalculates and disables Prev/Next correctly at the boundaries; the filter and grid stay in sync from their independent positions on the page.
+- Pagination crawlability: `curl` against `?pgf-page=1` and `?pgf-page=2` directly (no JS, no cookies) returns two different, fully server-rendered sets of posts; clicking Next/Prev in a browser updates the URL via `pushState` and swaps content with no reload.
+- A real hydration bug (client-declared initial state clobbering server-seeded state — see above) was caught by comparing the raw hydrated JSON against the live post-JS DOM, not just eyeballing the page, and fixed before shipping.
+- Client-rendered images (post-filter-fetch) confirmed via DOM inspection to carry the same `width`/`height`/`loading`/`decoding`/`alt` attributes as the server-rendered first paint.
+- Responsive layout checked at 375px (phone) and standard desktop widths.
 - Block editor: Inspector Controls (columns, posts per page) update the editor preview live; the grid's editor preview renders real data via `core-data`.
