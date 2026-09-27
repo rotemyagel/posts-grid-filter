@@ -62,16 +62,32 @@ wp_interactivity_state(
 	)
 );
 
-$prev_href = $current_page > 1 ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) ) : '';
-$next_href = $current_page < $total_pages ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) ) : '';
+$is_first_page = $current_page <= 1;
+$is_last_page  = $current_page >= $total_pages;
+
+$prev_href = $is_first_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) );
+$next_href = $is_last_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) );
+
+/*
+ * data-wp-bind--aria-disabled and data-wp-class--is-disabled only take
+ * effect once client JS hydrates. Mirroring their computed value directly
+ * in the initial markup (the same pattern already used for href and the
+ * filter checkboxes' checked state) means a no-JS visitor or a screen
+ * reader reading the page before hydration still sees a correctly
+ * disabled, correctly styled control -- not a bare link with no
+ * destination and no indication why.
+ */
+$prev_class = 'pgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );
+$next_class = 'pgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagination' ) );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="posts-grid-filter">
 	<a
-		class="pgf-pagination__prev"
+		class="<?php echo esc_attr( $prev_class ); ?>"
 		rel="prev"
 		<?php echo $prev_href ? 'href="' . esc_url( $prev_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo $is_first_page ? 'aria-disabled="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-bind--href="state.prevHref"
 		data-wp-bind--aria-disabled="state.isFirstPage"
 		data-wp-class--is-disabled="state.isFirstPage"
@@ -89,9 +105,10 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		?>
 	</span>
 	<a
-		class="pgf-pagination__next"
+		class="<?php echo esc_attr( $next_class ); ?>"
 		rel="next"
 		<?php echo $next_href ? 'href="' . esc_url( $next_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo $is_last_page ? 'aria-disabled="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-bind--href="state.nextHref"
 		data-wp-bind--aria-disabled="state.isLastPage"
 		data-wp-class--is-disabled="state.isLastPage"
