@@ -104,6 +104,16 @@ class PGF_Blocks {
 	 * applies automatically for the client-side filtered fetch, kept
 	 * consistent here for the server-rendered/no-JS path.
 	 *
+	 * 'include_children' is set explicitly to false, matching
+	 * WP_REST_Posts_Controller's own default for a plain array-of-term-IDs
+	 * taxonomy query var (verified directly against WordPress core source --
+	 * it defaults there to false, not WP_Tax_Query's own default of true).
+	 * The seeded pgf_category terms are flat, so this has no visible effect
+	 * on the demo content, but without it, a real site that later nests
+	 * pgf_category terms would get different filtered results server-side
+	 * (a page-2 reload, or any no-JS request) than the AJAX-filtered REST
+	 * path gives for the exact same selection.
+	 *
 	 * @param int[] $category_ids Selected pgf_category term IDs.
 	 * @param int[] $tag_ids      Selected pgf_tag term IDs.
 	 * @return array Empty if no filters are selected.
@@ -113,21 +123,70 @@ class PGF_Blocks {
 
 		if ( $category_ids ) {
 			$tax_query[] = array(
-				'taxonomy' => PGF_Post_Type::TAX_CATEGORY,
-				'field'    => 'term_id',
-				'terms'    => $category_ids,
+				'taxonomy'         => PGF_Post_Type::TAX_CATEGORY,
+				'field'            => 'term_id',
+				'terms'            => $category_ids,
+				'include_children' => false,
 			);
 		}
 
 		if ( $tag_ids ) {
 			$tax_query[] = array(
-				'taxonomy' => PGF_Post_Type::TAX_TAG,
-				'field'    => 'term_id',
-				'terms'    => $tag_ids,
+				'taxonomy'         => PGF_Post_Type::TAX_TAG,
+				'field'            => 'term_id',
+				'terms'            => $tag_ids,
+				'include_children' => false,
 			);
 		}
 
 		return $tax_query;
+	}
+
+	/**
+	 * Total page count for the given filters, from a dedicated `fields =>
+	 * ids` query with no `paged` value of its own. Shared by posts-grid's
+	 * render.php (to clamp an out-of-range ?pgf-page= before running its
+	 * main query) and pagination's render.php (to render "Page X of Y" and
+	 * disable Prev/Next correctly) specifically so the two can never
+	 * disagree about how many pages exist. This has to come from a
+	 * *separate* query rather than reusing the main content query's own
+	 * `max_num_pages` afterward -- verified directly that a WP_Query already
+	 * run with `paged` set far beyond the real last page comes back with
+	 * `found_posts`/`max_num_pages` both 0, not the true total, so there is
+	 * nothing reliable to clamp against from inside that same query once it
+	 * has already executed with an out-of-range offset.
+	 *
+	 * @param int   $posts_per_page Posts per page.
+	 * @param array $tax_query      Result of build_tax_query(), or empty.
+	 * @return int At least 1.
+	 */
+	public static function get_total_pages( $posts_per_page, $tax_query ) {
+		$query_args = array(
+			'post_type'      => PGF_Post_Type::POST_TYPE,
+			'posts_per_page' => $posts_per_page,
+			'post_status'    => 'publish',
+			'fields'         => 'ids',
+		);
+
+		if ( $tax_query ) {
+			$query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		}
+
+		return max( 1, (int) ( new WP_Query( $query_args ) )->max_num_pages );
+	}
+
+	/**
+	 * Clamps a requested page number to the last real page, so an
+	 * out-of-range ?pgf-page= (a hand-edited URL, a stale bookmark) renders
+	 * real content and a matching "Page X of Y" instead of an empty grid
+	 * next to a label reporting the page that was actually asked for.
+	 *
+	 * @param int $requested_page As returned by get_requested_page().
+	 * @param int $total_pages    As returned by get_total_pages().
+	 * @return int
+	 */
+	public static function clamp_page( $requested_page, $total_pages ) {
+		return min( $requested_page, $total_pages );
 	}
 
 	/**

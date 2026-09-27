@@ -39,14 +39,26 @@ if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
 }
 
+$tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+
+/*
+ * A requested page beyond the last real one (e.g. ?pgf-page=999 on a
+ * two-page result set) would otherwise render an empty grid while
+ * pagination's own render.php -- which runs the same get_total_pages() --
+ * still reports the real total (e.g. "Page 999 of 2"), an inconsistent and
+ * confusing result for a link that's easy to end up with by hand-editing a
+ * URL or an out-of-date bookmark. Clamping through the same shared helper
+ * pagination uses means the two can never disagree about the total.
+ */
+$total_pages  = PGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
+$current_page = PGF_Blocks::clamp_page( $current_page, $total_pages );
+
 $query_args = array(
 	'post_type'      => PGF_Post_Type::POST_TYPE,
 	'posts_per_page' => $posts_per_page,
 	'paged'          => $current_page,
 	'post_status'    => 'publish',
 );
-
-$tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
 if ( $tax_query ) {
 	$query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 }
@@ -57,11 +69,15 @@ wp_interactivity_state(
 	'posts-grid-filter',
 	array(
 		'config'             => array(
-			'postsPerPage' => $posts_per_page,
-			'restUrl'      => esc_url_raw( rest_url( 'wp/v2/' . PGF_Post_Type::POST_TYPE ) ),
-			'pageParam'    => PGF_Blocks::PAGE_PARAM,
+			'postsPerPage'  => $posts_per_page,
+			'restUrl'       => esc_url_raw( rest_url( 'wp/v2/' . PGF_Post_Type::POST_TYPE ) ),
+			'pageParam'     => PGF_Blocks::PAGE_PARAM,
 			'categoryParam' => PGF_Blocks::CATEGORY_PARAM,
 			'tagParam'      => PGF_Blocks::TAG_PARAM,
+			'i18n'          => array(
+				'noResults' => __( 'No posts found.', 'posts-grid-filter' ),
+				'loadError' => __( 'Could not load posts. Please try again.', 'posts-grid-filter' ),
+			),
 		),
 		'page'               => $current_page,
 		'selectedCategories' => $selected_categories,

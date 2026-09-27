@@ -36,29 +36,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $posts_per_page      = PGF_Blocks::sanitize_posts_per_page( $block->context['posts-grid-filter/postsPerPage'] ?? 6 );
-$current_page        = PGF_Blocks::get_requested_page();
 $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
 $selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
+$tax_query           = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
 
-$count_query_args = array(
-	'post_type'      => PGF_Post_Type::POST_TYPE,
-	'posts_per_page' => $posts_per_page,
-	'post_status'    => 'publish',
-	'fields'         => 'ids',
-);
-
-$tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
-if ( $tax_query ) {
-	$count_query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-}
-
-$count_query = new WP_Query( $count_query_args );
-$total_pages = max( 1, (int) $count_query->max_num_pages );
+/*
+ * Same get_total_pages()/clamp_page() pair posts-grid's render.php uses, so
+ * an out-of-range ?pgf-page= (e.g. a stale bookmark past the real last
+ * page) can never make this block report a different page/total than what
+ * the grid actually rendered -- see posts-grid/render.php for why total
+ * pages has to come from a query with no `paged` of its own.
+ */
+$total_pages  = PGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
+$current_page = PGF_Blocks::clamp_page( PGF_Blocks::get_requested_page(), $total_pages );
 
 wp_interactivity_state(
 	'posts-grid-filter',
 	array(
 		'totalPages' => $total_pages,
+		/*
+		 * A plain {current}/{total} placeholder template rather than a
+		 * PHP-side sprintf() call, since the label needs re-rendering
+		 * client-side (state.paginationLabel in view.js) every time page or
+		 * totalPages changes after a filter update -- translated once here,
+		 * not hardcoded as English in JS.
+		 */
+		'paginationLabelFormat' => __( 'Page {current} of {total}', 'posts-grid-filter' ),
 	)
 );
 

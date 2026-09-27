@@ -20,8 +20,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PGF_Seeder {
 
-	const SEEDED_OPTION    = 'pgf_seeded';
-	const DEMO_PAGE_OPTION = 'pgf_demo_page_id';
+	const SEEDED_OPTION      = 'pgf_seeded';
+	const DEMO_PAGE_OPTION   = 'pgf_demo_page_id';
+
+	/**
+	 * Options recording exactly which posts/attachments this seeder created,
+	 * read by uninstall.php so it deletes only content the plugin actually
+	 * owns -- not every pgf_post in the database. Without this, a real
+	 * pgf_post a site owner created by hand after activation (a normal,
+	 * expected use of the post type once seeded, not a demo-only leftover)
+	 * would be deleted right along with the demo content on uninstall, and
+	 * so would any existing media library image later chosen as its
+	 * featured image.
+	 */
+	const SEEDED_POST_IDS_OPTION       = 'pgf_seeded_post_ids';
+	const SEEDED_ATTACHMENT_IDS_OPTION = 'pgf_seeded_attachment_ids';
 
 	/**
 	 * Category => color map used both as term data and as the seeded
@@ -54,10 +67,29 @@ class PGF_Seeder {
 
 		$category_ids = $this->create_terms();
 		$tag_ids      = $this->create_tags();
-		$post_ids     = $this->create_posts( $category_ids, $tag_ids );
+
+		/*
+		 * create_posts() picks a category/tag for each post via `$index %
+		 * count( $category_names )` -- if term creation fails completely
+		 * (both arrays empty), that becomes a modulo by zero. Bailing here
+		 * with nothing marked "seeded" means a later activation attempt
+		 * (deactivate/reactivate) gets a genuine retry instead of a
+		 * permanently half-seeded, permanently-skipped state.
+		 */
+		if ( ! $category_ids || ! $tag_ids ) {
+			PGF_Blocks::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
+			return;
+		}
+
+		$result         = $this->create_posts( $category_ids, $tag_ids );
+		$post_ids       = $result['post_ids'];
+		$attachment_ids = $result['attachment_ids'];
+
 		$this->create_demo_page();
 
 		update_option( self::SEEDED_OPTION, true );
+		update_option( self::SEEDED_POST_IDS_OPTION, $post_ids );
+		update_option( self::SEEDED_ATTACHMENT_IDS_OPTION, $attachment_ids );
 
 		if ( count( $category_ids ) < count( $this->categories )
 			|| count( $tag_ids ) < count( $this->tags )
@@ -129,7 +161,8 @@ class PGF_Seeder {
 	 *
 	 * @param array $category_ids Category name => term_id.
 	 * @param array $tag_ids      Tag name => term_id.
-	 * @return int[] Inserted post IDs.
+	 * @return array{post_ids: int[], attachment_ids: int[]} Everything this
+	 *              call created, for uninstall.php's ownership-based cleanup.
 	 */
 	private function create_posts( $category_ids, $tag_ids ) {
 		$category_names = array_keys( $category_ids );
@@ -150,7 +183,8 @@ class PGF_Seeder {
 			'Reading the Room: Culture Shifts in Remote Teams',
 		);
 
-		$post_ids = array();
+		$post_ids       = array();
+		$attachment_ids = array();
 
 		foreach ( $titles as $index => $title ) {
 			$existing = get_page_by_title( $title, OBJECT, PGF_Post_Type::POST_TYPE );
@@ -190,13 +224,21 @@ class PGF_Seeder {
 				continue;
 			}
 
-			wp_set_object_terms( $post_id, $assigned_categories, PGF_Post_Type::TAX_CATEGORY );
-			wp_set_object_terms( $post_id, $assigned_tags, PGF_Post_Type::TAX_TAG );
+			$category_result = wp_set_object_terms( $post_id, $assigned_categories, PGF_Post_Type::TAX_CATEGORY );
+			if ( is_wp_error( $category_result ) ) {
+				PGF_Blocks::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
+			}
+
+			$tag_result = wp_set_object_terms( $post_id, $assigned_tags, PGF_Post_Type::TAX_TAG );
+			if ( is_wp_error( $tag_result ) ) {
+				PGF_Blocks::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
+			}
 
 			$attachment_id = $this->create_placeholder_image( $post_id, $primary_category, $index );
 			if ( $attachment_id ) {
 				set_post_thumbnail( $post_id, $attachment_id );
 				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
+				$attachment_ids[] = $attachment_id;
 			} else {
 				PGF_Blocks::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
 			}
@@ -204,7 +246,10 @@ class PGF_Seeder {
 			$post_ids[] = $post_id;
 		}
 
-		return $post_ids;
+		return array(
+			'post_ids'       => $post_ids,
+			'attachment_ids' => $attachment_ids,
+		);
 	}
 
 	/**
