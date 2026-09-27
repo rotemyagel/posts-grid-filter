@@ -4,7 +4,8 @@
  * a taxonomy is expressed by simply collecting every checked term ID into
  * one array; the AND-across-taxonomies half of the brief's filtering logic
  * is handled entirely server-side by WordPress's own REST tax_query
- * behavior when posts-grid's `refresh()` sends both arrays).
+ * behavior when posts-grid's `refresh()` sends both arrays). clearFilters()
+ * resets both arrays at once, for the "Clear filters" link in render.php.
  */
 import { store, getContext } from '@wordpress/interactivity';
 
@@ -17,6 +18,12 @@ const { state, actions } = store( 'posts-grid-filter', {
 		get isTagChecked() {
 			const { termId } = getContext();
 			return state.selectedTags.includes( termId );
+		},
+		get hideClearFilters() {
+			return (
+				state.selectedCategories.length === 0 &&
+				state.selectedTags.length === 0
+			);
 		},
 	},
 	actions: {
@@ -35,6 +42,13 @@ const { state, actions } = store( 'posts-grid-filter', {
 			state.selectedTags = checked
 				? [ ...state.selectedTags, termId ]
 				: state.selectedTags.filter( ( id ) => id !== termId );
+			state.page = 1;
+			actions.refresh();
+		},
+		clearFilters( event ) {
+			event.preventDefault();
+			state.selectedCategories = [];
+			state.selectedTags = [];
 			state.page = 1;
 			actions.refresh();
 		},
