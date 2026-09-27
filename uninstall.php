@@ -16,6 +16,27 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 require_once __DIR__ . '/includes/class-pgf-post-type.php';
 
+/*
+ * uninstall.php runs with the plugin deactivated: its normal init-hooked
+ * bootstrap (PGF_Post_Type::init(), called from the main plugin file) never
+ * executes for this request, so the post type and taxonomies are not
+ * registered here by default -- same reasoning as PGF_Plugin::activate(),
+ * which registers them explicitly for the same reason.
+ *
+ * This matters differently for posts than for terms: WP_Query/get_posts()
+ * match post_type by raw string against the database and work regardless
+ * of registration, but get_terms() and wp_delete_term() both require the
+ * taxonomy to be registered and return a WP_Error otherwise -- silently,
+ * since the only symptom is that terms are never actually deleted. Caught
+ * by actually running this file end-to-end (deactivate, invoke uninstall.php
+ * exactly as WP core would, inspect the database directly) rather than by
+ * reading the code: posts were correctly removed, but all 10 taxonomy terms
+ * were left behind untouched.
+ */
+$post_type = new PGF_Post_Type();
+$post_type->register_post_type();
+$post_type->register_taxonomies();
+
 $demo_page_id = (int) get_option( 'pgf_demo_page_id' );
 if ( $demo_page_id ) {
 	wp_delete_post( $demo_page_id, true );

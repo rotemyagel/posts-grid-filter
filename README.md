@@ -27,6 +27,14 @@ npm run build
 
 The build step needs `WP_EXPERIMENTAL_MODULES=1` to make `@wordpress/scripts` compile the blocks' `viewScriptModule` (Interactivity API) files — this is already wired into the `build`/`start` npm scripts via `cross-env`, so a plain `npm run build` is enough.
 
+**Don't have a WordPress install to drop this into?** `npm run env` (via `@wordpress/env`) spins up a complete, disposable WordPress + this plugin in Docker — no existing site needed:
+
+```bash
+npm install
+npm run build
+npm run env start
+```
+
 ## What gets built
 
 | Block | Purpose |
@@ -107,6 +115,16 @@ Every directive that affects *initial* markup elsewhere in this plugin has a mat
 
 This plugin doesn't set `"supports": { "interactivity": true }` in any block.json, which is what triggers WordPress's own automatic server-side directive resolution (`wp_interactivity_process_directives()`) using closures registered via `wp_interactivity_state()`. That's a legitimate, framework-supported way to get correct initial HTML without hand-computing it — but it would mean defining `isFirstPage`/`isLastPage`/`prevHref`/`nextHref`/etc. as PHP closures *in addition to* the JS getters that already exist, which duplicates the same logic in two languages rather than avoiding duplication. Manually computing the handful of values that affect initial markup, as done throughout this plugin, reaches the same "correct on first paint, no layout shift" goal the flag exists for, without that second copy. Worth revisiting if the number of derived values grows enough that keeping the two in sync by hand becomes error-prone.
 
+### A senior-level code review pass, and a real bug it found
+
+Late in development, this plugin was reviewed as if by a second engineer: re-reading every file with fresh eyes, cross-checking against a competing public implementation of the same brief, and — critically — actually *running* the parts of the code that hadn't been exercised yet, rather than trusting that reading them was enough.
+
+That last part caught a real, previously-undetected bug: **`uninstall.php` never actually deleted taxonomy terms.** It correctly deleted seeded posts and the demo page, but `get_terms()` and `wp_delete_term()` — unlike `WP_Query`'s post-type matching, which works against raw database strings regardless of registration — both require the taxonomy to be *registered* to function, and return a silent `WP_Error` otherwise. `uninstall.php` never registered the taxonomies (its normal `init`-hooked bootstrap doesn't run in the deactivated-plugin context uninstall executes in, and unlike `PGF_Plugin::activate()`, it never registered them explicitly either), so every deletion attempt silently failed. Verified by actually deactivating the plugin, invoking `uninstall.php` exactly as WordPress core would, and inspecting the database directly: 0 posts deleted correctly, but all 10 category/tag terms left behind. Fixed by registering the post type and taxonomies explicitly at the top of `uninstall.php`, mirroring `activate()`'s own reasoning; re-verified end to end afterward with a completely clean result (0 posts, 0 terms, 0 attachments, demo page gone).
+
+Two smaller, editor-only findings from the same pass: the block editor's live grid preview rendered images with `alt=""` (inconsistent with the real alt text added to every other image in the plugin), and the column-count control used a plain `ButtonGroup` of individual buttons instead of `ToggleGroupControl` — the component `@wordpress/components` actually provides for a "choose exactly one of N" pattern, with correct `radiogroup`/`radio` ARIA semantics built in. Both fixed; the `ToggleGroupControl` swap also surfaced a genuine cross-version compatibility issue (the component is still exported under its `__experimental` name on the WordPress version this was tested against, not its now-stable name), fixed by importing both names and using whichever one the running core version actually provides.
+
+One thing flagged but *not* fixed: `npm run lint:js` currently fails outright, independent of anything in this plugin's own code, due to a version conflict between `@typescript-eslint` and `ts-api-utils` in the installed `@wordpress/eslint-plugin` dependency tree. Given the very similar `@wordpress/scripts` v30→v36 upgrade attempt earlier in this project hit its own unrelated peer-dependency conflict, forcing a fix here felt like the same kind of gamble on an unfamiliar, currently-broken dependency graph rather than a contained change — recorded here as a known toolchain issue for a maintainer to address deliberately, rather than patched over.
+
 ## Known limitations
 
 - **REST URL is not permalink-structure-agnostic beyond the standard case.** The frontend fetch uses `rest_url()` (server-provided, not hardcoded), so it works with any permalink structure WordPress itself is configured with — but it hasn't been tested against a site running the "plain" `?rest_route=` fallback.
@@ -130,3 +148,6 @@ This plugin doesn't set `"supports": { "interactivity": true }` in any block.jso
 - Responsive layout checked at 375px (phone) and standard desktop widths.
 - Block editor: Inspector Controls (columns, posts per page) update the editor preview live; the grid's editor preview renders real data via `core-data`.
 - Cross-checked against WordPress's own official Interactivity API guidance ([github.com/WordPress/agent-skills](https://github.com/WordPress/agent-skills)), which caught the `aria-disabled`/`is-disabled` gap above — confirmed via `curl` (no JS) that pagination's disabled state now renders correctly server-side, not just client-side.
+- Every seeded post checked individually (not sampled) for the brief's exact seeding requirements: all 12 have a featured image, an excerpt, at least one category and one tag, and 4 of the 12 carry two categories / three tags specifically so filter combinations produce different result sets rather than every post matching every filter.
+- `uninstall.php` actually executed end to end (deactivate the plugin, invoke it exactly as WordPress core's plugin-deletion flow would, inspect the database directly) rather than only read — this is what caught the taxonomy-term deletion bug documented above. Re-verified clean afterward: 0 posts, 0 terms, 0 attachments, demo page gone.
+- The `ToggleGroupControl` editor fix confirmed via the block editor's own `wp.data` store (selecting the block programmatically and reading its rendered Inspector Controls panel), not just a screenshot — verified the Columns control renders its three options with no console error, after first catching and fixing a real cross-version export-name mismatch.
