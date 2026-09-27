@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Posts Grid + Filter
  * Description:       Dynamic Posts Grid and Posts Filter Gutenberg blocks, synced via the Interactivity API, with demo content seeded automatically on activation.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Author:            Rotem Yagel
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'PGF_VERSION', '1.0.0' );
+define( 'PGF_VERSION', '1.1.0' );
 define( 'PGF_FILE', __FILE__ );
 define( 'PGF_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PGF_URL', plugin_dir_url( __FILE__ ) );
