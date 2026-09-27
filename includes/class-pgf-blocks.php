@@ -22,6 +22,19 @@ class PGF_Blocks {
 	const PAGE_PARAM = 'pgf-page';
 
 	/**
+	 * Query string keys for the currently selected category/tag term IDs.
+	 * Read directly from $_GET (same reasoning as PAGE_PARAM: no rewrite
+	 * registration needed, works under any permalink structure) by every
+	 * block that needs to filter or reflect the current filter selection --
+	 * posts-grid (to filter its query), pagination (to filter its count
+	 * query and to preserve the selection when a Prev/Next link causes a
+	 * full page reload), and posts-filter (to pre-check the matching
+	 * checkboxes on a direct/shared link, before any JS has run).
+	 */
+	const CATEGORY_PARAM = 'pgf_category';
+	const TAG_PARAM      = 'pgf_tag';
+
+	/**
 	 * Bounds for the postsPerPage block attribute, matching the editor's own
 	 * RangeControl (min=1, max=24). Enforced again here because block
 	 * attributes are stored in post_content and can be edited directly
@@ -63,6 +76,58 @@ class PGF_Blocks {
 		}
 
 		return max( 1, absint( wp_unslash( $_GET[ self::PAGE_PARAM ] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	/**
+	 * Reads a list of term IDs from a $_GET[ $param ][] array parameter,
+	 * e.g. ?pgf_category[]=8&pgf_category[]=10, sanitizing every value to a
+	 * positive integer and dropping anything that isn't one.
+	 *
+	 * @param string $param One of self::CATEGORY_PARAM / self::TAG_PARAM.
+	 * @return int[]
+	 */
+	public static function get_requested_term_ids( $param ) {
+		if ( ! isset( $_GET[ $param ] ) || ! is_array( $_GET[ $param ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return array();
+		}
+
+		$ids = array_map( 'absint', wp_unslash( $_GET[ $param ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$ids = array_filter( $ids );
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	/**
+	 * Builds a WP_Query tax_query array from selected category/tag term IDs:
+	 * OR within a taxonomy (multiple terms in one clause), AND across
+	 * taxonomies (multiple clauses) -- the same semantics the REST API
+	 * applies automatically for the client-side filtered fetch, kept
+	 * consistent here for the server-rendered/no-JS path.
+	 *
+	 * @param int[] $category_ids Selected pgf_category term IDs.
+	 * @param int[] $tag_ids      Selected pgf_tag term IDs.
+	 * @return array Empty if no filters are selected.
+	 */
+	public static function build_tax_query( $category_ids, $tag_ids ) {
+		$tax_query = array();
+
+		if ( $category_ids ) {
+			$tax_query[] = array(
+				'taxonomy' => PGF_Post_Type::TAX_CATEGORY,
+				'field'    => 'term_id',
+				'terms'    => $category_ids,
+			);
+		}
+
+		if ( $tag_ids ) {
+			$tax_query[] = array(
+				'taxonomy' => PGF_Post_Type::TAX_TAG,
+				'field'    => 'term_id',
+				'terms'    => $tag_ids,
+			);
+		}
+
+		return $tax_query;
 	}
 
 	/**

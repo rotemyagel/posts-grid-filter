@@ -9,6 +9,12 @@
  * so it survives this block being placed anywhere on the page relative to
  * the grid.
  *
+ * Checkboxes matching the current ?pgf_category=/?pgf_tag= URL parameters
+ * are marked checked() here on the server, so a shared/bookmarked filtered
+ * link (reached via a pagination full-page reload -- see
+ * pagination/render.php) shows the correct selection immediately, before
+ * any JavaScript has run.
+ *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner content (none, no children).
  * @var WP_Block $block      Block instance.
@@ -23,6 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 $heading = isset( $attributes['heading'] ) && '' !== $attributes['heading']
 	? $attributes['heading']
 	: __( 'Filter posts', 'posts-grid-filter' );
+
+$selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
+$selected_tags        = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 
 $categories = get_terms(
 	array(
@@ -53,6 +62,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 				>
 					<input
 						type="checkbox"
+						<?php checked( in_array( (int) $term->term_id, $selected_categories, true ) ); ?>
 						data-wp-on--change="actions.toggleCategory"
 						data-wp-bind--checked="state.isCategoryChecked"
 					/>
@@ -72,6 +82,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 				>
 					<input
 						type="checkbox"
+						<?php checked( in_array( (int) $term->term_id, $selected_tags, true ) ); ?>
 						data-wp-on--change="actions.toggleTag"
 						data-wp-bind--checked="state.isTagChecked"
 					/>

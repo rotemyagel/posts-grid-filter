@@ -2,18 +2,21 @@
 /**
  * Server-side render for pgf/posts-grid.
  *
- * First paint is a plain WP_Query so the grid works with JS disabled and is
- * crawlable; the Interactivity API store (view.js) takes over from there,
- * re-fetching `data-pgf-grid-list` via the REST API whenever the Posts
- * Filter block (anywhere else on the page) or the pagination controls
- * change the shared client-side state.
+ * The query is driven entirely by plain `?pgf-page=`, `?pgf_category[]=`
+ * and `?pgf_tag[]=` URL parameters (PGF_Blocks::get_requested_page() /
+ * get_requested_term_ids()), not by client-side state: page 2, a filtered
+ * view, or both together are all real, crawlable URLs that render correct
+ * content on their own with or without JavaScript -- there is no
+ * client-only page or filtered view that only exists after a fetch.
  *
- * The page number itself comes from a plain `?pgf-page=` query string
- * parameter (PGF_Blocks::get_requested_page()), not just from client-side
- * state: this is what makes page 2+ a real, crawlable URL that renders the
- * correct content on its own, with or without JavaScript, rather than
- * content that only exists after a client-side fetch (the classic
- * infinite-scroll/"load more" SEO pitfall).
+ * Filtering itself still updates instantly via the Posts Filter block's
+ * Interactivity API store (no reload) for a fast interactive experience,
+ * patching `data-pgf-grid-list` via the REST API. Pagination, however, is
+ * plain `<a href>` navigation with a full page reload (see
+ * pagination/render.php) -- once a visitor moves to another page, the
+ * currently-selected filters travel with it as URL parameters rather than
+ * living only in client memory, which is also what keeps a filtered
+ * page 2 shareable/bookmarkable and correct on a fresh, no-JS load.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner blocks (the pagination block).
@@ -26,32 +29,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$columns        = isset( $attributes['columns'] ) ? (int) $attributes['columns'] : 3;
-$posts_per_page = PGF_Blocks::sanitize_posts_per_page( $attributes['postsPerPage'] ?? 6 );
-$current_page   = PGF_Blocks::get_requested_page();
+$columns             = isset( $attributes['columns'] ) ? (int) $attributes['columns'] : 3;
+$posts_per_page      = PGF_Blocks::sanitize_posts_per_page( $attributes['postsPerPage'] ?? 6 );
+$current_page        = PGF_Blocks::get_requested_page();
+$selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
+$selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 
 if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
 }
 
-$query = new WP_Query(
-	array(
-		'post_type'      => PGF_Post_Type::POST_TYPE,
-		'posts_per_page' => $posts_per_page,
-		'paged'          => $current_page,
-		'post_status'    => 'publish',
-	)
+$query_args = array(
+	'post_type'      => PGF_Post_Type::POST_TYPE,
+	'posts_per_page' => $posts_per_page,
+	'paged'          => $current_page,
+	'post_status'    => 'publish',
 );
+
+$tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+if ( $tax_query ) {
+	$query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+}
+
+$query = new WP_Query( $query_args );
 
 wp_interactivity_state(
 	'posts-grid-filter',
 	array(
-		'config' => array(
+		'config'             => array(
 			'postsPerPage' => $posts_per_page,
 			'restUrl'      => esc_url_raw( rest_url( 'wp/v2/' . PGF_Post_Type::POST_TYPE ) ),
 			'pageParam'    => PGF_Blocks::PAGE_PARAM,
+			'categoryParam' => PGF_Blocks::CATEGORY_PARAM,
+			'tagParam'      => PGF_Blocks::TAG_PARAM,
 		),
-		'page'   => $current_page,
+		'page'               => $current_page,
+		'selectedCategories' => $selected_categories,
+		'selectedTags'       => $selected_tags,
 	)
 );
 

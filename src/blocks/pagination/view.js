@@ -1,25 +1,45 @@
 /**
- * Adds pagination state/actions to the shared `posts-grid-filter` store.
+ * Adds pagination state to the shared `posts-grid-filter` store. No click
+ * actions here on purpose: Prev/Next (see pagination/render.php) are plain
+ * <a href="?pgf-page=N"> links that navigate normally, with a full page
+ * reload -- that is the whole point. A crawler, a JS-disabled visitor, or
+ * someone who just bookmarks or shares the link all reach a real, correctly
+ * server-rendered page this way, which is what "SEO-friendly pagination"
+ * (as opposed to infinite-scroll/"load more" content that only exists after
+ * a client-side fetch) actually means.
  *
- * The Prev/Next elements are real <a href="?pgf-page=N"> links (see
- * pagination/render.php), not just click targets: that's what makes page 2+
- * a URL a crawler (or a JS-disabled visitor) can actually reach, matching
- * the "foundation layer" pattern for SEO-friendly paginated/infinite-scroll
- * content (real, crawlable per-page URLs; JS is an enhancement on top, not
- * the only way in). This file is the enhancement layer: it intercepts the
- * click so navigating pages doesn't reload the whole document, but it still
- * updates the visible URL via history.pushState so the address bar, browser
- * back/forward, and "copy link" all stay correct.
+ * The only job left for JavaScript here is keeping the *href* itself
+ * accurate as the Posts Filter block's own AJAX interaction changes which
+ * categories/tags are selected (posts-grid/view.js's `refresh()` handles
+ * that fetch; this file never calls it). Without this, clicking Next while
+ * a filter was chosen through the AJAX filter UI would silently drop that
+ * filter on the full-page reload, since the link's href was rendered at
+ * initial page load, before the filter selection existed.
  */
 import { store } from '@wordpress/interactivity';
 
 const urlForPage = ( pageNumber ) => {
 	const url = new URL( window.location.href );
-	url.searchParams.set( state.config?.pageParam || 'pgf-page', pageNumber );
+	const pageParam = state.config?.pageParam || 'pgf-page';
+	const categoryParam = state.config?.categoryParam || 'pgf_category';
+	const tagParam = state.config?.tagParam || 'pgf_tag';
+
+	url.searchParams.set( pageParam, pageNumber );
+
+	url.searchParams.delete( `${ categoryParam }[]` );
+	( state.selectedCategories || [] ).forEach( ( id ) =>
+		url.searchParams.append( `${ categoryParam }[]`, id )
+	);
+
+	url.searchParams.delete( `${ tagParam }[]` );
+	( state.selectedTags || [] ).forEach( ( id ) =>
+		url.searchParams.append( `${ tagParam }[]`, id )
+	);
+
 	return url.toString();
 };
 
-const { state, actions } = store( 'posts-grid-filter', {
+const { state } = store( 'posts-grid-filter', {
 	state: {
 		get isFirstPage() {
 			return state.page <= 1;
@@ -35,24 +55,6 @@ const { state, actions } = store( 'posts-grid-filter', {
 		},
 		get nextHref() {
 			return state.isLastPage ? false : urlForPage( state.page + 1 );
-		},
-	},
-	actions: {
-		goToPreviousPage( event ) {
-			event.preventDefault();
-			if ( state.page > 1 ) {
-				state.page -= 1;
-				history.pushState( null, '', urlForPage( state.page ) );
-				actions.refresh();
-			}
-		},
-		goToNextPage( event ) {
-			event.preventDefault();
-			if ( state.page < state.totalPages ) {
-				state.page += 1;
-				history.pushState( null, '', urlForPage( state.page ) );
-				actions.refresh();
-			}
 		},
 	},
 } );

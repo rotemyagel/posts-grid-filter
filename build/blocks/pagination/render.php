@@ -7,8 +7,22 @@
  * carries real block attributes and total pages is a runtime WP_Query
  * result, not an attribute. This keeps the two blocks loosely coupled:
  * pagination only depends on `postsPerPage` (a real attribute passed via
- * context), and after first paint the Interactivity store keeps both
- * blocks' numbers in sync regardless of how each was computed server-side.
+ * context), and applies the same ?pgf_category=/?pgf_tag= URL filters as
+ * posts-grid's own query so its count (and therefore "Page X of Y") is
+ * correct for a filtered, shared/bookmarked URL too.
+ *
+ * Prev/Next are plain <a href> navigation -- a full page reload, deliberately
+ * not intercepted by JavaScript. That is what makes page 2+ (filtered or
+ * not) a real, crawlable, no-JS-required URL rather than content that only
+ * ever exists after a client-side fetch, which is the specific pattern
+ * "SEO-friendly infinite scroll" guidance warns against. `add_query_arg()`
+ * (called with no base URL) preserves whatever other query parameters --
+ * including ?pgf_category[]=/?pgf_tag[]= -- are already on the current
+ * request, so a filtered view's selection travels along automatically when
+ * a visitor pages through it. The one place that still needs JavaScript is
+ * keeping these hrefs in sync with a filter change made via the Posts
+ * Filter block's own AJAX interaction *before* any navigation happens --
+ * handled by the state.prevHref/nextHref getters in pagination/view.js.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner content (none, this block has no children).
@@ -21,18 +35,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$posts_per_page = PGF_Blocks::sanitize_posts_per_page( $block->context['posts-grid-filter/postsPerPage'] ?? 6 );
-$current_page   = PGF_Blocks::get_requested_page();
+$posts_per_page      = PGF_Blocks::sanitize_posts_per_page( $block->context['posts-grid-filter/postsPerPage'] ?? 6 );
+$current_page        = PGF_Blocks::get_requested_page();
+$selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
+$selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 
-$count_query = new WP_Query(
-	array(
-		'post_type'      => PGF_Post_Type::POST_TYPE,
-		'posts_per_page' => $posts_per_page,
-		'post_status'    => 'publish',
-		'fields'         => 'ids',
-	)
+$count_query_args = array(
+	'post_type'      => PGF_Post_Type::POST_TYPE,
+	'posts_per_page' => $posts_per_page,
+	'post_status'    => 'publish',
+	'fields'         => 'ids',
 );
 
+$tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+if ( $tax_query ) {
+	$count_query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+}
+
+$count_query = new WP_Query( $count_query_args );
 $total_pages = max( 1, (int) $count_query->max_num_pages );
 
 wp_interactivity_state(
@@ -42,17 +62,6 @@ wp_interactivity_state(
 	)
 );
 
-/*
- * Real, crawlable prev/next URLs, not just JS click handlers: with
- * JavaScript disabled these are plain links a browser or a crawler can
- * follow directly, and posts-grid's render.php reads the same ?pgf-page=
- * parameter to server-render the matching page. The Interactivity API
- * directives below layer an AJAX-driven, no-reload experience on top
- * (pagination/view.js intercepts the click and calls preventDefault()),
- * but the underlying href is what makes page 2+ reachable at all without
- * it -- the specific gap plain "load more"/infinite-scroll patterns are
- * usually criticized for.
- */
 $prev_href = $current_page > 1 ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) ) : '';
 $next_href = $current_page < $total_pages ? esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) ) : '';
 
@@ -63,7 +72,6 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		class="pgf-pagination__prev"
 		rel="prev"
 		<?php echo $prev_href ? 'href="' . esc_url( $prev_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-on--click="actions.goToPreviousPage"
 		data-wp-bind--href="state.prevHref"
 		data-wp-bind--aria-disabled="state.isFirstPage"
 		data-wp-class--is-disabled="state.isFirstPage"
@@ -84,7 +92,6 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		class="pgf-pagination__next"
 		rel="next"
 		<?php echo $next_href ? 'href="' . esc_url( $next_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-on--click="actions.goToNextPage"
 		data-wp-bind--href="state.nextHref"
 		data-wp-bind--aria-disabled="state.isLastPage"
 		data-wp-class--is-disabled="state.isLastPage"

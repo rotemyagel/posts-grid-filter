@@ -56,24 +56,26 @@ const renderPostCard = ( post ) => {
 };
 
 const { state, actions } = store( 'posts-grid-filter', {
-	// `page` and `totalPages` are deliberately NOT declared here with a
-	// literal default (e.g. `page: 1`): both are always server-seeded via
-	// wp_interactivity_state() in render.php (posts-grid seeds `page` from
-	// the ?pgf-page= URL, pagination seeds `totalPages`), and depending on
-	// script module evaluation order, a client-declared "initial" value can
-	// clobber the already-hydrated server value back to its default. Only
-	// state that is genuinely client-only (never server-seeded) belongs here.
+	// `page`, `totalPages`, `selectedCategories`, and `selectedTags` are
+	// deliberately NOT declared here with a literal default (e.g. `page: 1`):
+	// all four are always server-seeded via wp_interactivity_state() (grid's
+	// render.php seeds `page`/`selectedCategories`/`selectedTags` from the
+	// URL, pagination seeds `totalPages`), and depending on script module
+	// evaluation order, a client-declared "initial" value can clobber the
+	// already-hydrated server value back to its default. Only state that is
+	// genuinely client-only (never server-seeded) belongs here.
 	state: {
 		isLoading: false,
-		selectedCategories: [],
-		selectedTags: [],
 	},
 	actions: {
 		/**
 		 * Re-fetches pgf_post from the REST API using the current shared
-		 * filter/page state and patches the grid's post list in place.
-		 * Called by the filter block on every checkbox change and by the
-		 * pagination block on prev/next.
+		 * filter state and patches the grid's post list in place. Called by
+		 * the filter block on every checkbox change (which always resets
+		 * `state.page` to 1 first -- see posts-filter/view.js -- since a new
+		 * filter selection should start from page one). Pagination itself is
+		 * plain full-page-reload navigation (see pagination/render.php), not
+		 * an AJAX action, so it never calls this.
 		 */
 		async refresh() {
 			state.isLoading = true;
@@ -104,11 +106,6 @@ const { state, actions } = store( 'posts-grid-filter', {
 				const totalPagesHeader = response.headers.get( 'X-WP-TotalPages' );
 
 				state.totalPages = Math.max( 1, parseInt( totalPagesHeader || '1', 10 ) );
-				if ( state.page > state.totalPages ) {
-					state.page = state.totalPages;
-					await actions.refresh();
-					return;
-				}
 
 				const list = document.querySelector( '[data-pgf-grid-list]' );
 				if ( list ) {
