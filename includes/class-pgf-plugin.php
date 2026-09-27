@@ -24,6 +24,9 @@ class PGF_Plugin {
 
 		$blocks = new PGF_Blocks();
 		$blocks->init();
+
+		$single_template = new PGF_Single_Template();
+		$single_template->init();
 	}
 
 	/**

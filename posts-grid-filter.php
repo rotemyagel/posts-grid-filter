@@ -23,6 +23,7 @@ define( 'PGF_URL', plugin_dir_url( __FILE__ ) );
 require_once PGF_DIR . 'includes/class-pgf-post-type.php';
 require_once PGF_DIR . 'includes/class-pgf-seeder.php';
 require_once PGF_DIR . 'includes/class-pgf-blocks.php';
+require_once PGF_DIR . 'includes/class-pgf-single-template.php';
 require_once PGF_DIR . 'includes/class-pgf-plugin.php';
 
 /**
