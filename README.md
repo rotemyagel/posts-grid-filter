@@ -35,6 +35,11 @@ npm run build
 npm run env start
 ```
 
+Tested end to end on a fresh Docker environment: WordPress installs, the plugin activates, and all 12 posts / 4 categories / 6 tags seed correctly, visually confirmed in a browser. Two environment-specific snags came up while verifying this and are worth knowing about if you hit the same thing (neither is a plugin bug):
+
+- **"Could not find the current WordPress version in the cache and the network is not available"** — `@wordpress/env` checks for network access via a raw DNS lookup (Node's `dns.resolve()`), which fails on some Windows setups even when normal HTTPS traffic (what the actual WordPress download uses) works fine. If you hit this on a brand-new `wp-env` install, running any other `wp-env` command that reaches WordPress.org successfully once (or simply retrying) is usually enough to populate its local cache and unblock this specific check permanently.
+- **Blank homepage after a fresh install** — only occurs if you're reusing an existing `wp-env` database from a previous, unrelated attempt (rare in normal use). If this happens, `wp-env run cli wp theme activate twentytwentyfive` fixes it immediately, since it means no theme ended up active.
+
 ## What gets built
 
 | Block | Purpose |
