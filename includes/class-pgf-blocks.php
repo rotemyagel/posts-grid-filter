@@ -58,7 +58,7 @@ class PGF_Blocks {
 	 * Slug of the custom block-inserter category this plugin's blocks are
 	 * grouped under, instead of the generic "widgets" core category.
 	 */
-	const BLOCK_CATEGORY_SLUG = 'wm-features';
+	const BLOCK_CATEGORY_SLUG = 'wm-widgets';
 
 	/**
 	 * Hooks registration into WordPress.
@@ -69,13 +69,17 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Adds a "WM Features" category to the block inserter so Posts Grid,
+	 * Adds a "WM Widgets" category to the block inserter so Posts Grid,
 	 * Pagination, and Posts Filter (each block.json's own "category" is set
 	 * to self::BLOCK_CATEGORY_SLUG) appear grouped together under their own
 	 * heading, rather than mixed into core's generic "widgets" category
 	 * alongside every other plugin's uncategorized blocks. Registered first
 	 * in the list (array_merge with this category first) so it appears near
-	 * the top of the inserter rather than at the bottom.
+	 * the top of the inserter rather than at the bottom. No 'icon' key: every
+	 * other category heading in the inserter (Text, Media, Design, Widgets,
+	 * Theme, Embeds) is plain text with no icon, so adding one here would be
+	 * the one heading that looks inconsistent with the rest, not the blocks
+	 * within it (which already have their own icons).
 	 *
 	 * @param array $categories Existing block categories.
 	 * @return array
@@ -85,8 +89,7 @@ class PGF_Blocks {
 			array(
 				array(
 					'slug'  => self::BLOCK_CATEGORY_SLUG,
-					'title' => __( 'WM Features', 'wm-posts-grid-filter' ),
-					'icon'  => 'grid-view',
+					'title' => __( 'WM Widgets', 'wm-posts-grid-filter' ),
 				),
 			),
 			$categories

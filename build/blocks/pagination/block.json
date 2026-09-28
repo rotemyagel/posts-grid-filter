@@ -3,7 +3,7 @@
   "apiVersion": 3,
   "name": "pgf/pagination",
   "title": "Posts Grid Pagination",
-  "category": "wm-features",
+  "category": "wm-widgets",
   "icon": "controls-forward",
   "description": "Prev/next pagination for the Posts Grid block. Only usable inside a Posts Grid block.",
   "textdomain": "wm-posts-grid-filter",

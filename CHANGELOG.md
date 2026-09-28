@@ -420,18 +420,26 @@ Requested: group the plugin's three blocks under their own heading in the
 block inserter, rather than leaving them mixed into core's generic
 "widgets" category alongside every other plugin's uncategorized blocks.
 Added `PGF_Blocks::register_block_category()`, hooked to
-`block_categories_all`, registering a `wm-features` category ("WM
-Features") ahead of the existing list (so it sorts near the top of the
+`block_categories_all`, registering a `wm-widgets` category ("WM
+Widgets") ahead of the existing list (so it sorts near the top of the
 inserter rather than the bottom), and changed all three block.json files'
-`"category"` from `"widgets"` to `"wm-features"`.
+`"category"` from `"widgets"` to `"wm-widgets"`. No `icon` key is set on
+the category, matching every other inserter heading (Text, Media, Design,
+Widgets, Theme, Embeds), which are all plain text -- an icon here would
+have been the one heading that looked inconsistent with the rest.
 
 Verified directly in a real editor session, not just by reading the
 config: `wp.blocks.getBlockType()` confirmed all three blocks
 (`pgf/posts-grid`, `pgf/pagination`, `pgf/posts-filter`) report
-`category: "wm-features"`, `wp.data.select('core/blocks').getCategories()`
-confirmed the category itself is registered with the right slug/title,
-and a screenshot of the actual inserter panel shows "WM FEATURES" as a
-heading with Posts Grid and Posts Filter listed under it (Pagination
-doesn't appear there, correctly -- it's restricted to insertion only
-inside Posts Grid via its own `parent` field, so it was never listed
-standalone in the inserter to begin with, category or not).
+`category: "wm-widgets"`, `wp.data.select('core/blocks').getCategories()`
+confirmed the category itself is registered with the right slug/title and
+no icon, and a screenshot of the actual inserter panel shows "WM WIDGETS"
+as a plain-text heading with Posts Grid and Posts Filter listed under it
+(Pagination doesn't appear there, correctly -- it's restricted to
+insertion only inside Posts Grid via its own `parent` field, so it was
+never listed standalone in the inserter to begin with, category or not).
+
+(This category was originally shipped as `wm-features` / "WM Features"
+with a `grid-view` icon, then renamed to `wm-widgets` / "WM Widgets" with
+the icon dropped, per a naming/style review against the rest of the
+inserter's category headings.)
