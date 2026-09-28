@@ -1,6 +1,6 @@
 {
-  "name": "posts-grid-filter",
-  "version": "1.1.1",
+  "name": "rotem-posts-grid-filter",
+  "version": "1.2.0",
   "description": "Posts Grid + Posts Filter Gutenberg blocks with Interactivity API sync.",
   "private": true,
   "scripts": {

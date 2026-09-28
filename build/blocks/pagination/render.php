@@ -61,7 +61,7 @@ wp_interactivity_state(
 		 * totalPages changes after a filter update -- translated once here,
 		 * not hardcoded as English in JS.
 		 */
-		'paginationLabelFormat' => __( 'Page {current} of {total}', 'posts-grid-filter' ),
+		'paginationLabelFormat' => __( 'Page {current} of {total}', 'rotem-posts-grid-filter' ),
 	)
 );
 
@@ -95,13 +95,13 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		data-wp-bind--aria-disabled="state.isFirstPage"
 		data-wp-class--is-disabled="state.isFirstPage"
 	>
-		<?php esc_html_e( '‹ Prev', 'posts-grid-filter' ); ?>
+		<?php esc_html_e( '‹ Prev', 'rotem-posts-grid-filter' ); ?>
 	</a>
 	<span class="pgf-pagination__status" data-wp-text="state.paginationLabel">
 		<?php
 		printf(
 			/* translators: 1: current page, 2: total pages */
-			esc_html__( 'Page %1$d of %2$d', 'posts-grid-filter' ),
+			esc_html__( 'Page %1$d of %2$d', 'rotem-posts-grid-filter' ),
 			$current_page,
 			$total_pages
 		);
@@ -116,6 +116,6 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		data-wp-bind--aria-disabled="state.isLastPage"
 		data-wp-class--is-disabled="state.isLastPage"
 	>
-		<?php esc_html_e( 'Next ›', 'posts-grid-filter' ); ?>
+		<?php esc_html_e( 'Next ›', 'rotem-posts-grid-filter' ); ?>
 	</a>
 </div>

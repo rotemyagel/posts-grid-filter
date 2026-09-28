@@ -11,7 +11,7 @@
     "grid",
     "query"
   ],
-  "textdomain": "posts-grid-filter",
+  "textdomain": "rotem-posts-grid-filter",
   "attributes": {
     "columns": {
       "type": "number",

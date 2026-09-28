@@ -11,7 +11,7 @@
     "category",
     "tag"
   ],
-  "textdomain": "posts-grid-filter",
+  "textdomain": "rotem-posts-grid-filter",
   "attributes": {
     "heading": {
       "type": "string",

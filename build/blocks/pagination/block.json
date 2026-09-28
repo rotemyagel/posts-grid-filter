@@ -6,7 +6,7 @@
   "category": "widgets",
   "icon": "controls-forward",
   "description": "Prev/next pagination for the Posts Grid block. Only usable inside a Posts Grid block.",
-  "textdomain": "posts-grid-filter",
+  "textdomain": "rotem-posts-grid-filter",
   "parent": [
     "pgf/posts-grid"
   ],

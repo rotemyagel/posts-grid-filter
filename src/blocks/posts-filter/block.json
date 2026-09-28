@@ -7,7 +7,7 @@
 	"icon": "filter",
 	"description": "Category and tag checkboxes that filter the Posts Grid block. Can be placed anywhere on the page, not just next to the grid.",
 	"keywords": [ "filter", "category", "tag" ],
-	"textdomain": "posts-grid-filter",
+	"textdomain": "rotem-posts-grid-filter",
 	"attributes": {
 		"heading": { "type": "string", "default": "Filter posts" }
 	},

@@ -262,7 +262,7 @@ class PGF_Seeder {
 	private function excerpt_for( $title ) {
 		return sprintf(
 			/* translators: %s: post title */
-			__( 'A closer look at %s and what it means for teams working with WordPress today.', 'posts-grid-filter' ),
+			__( 'A closer look at %s and what it means for teams working with WordPress today.', 'rotem-posts-grid-filter' ),
 			lcfirst( $title )
 		);
 	}
@@ -354,7 +354,7 @@ class PGF_Seeder {
 			return;
 		}
 
-		$content = "<!-- wp:heading --><h2>" . esc_html__( 'Browse the grid', 'posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
+		$content = "<!-- wp:heading --><h2>" . esc_html__( 'Browse the grid', 'rotem-posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
 			"<!-- wp:pgf/posts-filter /-->\n\n" .
 			"<!-- wp:pgf/posts-grid {\"columns\":3,\"postsPerPage\":6} -->\n" .
 			"<!-- wp:pgf/pagination /-->\n" .
@@ -363,7 +363,7 @@ class PGF_Seeder {
 		$page_id = wp_insert_post(
 			array(
 				'post_type'    => 'page',
-				'post_title'   => __( 'Posts Grid + Filter Demo', 'posts-grid-filter' ),
+				'post_title'   => __( 'Posts Grid + Filter Demo', 'rotem-posts-grid-filter' ),
 				'post_name'    => 'posts-grid-filter-demo',
 				'post_status'  => 'publish',
 				'post_content' => $content,

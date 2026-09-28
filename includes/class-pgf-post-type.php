@@ -92,14 +92,14 @@ class PGF_Post_Type {
 		register_post_type(
 			self::POST_TYPE,
 			array(
-				'label'        => __( 'Grid Posts', 'posts-grid-filter' ),
+				'label'        => __( 'Grid Posts', 'rotem-posts-grid-filter' ),
 				'labels'       => array(
-					'name'          => __( 'Grid Posts', 'posts-grid-filter' ),
-					'singular_name' => __( 'Grid Post', 'posts-grid-filter' ),
-					'add_new_item'  => __( 'Add New Grid Post', 'posts-grid-filter' ),
-					'edit_item'     => __( 'Edit Grid Post', 'posts-grid-filter' ),
-					'search_items'  => __( 'Search Grid Posts', 'posts-grid-filter' ),
-					'not_found'     => __( 'No grid posts found', 'posts-grid-filter' ),
+					'name'          => __( 'Grid Posts', 'rotem-posts-grid-filter' ),
+					'singular_name' => __( 'Grid Post', 'rotem-posts-grid-filter' ),
+					'add_new_item'  => __( 'Add New Grid Post', 'rotem-posts-grid-filter' ),
+					'edit_item'     => __( 'Edit Grid Post', 'rotem-posts-grid-filter' ),
+					'search_items'  => __( 'Search Grid Posts', 'rotem-posts-grid-filter' ),
+					'not_found'     => __( 'No grid posts found', 'rotem-posts-grid-filter' ),
 				),
 				'public'       => true,
 				'show_in_rest' => true,
@@ -198,7 +198,7 @@ class PGF_Post_Type {
 			self::TAX_CATEGORY,
 			array( self::POST_TYPE ),
 			array(
-				'label'             => __( 'Grid Categories', 'posts-grid-filter' ),
+				'label'             => __( 'Grid Categories', 'rotem-posts-grid-filter' ),
 				'hierarchical'      => true,
 				'public'            => true,
 				'show_in_rest'      => true,
@@ -211,7 +211,7 @@ class PGF_Post_Type {
 			self::TAX_TAG,
 			array( self::POST_TYPE ),
 			array(
-				'label'             => __( 'Grid Tags', 'posts-grid-filter' ),
+				'label'             => __( 'Grid Tags', 'rotem-posts-grid-filter' ),
 				'hierarchical'      => false,
 				'public'            => true,
 				'show_in_rest'      => true,
