@@ -38,6 +38,22 @@
 	--wmpgf-weight-regular: 400;
 	--wmpgf-weight-strong: 600;
 
+	/* One neutral scale, derived from the theme's text colour so it works
+	   on light and dark themes alike. Without presets, ink is the inherited
+	   text colour and the other neutrals are it at lower opacity. */
+	--wmpgf-ink: var(--wp--preset--color--contrast, currentcolor);
+	--wmpgf-muted: color-mix(in srgb, var(--wmpgf-ink) 68%, transparent);
+	--wmpgf-line: color-mix(in srgb, var(--wmpgf-ink) 18%, transparent);
+	--wmpgf-surface: color-mix(in srgb, var(--wmpgf-ink) 6%, transparent);
+
+	/* One accent, used only for the active pill and focus rings. */
+	--wmpgf-accent: var(--wp--preset--color--accent, var(--wp--preset--color--primary, #2f4fd8));
+	--wmpgf-on-accent: #fff;
+
+	/* Two radii: cards and images, and pills (buttons, inputs, tags). */
+	--wmpgf-radius: 12px;
+	--wmpgf-radius-pill: 999px;
+
 	font-family: var(--wmpgf-font);
 }
 

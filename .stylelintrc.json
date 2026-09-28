@@ -2,17 +2,23 @@
 	"extends": "@wordpress/stylelint-config/scss-stylistic",
 	"rules": {
 		"selector-class-pattern": null,
+		"color-no-hex": true,
+		"color-named": "never",
 		"declaration-property-value-allowed-list": {
 			"font-size": [ "/^var\\(--wmpgf-text-(s|m|l)\\)$/", "inherit" ],
 			"font-weight": [ "/^var\\(--wmpgf-weight-(regular|strong)\\)$/", "inherit" ],
 			"font-family": [ "/^var\\(--wmpgf-font\\)$/", "inherit" ],
-			"line-height": [ "/^var\\(--wmpgf-leading-(s|m|l)\\)$/", "inherit", "1" ]
+			"line-height": [ "/^var\\(--wmpgf-leading-(s|m|l)\\)$/", "inherit", "1" ],
+			"border-radius": [ "/^var\\(--wmpgf-radius(-pill)?\\)$/", "0" ]
 		}
 	},
 	"overrides": [
 		{
 			"files": [ "assets/css/tokens.css" ],
-			"rules": { "declaration-property-value-allowed-list": null }
+			"rules": {
+				"color-no-hex": null,
+				"declaration-property-value-allowed-list": null
+			}
 		}
 	]
 }

@@ -8,10 +8,10 @@
 	width: 100%;
 	height: auto;
 	display: block;
-	border-radius: 4px;
+	border-radius: var(--wmpgf-radius);
 	aspect-ratio: 3 / 2;
 	object-fit: cover;
-	background-color: #f0f0f5;
+	background-color: var(--wmpgf-surface);
 	margin-bottom: 1.5rem;
 }
 
@@ -32,15 +32,15 @@
 .wmpgf-single .wmpgf-single__term {
 	display: inline-block;
 	padding: 0.2rem 0.7rem;
-	border-radius: 999px;
+	border-radius: var(--wmpgf-radius-pill);
 	font-size: var(--wmpgf-text-s);
 	text-decoration: none;
-	background: #f0f0f5;
+	background: var(--wmpgf-surface);
 }
 
 .wmpgf-single .wmpgf-single__term--tag {
 	background: transparent;
-	border: 1px solid #ddd;
+	border: 1px solid var(--wmpgf-line);
 	padding: 0.2rem 0.6rem;
 }
 

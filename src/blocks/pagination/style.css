@@ -20,8 +20,8 @@
 	box-sizing: border-box;
 	height: 40px;
 	padding: 0 16px;
-	border: 1px solid currentcolor;
-	border-radius: 999px;
+	border: 1px solid var(--wmpgf-line);
+	border-radius: var(--wmpgf-radius-pill);
 	background: transparent;
 	color: inherit;
 	font-size: inherit;
@@ -49,8 +49,8 @@
 	height: 40px;
 	margin: 0;
 	padding: 0 12px;
-	border: 1px solid currentcolor;
-	border-radius: 999px;
+	border: 1px solid var(--wmpgf-line);
+	border-radius: var(--wmpgf-radius-pill);
 	background: transparent;
 	color: inherit;
 	font-size: inherit;
@@ -59,7 +59,7 @@
 .wp-block-wmpgf-pagination .wmpgf-pagination__note {
 	flex-basis: 100%;
 	margin: 0;
-	opacity: 0.7;
+	color: var(--wmpgf-muted);
 }
 
 /* Themes often set a font on these elements directly; inherit ours. */
