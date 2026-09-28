@@ -2,3 +2,4 @@ node_modules/
 vendor/
 *.log
 wm-posts-grid-filter.zip
+.phpunit.result.cache

@@ -47,4 +47,19 @@
 	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
 		<exclude-pattern>templates/single-wmpgf_post\.php</exclude-pattern>
 	</rule>
+
+	<!--
+		Tests follow PHPUnit's conventions, as core's own tests do: files are
+		found by their test- prefix, classes are named Test_*, and a test's
+		name says what it checks, so it needs no doc comment.
+	-->
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>tests/php/test-*\.php</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound">
+		<exclude-pattern>tests/php/test-*\.php</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
 </ruleset>

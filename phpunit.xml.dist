@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<phpunit
+	bootstrap="tests/php/bootstrap.php"
+	backupGlobals="false"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+>
+	<testsuites>
+		<testsuite name="wm-posts-grid-filter">
+			<directory prefix="test-" suffix=".php">tests/php</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>

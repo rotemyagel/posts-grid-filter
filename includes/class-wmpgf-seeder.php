@@ -178,7 +178,7 @@ class WMPGF_Seeder {
 	 *              what this call inserted.
 	 */
 	private function create_posts( array $demo_posts, $category_ids, $tag_ids ) {
-		$post_ids        = array();
+		$post_ids         = array();
 		$created_post_ids = array();
 		$attachment_ids   = array();
 
