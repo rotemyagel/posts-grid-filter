@@ -1,280 +1,144 @@
-<div align="center">
-
 # Posts Grid + Filter
 
-### Two Gutenberg blocks, synced without nesting, with demo content seeded on activation.
+Two Gutenberg blocks: a posts grid and a filter that can sit anywhere on the same page. Picking categories, tags or a search term updates the grid without a page reload, and every filtered view is also a real URL that works without JavaScript. Activating the plugin creates demo posts and a demo page, so there is something to look at straight away.
 
-A dynamic **Posts Grid** and a companion **Posts Filter** — kept in sync via a shared Interactivity API store, with pagination as a real inner block and zero manual setup after activation.
+I built it for the WalkMe WordPress technical assessment.
 
-[![WordPress 6.6+](https://img.shields.io/badge/WordPress-6.6%2B-21759b?logo=wordpress&logoColor=white)](https://wordpress.org)
-[![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net)
-[![Block API v3](https://img.shields.io/badge/Block%20API-v3-0073aa)](https://developer.wordpress.org/block-editor/reference-guides/block-api/)
-[![Built with @wordpress/scripts](https://img.shields.io/badge/built%20with-%40wordpress%2Fscripts-21759b)](https://www.npmjs.com/package/@wordpress/scripts)
-[![License: GPL v2+](https://img.shields.io/badge/License-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
+## Install
 
-Built for the WordPress Web Development Technical Assessment.
+Requires WordPress 6.6 and PHP 7.4 or later.
 
-[**Rotem Yagel**](https://github.com/rotemyagel) &nbsp;·&nbsp; [GitHub](https://github.com/rotemyagel/wm-posts-grid-filter)
-
-</div>
-
----
-
-## ✨ Highlights
-
-- **Dynamic Posts Grid** — server-rendered via `WP_Query`. Configurable columns (2 / 3 / 4) and posts-per-page via Inspector Controls.
-- **Posts Filter** — category and tag checkboxes rendered as pill toggles, with a "Clear filters" link. Can be placed anywhere on the page, not nested inside the grid. The selection is mirrored into the address bar, so a refresh or a shared link reopens the same filtered view, and it still works with JavaScript disabled (a plain GET form).
-- **Pagination as a true inner block** — locked into the grid's template, registered as its own block rather than markup the grid just happens to render.
-- **Zero-JS-in-the-click-path pagination** — Prev/Next are plain, crawlable `<a href>` links with a full page reload; filtering stays instant via AJAX. See [why](#pagination-is-real-full-reload-navigation) below.
-- **Shared Interactivity API store, not nesting** — both blocks call `store('wmpgf', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
-- **Idempotent, ownership-aware activation** — seeds 12 posts across 4 categories and 6 tags (each with a featured image and excerpt) plus a demo page. Reactivation never duplicates content, and `uninstall.php` only ever removes what the plugin itself created — never a site owner's own content, even if it shares a title or slug with seeded content.
-
----
-
-## 🚀 Quick start
-
-### Requirements
-
-| Tool | Version | Notes |
-|---|---|---|
-| WordPress | 6.6+ | Interactivity API, its router and getServerState() |
-| PHP | 7.4+ | No image library (GD/Imagick) needed — demo images are generated as SVG |
-| Node.js | any current LTS | Only needed if rebuilding from source |
-| Composer | any current version | Only needed to run the PHP linter (`npm run lint:php`) — not a runtime dependency |
-
-### From the packaged zip / a checked-out repo with `build/` present
+**From the release zip.** Download [wm-posts-grid-filter.zip](https://github.com/rotemyagel/wm-posts-grid-filter/releases/latest/download/wm-posts-grid-filter.zip), then upload it under Plugins > Add New > Upload, or:
 
 ```bash
-# 1. Copy the wm-posts-grid-filter folder into wp-content/plugins/
-# 2. Activate it
-wp plugin activate wm-posts-grid-filter
+wp plugin install wm-posts-grid-filter.zip --activate
 ```
 
-That's it — no configuration screen, no environment variables. Activation seeds 12 demo posts, 4 categories, 6 tags, and publishes a **Posts Grid + Filter Demo** page with both blocks already placed.
+Use the release zip rather than GitHub's "Download ZIP" button. That one unpacks to `wm-posts-grid-filter-main`, which is the wrong folder name.
 
-### Building from source
-
-Only needed if `build/` isn't present, or after editing anything in `src/`:
+**With wp-env** (needs Docker):
 
 ```bash
 npm install
-npm run build
-```
-
-`WP_EXPERIMENTAL_MODULES=1` (needed for `@wordpress/scripts` to compile the Interactivity API `viewScriptModule` files) is already wired into the `build`/`start` scripts via `cross-env` — a plain `npm run build` is enough.
-
-### Disposable environment via wp-env
-
-No existing WordPress install needed:
-
-```bash
-npm install
-npm run build
 npm run env start
 ```
 
-`@wordpress/env` spins up a complete WordPress + MySQL stack in Docker with this plugin already active. The first start takes a few minutes (Docker pulls images); subsequent starts are seconds.
+This starts WordPress at http://localhost:8888 with the plugin active and pretty permalinks switched on. The demo page is at http://localhost:8888/posts-grid-filter-demo/. Log in with `admin` / `password`.
+
+**From source.** `build/` is committed, so a checkout works as is. After changing anything in `src/`, run `npm install` and `npm run build`.
+
+## What you get
+
+Three blocks, grouped under "WM Widgets" in the inserter:
+
+- **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns and posts per page.
+- **Pagination** (`wmpgf/pagination`). This lives inside the grid and can't be used on its own. It has Prev and Next links, "Page 2 of 3", and a posts-per-page select for visitors (6, 12 or 24).
+- **Posts Filter** (`wmpgf/posts-filter`). It has a search field, category and tag pills, a result count and "Clear filters". It isn't nested in the grid; put it anywhere on the page.
+
+On activation the plugin creates:
+- 12 posts in its own post type, each with an excerpt, three paragraphs of body text and a generated cover image.
+- 4 categories with 4 posts each; 4 of the posts have two categories.
+- 6 tags.
+- A demo page, `/posts-grid-filter-demo/`, with the filter above the grid.
+
+Filter rules: several categories match any of them (OR), and the same goes for tags. Categories, tags and search combine with AND.
+
+## How a filter click travels
+
+1. **Click.** The checkbox's `data-wp-on--change` runs `toggleCategory` in the shared `wmpgf` store, which updates `state.selectedCategories`.
+2. **URL.** The action builds the new address with `urlWith()`, for example `?wmpgf-category=design,culture`, and resets the page to 1.
+3. **Router.** `navigate()` from `@wordpress/interactivity-router` requests that URL like any page load and adds it to the browser history.
+4. **Server.** `WMPGF_Request` reads the parameters, `WMPGF_Query` runs the query, and the grid's `render.php` prints the cards and pagination.
+5. **Swap.** The router replaces the grid's router region with the new HTML and updates the store's server state. The filter's `syncFromServer` callback then updates the count and checkboxes from it.
+
+Back and Forward go through the same steps, so they step through filter changes. Without JavaScript, the filter is a plain GET form that loads the same URL, and the server renders the same HTML.
+
+## How the blocks talk to each other, and why this way
+
+The filter and the grid share one Interactivity API store, `wmpgf`. Each block's `view.js` calls `store( 'wmpgf', … )`, and WordPress merges them by namespace. So neither block needs to know where the other is on the page. The URL is the single source of truth: the filter writes it, and the server reads it.
+
+I considered three other approaches:
+
+- **Fetching posts over REST and building cards in JavaScript.** The first version did this. The card then existed three times, in PHP, in hand-built JavaScript DOM and in the editor's JSX, and the three drifted apart. With the router, the only card template is `posts-grid/render.php`: the frontend, filter changes, pagination and the editor preview (through `ServerSideRender`) all use it.
+- **REST plus `data-wp-each` templates.** This would work, but the card would still be written twice, and pagination and no-JS support would each need their own code path.
+- **Nesting the filter inside the grid**, or custom DOM events between the blocks. Nesting limits where the filter can go, and custom events duplicate what the store already does.
+
+## Decisions and tradeoffs
+
+**Own post type and taxonomies** (`wmpgf_post`, `wmpgf_category`, `wmpgf_tag`). Demo content stays separate from a site's real posts, so installing, reactivating and uninstalling never touch them. Everything uses one prefix, `wmpgf`: PHP classes, options, block names, the store, CSS classes and URL parameters.
+
+**Readable URLs.** Links are built by hand (`src/shared/url.js`, mirrored by `WMPGF_Request::url()`), so slugs stay readable, as in `design,culture`, instead of `design%2Cculture`. The search term is the one free-text value, so it is the one value that gets encoded. The server also accepts `wmpgf-category[]=design`, which is what the no-JS form sends. Unknown slugs are ignored.
+
+**Posts per page sits under the grid, not in the filter bar.** The review asked for it in the filter bar. I put it in the pagination block instead, for two reasons:
+- The pagination block receives the grid's own default through block context. The filter can't know which grid's default applies.
+- It sits inside the region the router re-renders, so its selected value is always current.
+
+It is also a visitor-facing extra: the posts-per-page setting in the Inspector, which is what the brief asked for, is on the grid block.
+
+**Server-rendered values instead of server directive processing.** The blocks don't declare `supports.interactivity`, so WordPress doesn't evaluate directives on the server. `render.php` prints the checked boxes, the count and the "Clear filters" visibility directly, from the same `WMPGF_Request::filters()` that drives the query. Three of those values are JavaScript getters (`isCategoryChecked`, `isTagChecked`, `hideClearFilters`). Server processing would need each one rewritten as a PHP closure, so the logic would exist in two languages either way.
+
+**`style`, not `viewStyle`.** The editor preview is the same server-rendered markup as the frontend, so it needs the same CSS, and `viewStyle` only loads on the frontend. On classic themes that don't load block styles separately, this means the plugin's CSS (about 12 KB) loads on every page. The font file does not: browsers only download it where an element uses it.
+
+**The blocks bring their own font, and a theme can turn it off.** The font is Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there is no third-party request. Overriding a theme's font is a real tradeoff, so the font is a single token scoped to the plugin's blocks, and a theme that prefers its own sets `--wmpgf-font: inherit`.
+
+**A small design system.** There are three text sizes, two weights, one accent colour and two corner radii, all defined as tokens in `assets/css/tokens.css`. Stylelint rejects any other size, weight, radius or hex colour. Neutral colours are mixed from the theme's text colour, so the blocks work on dark themes.
+
+**Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
+
+**Seeding is safe to repeat, and uninstall only removes what the plugin created.** Each step of the seeder reuses what already exists: terms by name, posts by title, the page by slug. Seeding only counts as done when every piece exists, so a failed run is retried on the next activation. The seeder records the IDs it created, as opposed to ones it adopted, and `uninstall.php` deletes only those. A post someone wrote by hand in the same post type survives. Cover images are generated as SVG text, so activation needs no network access and no PHP image extension.
+
+## Tests and tooling
 
 ```bash
-npm run start        # Webpack watch — auto-rebuild on src/ changes
-npm run lint:js      # ESLint via @wordpress/scripts
-npm run env stop     # Stop containers (preserves DB)
-npm run env destroy  # Wipe containers + DB
+npm run lint:js      # ESLint (@wordpress/scripts)
+npm run lint:css     # Stylelint, including the token rules
+npm run lint:php     # WordPress Coding Standards (run composer install first)
+npm run test:js      # Jest: the URL builder
+npm run test:php     # PHPUnit in wp-env's tests container (start wp-env first)
+npm run plugin-zip   # Builds wm-posts-grid-filter.zip
 ```
 
-PHP linting is Composer-managed, separately from the npm-based JS tooling above:
+The PHPUnit suite covers:
+- The filter logic: OR within a taxonomy, AND across, search on top, unknown slugs, both URL forms, and clamping of posts per page and page number.
+- The PHP URL builder.
+- The rewrite regression above.
+- Seeding: no duplicates, retry after a failure.
+- Uninstall: only seeded content is removed.
 
-```bash
-composer install      # once, installs PHPCS + WordPress Coding Standards
-npm run lint:php       # checks; exits clean
-npm run lint:php-fix   # auto-fixes what it can
-```
+To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
----
+GitHub Actions runs all linters, the build, both test suites and a request to the demo page of a fresh wp-env on every push. It also fails if the committed `build/` doesn't match the source.
 
-## 📦 What's in the box
+## Known limitations
 
-### Three blocks
+- **One grid and one filter per page.** The store holds one selection and the router region has a fixed name. Several independent pairs would need per-block state, and the brief doesn't call for it.
+- **Multisite.** Blocks and permalinks work on every site. Demo content is created only on the site where the plugin is activated; network activation creates it on the main site only. I chose that on purpose: a network admin wouldn't want 12 demo posts on every site.
+- **Upgrading from 1.x.** 2.0 renamed the prefix, including the post type and block names, so 1.x content doesn't carry over. Delete 1.x first (its uninstall removes its demo content), then install 2.0.
+- **Search** is WordPress's built-in search on title, excerpt and content, with no relevance ranking beyond that.
+- **Every filter combination can be indexed.** With 4 categories and 6 tags, each combination is a different, legitimate page. On a site with thousands of terms I would limit indexing of combinations, based on real traffic data.
 
-| Block | Type | Responsibility |
-|---|---|---|
-| `wmpgf/posts-grid` | Dynamic | Grid of posts, configurable columns/posts-per-page. Server-rendered; refreshes in place via REST when filters change. |
-| `wmpgf/pagination` | Dynamic, inner block | Prev / "Page X of Y" / Next. Locked into `wmpgf/posts-grid`'s template via `parent` + `templateLock: "all"`. |
-| `wmpgf/posts-filter` | Dynamic | Category/tag pill toggles + Clear filters. Independent of the grid — no nesting required. |
-
-All three register into their own **"WM Widgets"** block-inserter category (`WMPGF_Blocks::register_block_category()`, via the `block_categories_all` filter) instead of core's generic "widgets" category, so they're grouped together and easy to find rather than mixed in among every other plugin's uncategorized blocks.
-
-### Seeded demo content
-
-Created automatically on first activation, idempotently (reactivating never duplicates it):
-
-- **4 categories** — Technology · Design · Business · Culture
-- **6 tags** — Guide · Opinion · News · Interview · Deep Dive · Trends
-- **12 posts** — deterministic but overlapping category/tag assignments (4 posts carry two categories, several carry three tags), so filter combinations produce meaningfully different result sets rather than every post matching everything
-- **12 featured images** — generated locally as SVG (a solid color per category plus a text label), so activation needs no network access and no PHP image extension
-- **1 demo page** — `/posts-grid-filter-demo/`, with both blocks already placed
-- **Author** — the user who activates the plugin, or the first administrator when there is none (e.g. activation via WP-CLI)
-
----
-
-## 🏛️ Architecture decisions
-
-A short account of the calls made and why. The full round-by-round history — including two independent code-review passes and every bug they surfaced — is in [CHANGELOG.md](CHANGELOG.md).
-
-### A dedicated post type and taxonomies
-
-`wmpgf_post` with `wmpgf_category`/`wmpgf_tag`, not core `post`/`category`/`post_tag`. Keeps demo content fully isolated and identifiable — activation, reactivation, and uninstall never touch a site's real content — and satisfies the brief's requirement that the post type and taxonomy names carry a unique prefix.
-
-### Inter-block sync: the Interactivity API, with REST doing the actual filtering
-
-Both blocks call `store('wmpgf', { state, actions })` from their own `view.js`. WordPress merges every caller's partial state/actions into one shared store by namespace — the documented pattern for exactly this situation, and why the blocks can sit anywhere on the page without either needing to know the other exists.
-
-Filtering itself isn't reimplemented: any taxonomy registered with `show_in_rest => true` gets an automatic REST collection parameter, and WordPress's own `tax_query` behavior (`IN`/OR within one taxonomy, `AND` across taxonomies) is exactly the "OR within a filter type, AND across filter types" logic the brief asks for.
-
-### Pagination is real, full-reload navigation
-
-Prev/Next are plain `<a href="?wmpgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`. Pagination is hidden when every result fits on one page (including zero results).
-
-### Filtering: instant with JavaScript, a plain form without it
-
-With JavaScript, each change filters instantly over REST and `history.replaceState()` mirrors the selection into the address bar, so a refresh or a copied link reopens the same view. Without JavaScript, the checkboxes are a plain `<form method="get">` with an "Apply filters" button (inside `<noscript>`). Result-count changes are announced to screen readers through an `aria-live` region.
-
-URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?wmpgf_category=design,culture&wmpgf_tag=trends&wmpgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/wmpgf_post?per_page=6&page=1&wmpgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `WMPGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`WMPGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `wmpgf_category[]=design&wmpgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
-
-### The blocks bring their own font, and a theme can turn it off
-
-The blocks use Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there's no third-party request, and it's only downloaded on pages that show a block. A block overriding the theme's font is a real tradeoff, so the font is one token scoped to the plugin's wrappers: a theme that prefers its own sets `--wmpgf-font: inherit`.
-
-### Single-post permalinks use a fixed base
-
-Single posts live at `/grid-post/{slug}/`. An earlier version put the category first (`/{category}/{slug}/`), but a rewrite rule with no fixed text in front matches every two-segment URL on the site, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief never asked for category URLs, so I removed the feature instead of keeping a custom rewrite tag, permalink filter and canonical redirect for it.
-
-### Ownership-aware seeding and uninstall
-
-`wmpgf_post` is a public, registered post type — once seeded, a site owner creating one by hand is normal use, not a leftover. The seeder records exactly which posts, attachments, and taxonomy terms it *creates* (as opposed to *adopts*, when idempotency finds a pre-existing match), and `uninstall.php` deletes only those, never anything it can't prove it created — including the demo page itself, which is adopted rather than deleted if something already occupies that slug.
-
-### Scope: one grid + one filter per page
-
-State lives in one shared store, not namespaced per block instance — matching the brief (grid and filter, placed anywhere on one page) and the demo page it seeds. Multiple independent grid/filter pairs would need per-instance context propagation, and nothing in the brief calls for it.
-
-### SVG-generated demo images, not bundled files or a GD dependency
-
-Solid-color placeholders with a text label, written directly as SVG (plain XML text via `file_put_contents()`) rather than shipped as binary files, fetched from a remote API, or generated with an image library. Keeps activation fully offline, the plugin's zip free of binary assets, and needs no PHP image extension at all — an earlier GD-based version of this file produced no featured images whatsoever on a PHP build without GD; SVG has nothing to fall back to or skip.
-
----
-
-## 🗂️ Project layout
+## Project layout
 
 ```
-wm-posts-grid-filter/
-├── wm-posts-grid-filter.php       Plugin bootstrap, constants, hook registration
-├── uninstall.php                  Ownership-aware demo cleanup on plugin delete
-├── .wp-env.json                   wp-env (Docker) config
-├── package.json                   Dev dependencies, npm scripts
-├── composer.json                  Dev-only: PHPCS + WordPress Coding Standards
-├── phpcs.xml.dist                 PHPCS ruleset for this plugin
-├── README.md                      This file
-├── CHANGELOG.md                   Full development history, both review passes
-├── LICENSE                        GPL-2.0 text
-│
-├── includes/
-│   ├── class-wmpgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
-│   ├── class-wmpgf-post-type.php    wmpgf_post CPT + taxonomies
-│   ├── class-wmpgf-blocks.php       Block registration + shared query/param helpers
-│   ├── class-wmpgf-seeder.php       Idempotent, ownership-tracked demo content seeding
-│   └── class-wmpgf-single-template.php  Single-post template fallback for themes with none
-│
-├── templates/
-│   └── single-wmpgf_post.php        Title/image/terms/content template for a single grid post
-│
-├── assets/css/
-│   └── single.css                 Styling for the single-post template
-│
-├── src/
-│   ├── shared/
-│   │   └── filter-url.js          Builds readable ?wmpgf_category=design,culture&wmpgf-page=2 URLs
-│   │
-│   └── blocks/                    Each block: block.json, index.js (registration), edit.js,
-│       │                          save.js, render.php, view.js, style.css
-│       ├── posts-grid/
-│       │   ├── edit.js            InspectorControls (columns, posts per page), live post preview
-│       │   ├── save.js            Saves only the inner pagination block; the grid itself is dynamic
-│       │   ├── render.php         Server render: query, pagination clamp, i18n config, aria-live region
-│       │   └── view.js            Frontend: REST refresh, request sequencing, card rendering
-│       │
-│       ├── pagination/
-│       │   ├── block.json         parent: ["wmpgf/posts-grid"]
-│       │   ├── edit.js            Editor preview with the real page count
-│       │   ├── render.php         Prev/Next hrefs, total-page count, hidden on a single page
-│       │   └── view.js            Reactive href/label/visibility getters
-│       │
-│       └── posts-filter/
-│           ├── edit.js            Editor preview with the real category/tag pills
-│           ├── render.php         GET form with checkbox groups, no-JS submit, Clear filters link
-│           └── view.js            Toggle/clear actions, address-bar sync
-│
-└── build/                         Generated by @wordpress/scripts from src/; committed so the zip installs without a build step
+wm-posts-grid-filter.php     Bootstrap and constants
+uninstall.php                Removes only what the seeder created
+includes/
+  class-wmpgf-plugin.php         Hooks, activation, rewrite flush per version
+  class-wmpgf-post-type.php      Post type and taxonomies
+  class-wmpgf-request.php        The only code that reads $_GET; builds URLs
+  class-wmpgf-query.php          Queries, cached per request
+  class-wmpgf-blocks.php         Block and style registration
+  class-wmpgf-seeder.php         Demo content
+  class-wmpgf-single-template.php
+  demo-content.php               The 12 demo posts
+templates/single-wmpgf_post.php  Single post template for themes without one
+assets/css/tokens.css            Design tokens and the font
+src/shared/                      url.js (URL builder), navigate.js (router call)
+src/blocks/*/                    block.json, edit.js, render.php, view.js, style.css
+tests/php/                       PHPUnit
+build/                           Compiled from src/, committed
 ```
 
----
+## License
 
-## ✅ Coding standards
-
-- **PHP** — checked with the actual [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards) ruleset via PHPCS (`phpcs.xml.dist`, `npm run lint:php`), not just followed by convention: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout. One rule is disabled with a documented reason in `phpcs.xml.dist` — the naming check for `templates/single-wmpgf_post.php`, whose underscore is required by WordPress's own template-hierarchy convention (`single-{$post_type}.php`), not a style inconsistency.
-- **JavaScript** — `@wordpress/scripts` ESLint config (`npm run lint:js`, clean). Only `@wordpress/*` packages; no external React libraries.
-- **CSS** — `@wordpress/scripts` Stylelint config (`npm run lint:css`, clean).
-- **i18n** — every user-facing string wrapped with `__()`/`_e()`/`esc_html__()`/`esc_html_e()` under the `wm-posts-grid-filter` text domain, including strings rendered client-side (passed through from PHP via `wp_interactivity_state()`, not hardcoded in JS).
-- **Security** — output escaping on every dynamic value; client-rendered cards build real DOM nodes with element properties rather than string-interpolated HTML, so a title can't break out of an attribute.
-
----
-
-## 🧪 Verification checklist
-
-A smoke test you can run after activation:
-
-1. **Plugin is active** — Plugins screen shows "Posts Grid + Filter" enabled.
-2. **Seeding ran** — Posts screen (Grid Posts) lists 12 demo posts, each with a featured image, excerpt, at least one category, and at least one tag.
-3. **Demo page exists** — Pages screen lists "Posts Grid + Filter Demo"; opening it shows the filter above the grid, both populated.
-4. **Inspector controls work** — select the grid block, change Columns and Posts per page; the editor preview updates live, including the pagination preview's page count. The filter block shows the real category/tag pills in the editor.
-5. **Frontend filtering** — check a category; the grid refreshes in place (no reload) and the address bar updates. Add a tag; results narrow further (AND). Refresh the page; the same selection and results come back. Uncheck everything; the full set returns.
-6. **Clear filters** — appears once a filter is active, resets both instantly.
-7. **Pagination** — click Next with filters active; a real page navigation occurs, filters are preserved in the URL, and the checkboxes on the new page are pre-checked to match. Pick a filter that fits on one page; pagination disappears.
-   - **Without JavaScript** — disable JavaScript and reload; an "Apply filters" button appears under the checkboxes and submits the selection as a normal page load.
-8. **Single post** — click a card's title; the single-post page renders title, image, categories/tags, and content, at a `/grid-post/post-slug/` URL.
-9. **Core URLs still work** — with the plugin active, an author archive (`/author/{name}/`), a date archive (`/2026/09/`), `/feed/atom/`, `/page/2/` and a nested page all load normally.
-10. **Reactivation is idempotent** — deactivate, reactivate; no duplicate posts appear.
-11. **Uninstall is ownership-safe** — create a Grid Post by hand, then delete the plugin via the Plugins screen: the 12 seeded posts/images/terms and the demo page are removed; your hand-created post survives.
-
-### Programmatic checks
-
-```bash
-# OR within a taxonomy: two categories (REST takes term IDs) should return their union
-curl -s "http://your-site.test/wp-json/wp/v2/wmpgf_post?wmpgf_category=8,10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
-
-# AND across taxonomies: adding a tag should narrow the same request
-curl -s "http://your-site.test/wp-json/wp/v2/wmpgf_post?wmpgf_category=8,10&wmpgf_tag=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
-
-# No-JS pagination + filtering, server-rendered
-curl -s "http://your-site.test/posts-grid-filter-demo/?wmpgf_category=design,culture&wmpgf-page=2" | grep -o 'Page [0-9]* of [0-9]*'
-```
-
----
-
-## ⚖️ Known limitations & tradeoffs
-
-- **One grid + one filter per page** is the supported scope, not multiple independent pairs on the same page — nothing in the brief calls for it, and it would need per-instance context propagation the shared store doesn't do today.
-- **No `data-wp-each` for the post list** — the client-rendered card list is patched imperatively (`replaceChildren()`) rather than via the Interactivity API's declarative list directive, a deliberate scope call documented in [CHANGELOG.md](CHANGELOG.md).
-- **Back doesn't step through filter changes** — the address bar is updated with `replaceState()`, not `pushState()`, so each checkbox click doesn't add a history entry. Back leaves the page, as it would after any other in-page control.
-
-Two items previously listed here were fixed rather than left as limitations — see [CHANGELOG.md](CHANGELOG.md#fourth-pass-fixing-rather-than-documenting-two-limitations): demo images no longer need GD at all (generated as SVG instead), and `npm run lint:js` runs clean (a `typescript` version override, plus real formatting/unused-variable fixes it then caught).
-
-Two more are deliberate design decisions, not bugs to fix:
-
-- **Pagination is a full page reload, not instant.** This was built this way on purpose, specifically *instead of* an earlier AJAX version — full-reload navigation is what makes page 2+ a real, crawlable URL that works with JavaScript disabled, which instant pagination structurally cannot do. Reverting this would reintroduce the exact problem it was built to solve. Filtering is a separate concern and stays instant.
-- **Filtered *and* paginated views are both crawlable** (`?wmpgf_category=` combined with `?wmpgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
-
----
-
-## 📄 License
-
-GPL-2.0-or-later, matching WordPress core. Full text in [LICENSE](LICENSE).
+GPL-2.0-or-later. See [LICENSE](LICENSE).
