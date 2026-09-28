@@ -18,14 +18,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$posts_per_page      = WMPGF_Blocks::sanitize_posts_per_page( $block->context['wmpgf/postsPerPage'] ?? 6 );
-$selected_categories = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::CATEGORY_PARAM );
-$selected_tags       = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::TAG_PARAM );
-$tax_query           = WMPGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+$posts_per_page      = WMPGF_Query::sanitize_posts_per_page( $block->context['wmpgf/postsPerPage'] ?? 6 );
+$selected_categories = WMPGF_Request::term_ids( WMPGF_Request::CATEGORY_PARAM );
+$selected_tags       = WMPGF_Request::term_ids( WMPGF_Request::TAG_PARAM );
+$tax_query           = WMPGF_Query::tax_query( $selected_categories, $selected_tags );
 
 // Same helpers as posts-grid/render.php, so both agree on the clamped page.
-$total_pages  = WMPGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
-$current_page = WMPGF_Blocks::clamp_page( WMPGF_Blocks::get_requested_page(), $total_pages );
+$total_pages  = WMPGF_Query::total_pages( $posts_per_page, $tax_query );
+$current_page = WMPGF_Query::clamp_page( WMPGF_Request::page(), $total_pages );
 
 wp_interactivity_state(
 	'wmpgf',
@@ -39,8 +39,8 @@ wp_interactivity_state(
 $is_first_page = $current_page <= 1;
 $is_last_page  = $current_page >= $total_pages;
 
-$prev_href = $is_first_page ? '' : WMPGF_Blocks::page_url( $current_page - 1, $selected_categories, $selected_tags );
-$next_href = $is_last_page ? '' : WMPGF_Blocks::page_url( $current_page + 1, $selected_categories, $selected_tags );
+$prev_href = $is_first_page ? '' : WMPGF_Request::page_url( $current_page - 1, $selected_categories, $selected_tags );
+$next_href = $is_last_page ? '' : WMPGF_Request::page_url( $current_page + 1, $selected_categories, $selected_tags );
 
 // Disabled state is also rendered server-side, for first paint and no-JS.
 $prev_class = 'wmpgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );

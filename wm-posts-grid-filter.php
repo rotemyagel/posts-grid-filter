@@ -24,6 +24,8 @@ define( 'WMPGF_URL', plugin_dir_url( __FILE__ ) );
 
 require_once WMPGF_DIR . 'includes/class-wmpgf-post-type.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-seeder.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-request.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-query.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-blocks.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-single-template.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-plugin.php';

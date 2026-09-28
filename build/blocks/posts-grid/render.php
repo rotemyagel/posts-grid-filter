@@ -19,20 +19,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $columns             = isset( $attributes['columns'] ) ? (int) $attributes['columns'] : 3;
-$posts_per_page      = WMPGF_Blocks::sanitize_posts_per_page( $attributes['postsPerPage'] ?? 6 );
-$current_page        = WMPGF_Blocks::get_requested_page();
-$selected_categories = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::CATEGORY_PARAM );
-$selected_tags       = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::TAG_PARAM );
+$posts_per_page      = WMPGF_Query::sanitize_posts_per_page( $attributes['postsPerPage'] ?? 6 );
+$current_page        = WMPGF_Request::page();
+$selected_categories = WMPGF_Request::term_ids( WMPGF_Request::CATEGORY_PARAM );
+$selected_tags       = WMPGF_Request::term_ids( WMPGF_Request::TAG_PARAM );
 
 if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
 }
 
-$tax_query = WMPGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+$tax_query = WMPGF_Query::tax_query( $selected_categories, $selected_tags );
 
 // Same helpers as pagination/render.php, so both agree on the clamped page.
-$total_pages  = WMPGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
-$current_page = WMPGF_Blocks::clamp_page( $current_page, $total_pages );
+$total_pages  = WMPGF_Query::total_pages( $posts_per_page, $tax_query );
+$current_page = WMPGF_Query::clamp_page( $current_page, $total_pages );
 
 $query_args = array(
 	'post_type'      => WMPGF_Post_Type::POST_TYPE,
@@ -52,9 +52,9 @@ wp_interactivity_state(
 		'config'             => array(
 			'postsPerPage'  => $posts_per_page,
 			'restUrl'       => esc_url_raw( rest_url( 'wp/v2/' . WMPGF_Post_Type::POST_TYPE ) ),
-			'pageParam'     => WMPGF_Blocks::PAGE_PARAM,
-			'categoryParam' => WMPGF_Blocks::CATEGORY_PARAM,
-			'tagParam'      => WMPGF_Blocks::TAG_PARAM,
+			'pageParam'     => WMPGF_Request::PAGE_PARAM,
+			'categoryParam' => WMPGF_Request::CATEGORY_PARAM,
+			'tagParam'      => WMPGF_Request::TAG_PARAM,
 			'i18n'          => array(
 				'noResults' => __( 'No posts found.', 'wm-posts-grid-filter' ),
 				/* translators: {count} is replaced in the browser with the number of matching posts. */
@@ -65,7 +65,7 @@ wp_interactivity_state(
 		'page'               => $current_page,
 		'selectedCategories' => $selected_categories,
 		'selectedTags'       => $selected_tags,
-		'termSlugs'          => WMPGF_Blocks::term_slug_map(),
+		'termSlugs'          => WMPGF_Request::term_slug_map(),
 	)
 );
 

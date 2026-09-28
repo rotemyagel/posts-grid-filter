@@ -22,15 +22,15 @@ $heading = isset( $attributes['heading'] ) && '' !== $attributes['heading']
 	? $attributes['heading']
 	: __( 'Filter posts', 'wm-posts-grid-filter' );
 
-$selected_categories = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::CATEGORY_PARAM );
-$selected_tags       = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::TAG_PARAM );
+$selected_categories = WMPGF_Request::term_ids( WMPGF_Request::CATEGORY_PARAM );
+$selected_tags       = WMPGF_Request::term_ids( WMPGF_Request::TAG_PARAM );
 $has_active_filters  = $selected_categories || $selected_tags;
 
 // For the address-bar sync in view.js, which works with term IDs.
-wp_interactivity_state( 'wmpgf', array( 'termSlugs' => WMPGF_Blocks::term_slug_map() ) );
+wp_interactivity_state( 'wmpgf', array( 'termSlugs' => WMPGF_Request::term_slug_map() ) );
 
 // A real link for no-JS; view.js intercepts it to clear without a reload.
-$clear_url = WMPGF_Blocks::page_url( 1, array(), array() );
+$clear_url = WMPGF_Request::page_url( 1, array(), array() );
 
 // A GET form replaces the whole query string, so other params (e.g.
 // ?page_id= under plain permalinks) are carried over as hidden inputs.
@@ -86,7 +86,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 						>
 							<input
 								type="checkbox"
-								name="<?php echo esc_attr( WMPGF_Blocks::CATEGORY_PARAM ); ?>[]"
+								name="<?php echo esc_attr( WMPGF_Request::CATEGORY_PARAM ); ?>[]"
 								value="<?php echo esc_attr( $category_term->slug ); ?>"
 								<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
 								data-wp-on--change="actions.toggleCategory"
@@ -110,7 +110,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 						>
 							<input
 								type="checkbox"
-								name="<?php echo esc_attr( WMPGF_Blocks::TAG_PARAM ); ?>[]"
+								name="<?php echo esc_attr( WMPGF_Request::TAG_PARAM ); ?>[]"
 								value="<?php echo esc_attr( $tag_term->slug ); ?>"
 								<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
 								data-wp-on--change="actions.toggleTag"

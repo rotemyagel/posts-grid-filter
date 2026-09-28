@@ -75,7 +75,7 @@ class WMPGF_Seeder {
 		// Without terms, create_posts() would divide by zero. Not marking the
 		// run as seeded lets the next activation retry.
 		if ( ! $category_ids || ! $tag_ids ) {
-			WMPGF_Blocks::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
+			self::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
 			return;
 		}
 
@@ -99,7 +99,7 @@ class WMPGF_Seeder {
 			|| count( $tag_ids ) < count( $this->tags )
 			|| count( $post_ids ) < 12
 		) {
-			WMPGF_Blocks::log(
+			self::log(
 				sprintf(
 					'Seeding finished with fewer items than expected: %d/%d categories, %d/%d tags, %d/12 posts. See prior log lines for individual failures.',
 					count( $category_ids ),
@@ -130,7 +130,7 @@ class WMPGF_Seeder {
 				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_CATEGORY );
 			}
 			if ( is_wp_error( $term ) ) {
-				WMPGF_Blocks::log( sprintf( 'Failed to create category "%s": %s', $name, $term->get_error_message() ) );
+				self::log( sprintf( 'Failed to create category "%s": %s', $name, $term->get_error_message() ) );
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
@@ -161,7 +161,7 @@ class WMPGF_Seeder {
 				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_TAG );
 			}
 			if ( is_wp_error( $term ) ) {
-				WMPGF_Blocks::log( sprintf( 'Failed to create tag "%s": %s', $name, $term->get_error_message() ) );
+				self::log( sprintf( 'Failed to create tag "%s": %s', $name, $term->get_error_message() ) );
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
@@ -257,18 +257,18 @@ class WMPGF_Seeder {
 
 			if ( is_wp_error( $post_id ) || ! $post_id ) {
 				$reason = is_wp_error( $post_id ) ? $post_id->get_error_message() : 'wp_insert_post() returned no ID';
-				WMPGF_Blocks::log( sprintf( 'Failed to create seed post "%s": %s', $title, $reason ) );
+				self::log( sprintf( 'Failed to create seed post "%s": %s', $title, $reason ) );
 				continue;
 			}
 
 			$category_result = wp_set_object_terms( $post_id, $assigned_categories, WMPGF_Post_Type::TAX_CATEGORY );
 			if ( is_wp_error( $category_result ) ) {
-				WMPGF_Blocks::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
+				self::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
 			}
 
 			$tag_result = wp_set_object_terms( $post_id, $assigned_tags, WMPGF_Post_Type::TAX_TAG );
 			if ( is_wp_error( $tag_result ) ) {
-				WMPGF_Blocks::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
+				self::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
 			}
 
 			$attachment_id = $this->create_placeholder_image( $post_id, $primary_category, $index );
@@ -277,7 +277,7 @@ class WMPGF_Seeder {
 				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
 				$attachment_ids[] = $attachment_id;
 			} else {
-				WMPGF_Blocks::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
+				self::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
 			}
 
 			$post_ids[]         = $post_id;
@@ -289,6 +289,17 @@ class WMPGF_Seeder {
 			'created_post_ids' => $created_post_ids,
 			'attachment_ids'   => $attachment_ids,
 		);
+	}
+
+	/**
+	 * Logs seeding failures, only when WP_DEBUG_LOG is enabled.
+	 *
+	 * @param string $message Message to log.
+	 */
+	private static function log( $message ) {
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			error_log( '[Posts Grid + Filter] ' . $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 	}
 
 	/**
@@ -373,7 +384,7 @@ class WMPGF_Seeder {
 		$file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
 
 		if ( false === file_put_contents( $file_path, $svg ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			WMPGF_Blocks::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
+			self::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
 			return 0;
 		}
 
@@ -395,7 +406,7 @@ class WMPGF_Seeder {
 		remove_filter( 'upload_mimes', $allow_svg_mime );
 
 		if ( is_wp_error( $attachment_id ) ) {
-			WMPGF_Blocks::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
+			self::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
 			return 0;
 		}
 
@@ -452,7 +463,7 @@ class WMPGF_Seeder {
 			update_option( self::DEMO_PAGE_OWNED_OPTION, true );
 		} else {
 			$reason = is_wp_error( $page_id ) ? $page_id->get_error_message() : 'wp_insert_post() returned no ID';
-			WMPGF_Blocks::log( 'Failed to create the demo page: ' . $reason );
+			self::log( 'Failed to create the demo page: ' . $reason );
 		}
 	}
 }
