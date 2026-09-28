@@ -1,6 +1,6 @@
 {
   "name": "wm-posts-grid-filter",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Posts Grid + Posts Filter Gutenberg blocks with Interactivity API sync.",
   "license": "GPL-2.0-or-later",
   "private": true,

@@ -50,6 +50,13 @@ class PGF_Seeder {
 	private $tags = array( 'Guide', 'Opinion', 'News', 'Interview', 'Deep Dive', 'Trends' );
 
 	/**
+	 * Author for everything seeded.
+	 *
+	 * @var int
+	 */
+	private $author_id = 0;
+
+	/**
 	 * Runs once on plugin activation. Idempotent: a second activation
 	 * (e.g. deactivate/reactivate) will not create duplicate content.
 	 */
@@ -57,6 +64,8 @@ class PGF_Seeder {
 		if ( get_option( self::SEEDED_OPTION ) ) {
 			return;
 		}
+
+		$this->author_id = $this->default_author_id();
 
 		$categories   = $this->create_terms();
 		$tags         = $this->create_tags();
@@ -240,6 +249,7 @@ class PGF_Seeder {
 					'post_type'    => PGF_Post_Type::POST_TYPE,
 					'post_title'   => $title,
 					'post_status'  => 'publish',
+					'post_author'  => $this->author_id,
 					'post_excerpt' => $this->excerpt_for( $title ),
 					'post_content' => $this->content_for( $title ),
 				)
@@ -279,6 +289,31 @@ class PGF_Seeder {
 			'created_post_ids' => $created_post_ids,
 			'attachment_ids'   => $attachment_ids,
 		);
+	}
+
+	/**
+	 * The activating user, or the first administrator when there is none
+	 * (e.g. activation via WP-CLI), so seeded content never has no author.
+	 *
+	 * @return int User ID, or 0 if the site has no administrator.
+	 */
+	private function default_author_id() {
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			return $user_id;
+		}
+
+		$admins = get_users(
+			array(
+				'role'    => 'administrator',
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+				'number'  => 1,
+				'fields'  => 'ID',
+			)
+		);
+
+		return $admins ? (int) $admins[0] : 0;
 	}
 
 	/**
@@ -346,6 +381,7 @@ class PGF_Seeder {
 			'post_mime_type' => 'image/svg+xml',
 			'post_title'     => $category . ' cover image',
 			'post_status'    => 'inherit',
+			'post_author'    => $this->author_id,
 		);
 
 		// SVG is blocked by default (it can carry scripts). Allowed only for
@@ -406,6 +442,7 @@ class PGF_Seeder {
 				'post_title'   => __( 'Posts Grid + Filter Demo', 'wm-posts-grid-filter' ),
 				'post_name'    => 'posts-grid-filter-demo',
 				'post_status'  => 'publish',
+				'post_author'  => $this->author_id,
 				'post_content' => $content,
 			)
 		);

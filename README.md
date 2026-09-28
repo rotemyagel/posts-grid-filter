@@ -114,6 +114,7 @@ Created automatically on first activation, idempotently (reactivating never dupl
 - **12 posts** — deterministic but overlapping category/tag assignments (4 posts carry two categories, several carry three tags), so filter combinations produce meaningfully different result sets rather than every post matching everything
 - **12 featured images** — generated locally as SVG (a solid color per category plus a text label), so activation needs no network access and no PHP image extension
 - **1 demo page** — `/posts-grid-filter-demo/`, with both blocks already placed
+- **Author** — the user who activates the plugin, or the first administrator when there is none (e.g. activation via WP-CLI)
 
 ---
 

@@ -526,3 +526,11 @@ Verified with curl (slug, `[]`, mixed-case, duplicate and unknown-slug
 URLs; Prev/Next keep the order given) and in the browser (exact
 address-bar and request strings, no `%`, page 2 via Next, no console
 errors).
+## Seeded content always has an author (1.3.2)
+
+Activating through WP-CLI has no logged-in user, so seeded posts, their
+images, and the demo page were saved with author 0 and showed "(No author)"
+in the editor. The seeder now uses the activating user, or the first
+administrator (lowest ID) when there is none. Verified with a WP-CLI
+uninstall and reactivation: all 12 posts, 12 images, and the demo page have
+author ID 1.
