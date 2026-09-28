@@ -13,7 +13,8 @@
     "lint:php": "php vendor/bin/phpcs",
     "lint:php-fix": "php vendor/bin/phpcbf",
     "packages-update": "wp-scripts packages-update",
-    "env": "wp-env"
+    "env": "wp-env",
+    "plugin-zip": "wp-scripts plugin-zip"
   },
   "devDependencies": {
     "@wordpress/env": "^10.0.0",
@@ -22,5 +23,16 @@
   },
   "overrides": {
     "typescript": "5.4.5"
-  }
+  },
+  "files": [
+    "assets",
+    "build",
+    "includes",
+    "templates",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "uninstall.php",
+    "wm-posts-grid-filter.php"
+  ]
 }
