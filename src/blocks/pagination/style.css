@@ -44,3 +44,8 @@
 	cursor: not-allowed;
 	pointer-events: none;
 }
+
+/* Themes often set a font on these elements directly; inherit ours. */
+.wp-block-wmpgf-pagination.wmpgf-pagination :is(a, span, label, select, button) {
+	font-family: inherit;
+}

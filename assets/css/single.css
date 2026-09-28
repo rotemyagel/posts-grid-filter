@@ -4,7 +4,7 @@
 	padding: 2rem 1.5rem 3rem;
 }
 
-.wmpgf-single__thumbnail img {
+.wmpgf-single .wmpgf-single__thumbnail img {
 	width: 100%;
 	height: auto;
 	display: block;
@@ -15,21 +15,21 @@
 	margin-bottom: 1.5rem;
 }
 
-.wmpgf-single__title {
+.wmpgf-single .wmpgf-single__title {
 	margin: 0 0 0.75rem;
 	font-size: var(--wmpgf-text-l);
 	font-weight: var(--wmpgf-weight-strong);
 	line-height: var(--wmpgf-leading-l);
 }
 
-.wmpgf-single__terms {
+.wmpgf-single .wmpgf-single__terms {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
 	margin-bottom: 1rem;
 }
 
-.wmpgf-single__term {
+.wmpgf-single .wmpgf-single__term {
 	display: inline-block;
 	padding: 0.2rem 0.7rem;
 	border-radius: 999px;
@@ -38,22 +38,22 @@
 	background: #f0f0f5;
 }
 
-.wmpgf-single__term--tag {
+.wmpgf-single .wmpgf-single__term--tag {
 	background: transparent;
 	border: 1px solid #ddd;
 	padding: 0.2rem 0.6rem;
 }
 
-.wmpgf-single__content {
+.wmpgf-single .wmpgf-single__content {
 	font-size: var(--wmpgf-text-m);
 	line-height: var(--wmpgf-leading-m);
 }
 
-.wmpgf-single__back {
+.wmpgf-single .wmpgf-single__back {
 	margin-top: 2rem;
 }
 
-.wmpgf-single__back a {
+.wmpgf-single .wmpgf-single__back a {
 	text-decoration: none;
 }
 
@@ -62,4 +62,9 @@
 	.wmpgf-single {
 		padding: 1.25rem 1rem 2rem;
 	}
+}
+
+/* Themes often set a font on these elements directly; inherit ours. */
+.wmpgf-single .wmpgf-single__article :is(h1, p, a) {
+	font-family: inherit;
 }

@@ -94,3 +94,8 @@
 	grid-column: 1 / -1;
 	opacity: 0.7;
 }
+
+/* Themes often set a font on a, p and headings directly; inherit ours. */
+.wp-block-wmpgf-posts-grid .wmpgf-grid :is(h3, p, a) {
+	font-family: inherit;
+}

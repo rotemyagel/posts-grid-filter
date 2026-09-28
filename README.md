@@ -141,6 +141,10 @@ With JavaScript, each change filters instantly over REST and `history.replaceSta
 
 URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?wmpgf_category=design,culture&wmpgf_tag=trends&wmpgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/wmpgf_post?per_page=6&page=1&wmpgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `WMPGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`WMPGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `wmpgf_category[]=design&wmpgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
 
+### The blocks bring their own font, and a theme can turn it off
+
+The blocks use Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there's no third-party request, and it's only downloaded on pages that show a block. A block overriding the theme's font is a real tradeoff, so the font is one token scoped to the plugin's wrappers: a theme that prefers its own sets `--wmpgf-font: inherit`.
+
 ### Single-post permalinks use a fixed base
 
 Single posts live at `/grid-post/{slug}/`. An earlier version put the category first (`/{category}/{slug}/`), but a rewrite rule with no fixed text in front matches every two-segment URL on the site, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief never asked for category URLs, so I removed the feature instead of keeping a custom rewrite tag, permalink filter and canonical redirect for it.

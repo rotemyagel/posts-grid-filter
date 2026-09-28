@@ -98,3 +98,9 @@
 	white-space: nowrap;
 	border: 0;
 }
+
+/* Themes often set a font on these elements directly; inherit ours. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__heading,
+.wp-block-wmpgf-posts-filter .wmpgf-filter__form :is(p, a, legend, label, input, select, button) {
+	font-family: inherit;
+}
