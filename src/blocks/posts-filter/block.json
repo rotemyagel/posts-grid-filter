@@ -9,7 +9,8 @@
 	"keywords": [ "filter", "category", "tag" ],
 	"textdomain": "wm-posts-grid-filter",
 	"attributes": {
-		"heading": { "type": "string", "default": "" }
+		"heading": { "type": "string", "default": "" },
+		"showSearch": { "type": "boolean", "default": true }
 	},
 	"supports": {
 		"html": false,

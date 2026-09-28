@@ -16,6 +16,10 @@
     "heading": {
       "type": "string",
       "default": ""
+    },
+    "showSearch": {
+      "type": "boolean",
+      "default": true
     }
   },
   "supports": {

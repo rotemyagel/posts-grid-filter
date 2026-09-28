@@ -19,21 +19,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$heading = $attributes['heading'] ?? '';
-$filters = WMPGF_Request::filters();
-$count   = WMPGF_Query::count( $filters );
+$heading     = $attributes['heading'] ?? '';
+$show_search = $attributes['showSearch'] ?? true;
+$filters     = WMPGF_Request::filters();
+$count       = WMPGF_Query::count( $filters );
+$count_label = sprintf(
+	/* translators: %s: number of matching posts. */
+	_n( '%s post', '%s posts', $count, 'wm-posts-grid-filter' ),
+	number_format_i18n( $count )
+);
 
-wp_interactivity_config( 'wmpgf', array( 'params' => WMPGF_Request::params() ) );
+// Initial values are printed by PHP below (for first paint and no-JS);
+// the data-wp-* directives take over once the store hydrates.
+wp_interactivity_config(
+	'wmpgf',
+	array(
+		'params'      => WMPGF_Request::params(),
+		'searchDelay' => 300,
+	)
+);
 wp_interactivity_state(
 	'wmpgf',
 	array(
 		'selectedCategories' => $filters['categories'],
 		'selectedTags'       => $filters['tags'],
-		'resultsLabel'       => sprintf(
-			/* translators: %s: number of matching posts. */
-			_n( '%s post', '%s posts', $count, 'wm-posts-grid-filter' ),
-			number_format_i18n( $count )
-		),
+		'search'             => $filters['search'],
+		'resultsLabel'       => $count_label,
 	)
 );
 
@@ -56,14 +67,22 @@ $groups = array(
 	),
 );
 
-$own_params         = array( WMPGF_Request::PAGE_PARAM, WMPGF_Request::CATEGORY_PARAM, WMPGF_Request::TAG_PARAM );
+// The form sets these itself; with search hidden, a search already in the
+// URL is kept as a hidden input instead.
+$own_params = array( WMPGF_Request::PAGE_PARAM, WMPGF_Request::CATEGORY_PARAM, WMPGF_Request::TAG_PARAM );
+if ( $show_search ) {
+	$own_params[] = WMPGF_Request::SEARCH_PARAM;
+}
+
 $clear_url          = WMPGF_Request::url(
 	array(
 		'categories' => array(),
 		'tags'       => array(),
+		'search'     => '',
 	)
 );
-$has_active_filters = $filters['categories'] || $filters['tags'];
+$has_active_filters = $filters['categories'] || $filters['tags'] || '' !== $filters['search'];
+$search_id          = wp_unique_id( 'wmpgf-search-' );
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-filter' ) );
 ?>
@@ -76,11 +95,32 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 		<h3 class="wmpgf-filter__heading"><?php echo esc_html( $heading ); ?></h3>
 	<?php endif; ?>
 
-	<form class="wmpgf-filter__form" method="get" action="<?php echo esc_url( strtok( $clear_url, '?' ) ); ?>">
+	<form
+		class="wmpgf-filter__form"
+		method="get"
+		action="<?php echo esc_url( strtok( $clear_url, '?' ) ); ?>"
+		role="search"
+		data-wp-on--submit="actions.submitSearch"
+	>
 		<?php WMPGF_Request::hidden_inputs( $own_params ); ?>
 
 		<div class="wmpgf-filter__bar">
-			<p class="wmpgf-filter__count" aria-live="polite" data-wp-text="state.resultsLabel"></p>
+			<?php if ( $show_search ) : ?>
+				<label class="wmpgf-sr-only" for="<?php echo esc_attr( $search_id ); ?>"><?php esc_html_e( 'Search posts', 'wm-posts-grid-filter' ); ?></label>
+				<input
+					type="search"
+					id="<?php echo esc_attr( $search_id ); ?>"
+					class="wmpgf-filter__search"
+					name="<?php echo esc_attr( WMPGF_Request::SEARCH_PARAM ); ?>"
+					value="<?php echo esc_attr( $filters['search'] ); ?>"
+					placeholder="<?php esc_attr_e( 'Search posts', 'wm-posts-grid-filter' ); ?>"
+					maxlength="<?php echo (int) WMPGF_Request::MAX_SEARCH_LENGTH; ?>"
+					autocomplete="off"
+					data-wp-on--input="actions.updateSearch"
+					data-wp-bind--value="state.search"
+				/>
+			<?php endif; ?>
+			<p class="wmpgf-filter__count" aria-live="polite" data-wp-text="state.resultsLabel"><?php echo esc_html( $count_label ); ?></p>
 			<a
 				href="<?php echo esc_url( $clear_url ); ?>"
 				class="wmpgf-filter__clear"

@@ -1,5 +1,6 @@
 /*
- * Design tokens shared by every block and the single-post template.
+ * Design tokens (and one utility class) shared by every block and the
+ * single-post template.
  * Registered once as the "wmpgf-tokens" style handle. :where() keeps the
  * specificity at zero, so a theme can override any token, including the
  * font (--wmpgf-font: inherit uses the theme's own).
@@ -38,4 +39,17 @@
 	--wmpgf-weight-strong: 600;
 
 	font-family: var(--wmpgf-font);
+}
+
+/* Shared utility: visually hidden, still read by screen readers. */
+.wmpgf-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }

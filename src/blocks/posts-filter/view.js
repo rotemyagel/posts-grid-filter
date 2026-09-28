@@ -14,11 +14,20 @@ import { navigateTo } from '../../shared/navigate';
 const toggle = ( list, value, on ) =>
 	on ? [ ...list, value ] : list.filter( ( item ) => item !== value );
 
+// Bumped on every keystroke, so only the last one after the pause searches,
+// and so the server's copy of the term doesn't overwrite what's being typed.
+let searchInput = 0;
+let searchPending = false;
+
 function* applyFilters() {
 	yield* navigateTo(
 		state,
 		urlWith(
-			{ categories: state.selectedCategories, tags: state.selectedTags },
+			{
+				categories: state.selectedCategories,
+				tags: state.selectedTags,
+				search: state.search.trim(),
+			},
 			getConfig().params
 		)
 	);
@@ -34,7 +43,9 @@ const { state } = store( 'wmpgf', {
 		},
 		get hideClearFilters() {
 			return (
-				! state.selectedCategories.length && ! state.selectedTags.length
+				! state.selectedCategories.length &&
+				! state.selectedTags.length &&
+				! state.search.trim()
 			);
 		},
 	},
@@ -55,11 +66,38 @@ const { state } = store( 'wmpgf', {
 			);
 			yield* applyFilters();
 		},
+		*updateSearch( event ) {
+			state.search = event.target.value;
+			searchPending = true;
+			const input = ++searchInput;
+			yield new Promise( ( resolve ) =>
+				setTimeout( resolve, getConfig().searchDelay )
+			);
+			if ( input !== searchInput ) {
+				return;
+			}
+			yield* applyFilters();
+			if ( input === searchInput ) {
+				searchPending = false;
+			}
+		},
+		// Enter in the search field: search now instead of after the pause.
+		*submitSearch( event ) {
+			event.preventDefault();
+			const input = ++searchInput;
+			yield* applyFilters();
+			if ( input === searchInput ) {
+				searchPending = false;
+			}
+		},
 		*clearFilters( event ) {
 			event.preventDefault();
+			++searchInput;
 			state.selectedCategories = [];
 			state.selectedTags = [];
+			state.search = '';
 			yield* applyFilters();
+			searchPending = false;
 		},
 	},
 	callbacks: {
@@ -70,6 +108,9 @@ const { state } = store( 'wmpgf', {
 			state.selectedCategories = server.selectedCategories;
 			state.selectedTags = server.selectedTags;
 			state.resultsLabel = server.resultsLabel;
+			if ( ! searchPending ) {
+				state.search = server.search;
+			}
 		},
 	},
 } );

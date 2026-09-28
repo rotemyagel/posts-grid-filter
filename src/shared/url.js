@@ -25,6 +25,7 @@ const isParam = ( rawKey, name ) => {
  * @param {Object}   changes              Params to set.
  * @param {string[]} [changes.categories] Category slugs.
  * @param {string[]} [changes.tags]       Tag slugs.
+ * @param {string}   [changes.search]     Search term.
  * @param {number}   [changes.page]       Page number; 1 omits the param.
  * @param {Object}   params               Param names, from getConfig().params.
  * @return {string} Path and query.
@@ -51,6 +52,12 @@ export const urlWith = ( changes, params ) => {
 			parts.push( `${ params[ key ] }=${ changes[ key ].join( ',' ) }` );
 		}
 	} );
+	// Free text, so it is the one value that must be encoded.
+	if ( changes.search ) {
+		parts.push(
+			`${ params.search }=${ encodeURIComponent( changes.search ) }`
+		);
+	}
 	if ( changes.page > 1 ) {
 		parts.push( `${ params.page }=${ changes.page }` );
 	}

@@ -24,6 +24,27 @@
 	min-height: 40px;
 }
 
+.wp-block-wmpgf-posts-filter .wmpgf-filter__search {
+	flex: 1 1 240px;
+	box-sizing: border-box;
+	min-width: 0;
+	max-width: 420px;
+	height: 40px;
+	margin: 0;
+	padding: 0 16px;
+	border: 1px solid #ddd;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font-size: var(--wmpgf-text-m);
+	line-height: 1;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__search:focus-visible {
+	outline: 2px solid #1e1e1e;
+	outline-offset: 2px;
+}
+
 .wp-block-wmpgf-posts-filter .wmpgf-filter__count {
 	margin: 0 0 0 auto;
 	font-size: var(--wmpgf-text-s);

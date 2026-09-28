@@ -23,6 +23,12 @@ class WMPGF_Request {
 	const PAGE_PARAM     = 'wmpgf-page';
 	const CATEGORY_PARAM = 'wmpgf-category';
 	const TAG_PARAM      = 'wmpgf-tag';
+	const SEARCH_PARAM   = 'wmpgf-search';
+
+	/**
+	 * Longest search term kept; anything longer is cut.
+	 */
+	const MAX_SEARCH_LENGTH = 100;
 
 	/**
 	 * Existing term slugs per taxonomy, cached for the request.
@@ -41,6 +47,7 @@ class WMPGF_Request {
 			'page'       => self::PAGE_PARAM,
 			'categories' => self::CATEGORY_PARAM,
 			'tags'       => self::TAG_PARAM,
+			'search'     => self::SEARCH_PARAM,
 		);
 	}
 
@@ -58,15 +65,32 @@ class WMPGF_Request {
 	}
 
 	/**
-	 * The current filter selection.
+	 * The current filter selection. Search, categories and tags combine
+	 * with AND.
 	 *
-	 * @return array{categories: string[], tags: string[]}
+	 * @return array{categories: string[], tags: string[], search: string}
 	 */
 	public static function filters() {
 		return array(
 			'categories' => self::slugs( self::CATEGORY_PARAM, WMPGF_Post_Type::TAX_CATEGORY ),
 			'tags'       => self::slugs( self::TAG_PARAM, WMPGF_Post_Type::TAX_TAG ),
+			'search'     => self::search(),
 		);
+	}
+
+	/**
+	 * Search term from ?wmpgf-search=, as plain text.
+	 *
+	 * @return string Empty if none.
+	 */
+	private static function search() {
+		if ( ! isset( $_GET[ self::SEARCH_PARAM ] ) || ! is_string( $_GET[ self::SEARCH_PARAM ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return '';
+		}
+
+		$search = sanitize_text_field( wp_unslash( $_GET[ self::SEARCH_PARAM ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		return trim( mb_substr( $search, 0, self::MAX_SEARCH_LENGTH ) );
 	}
 
 	/**
@@ -109,7 +133,7 @@ class WMPGF_Request {
 	 * Mirrors urlWith() in src/shared/url.js.
 	 *
 	 * @param array $changes Keys of params(): 'categories' and 'tags' take
-	 *                       slug arrays, 'page' an int.
+	 *                       slug arrays, 'search' a string, 'page' an int.
 	 * @return string Unescaped URL.
 	 */
 	public static function url( array $changes ) {
@@ -137,6 +161,10 @@ class WMPGF_Request {
 			if ( ! empty( $changes[ $key ] ) ) {
 				$query[] = $names[ $key ] . '=' . implode( ',', array_map( 'sanitize_title', $changes[ $key ] ) );
 			}
+		}
+		// Free text, so it is the one value that must be encoded.
+		if ( isset( $changes['search'] ) && '' !== $changes['search'] ) {
+			$query[] = self::SEARCH_PARAM . '=' . rawurlencode( $changes['search'] );
 		}
 		if ( isset( $changes['page'] ) && $changes['page'] > 1 ) {
 			$query[] = self::PAGE_PARAM . '=' . (int) $changes['page'];

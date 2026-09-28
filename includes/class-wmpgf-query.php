@@ -124,6 +124,10 @@ class WMPGF_Query {
 			$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 		}
 
+		if ( '' !== $filters['search'] ) {
+			$args['s'] = $filters['search'];
+		}
+
 		return $args;
 	}
 

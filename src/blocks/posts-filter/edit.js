@@ -1,7 +1,12 @@
 import './style.css';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, TextControl, Spinner } from '@wordpress/components';
+import {
+	PanelBody,
+	TextControl,
+	ToggleControl,
+	Spinner,
+} from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 
@@ -30,7 +35,7 @@ function TermGroup( { legend, terms } ) {
 }
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { heading } = attributes;
+	const { heading, showSearch } = attributes;
 	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
 
 	const { categories, tags, total } = useSelect( ( select ) => {
@@ -73,6 +78,14 @@ export default function Edit( { attributes, setAttributes } ) {
 							setAttributes( { heading: value } )
 						}
 					/>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Show search', 'wm-posts-grid-filter' ) }
+						checked={ showSearch }
+						onChange={ ( value ) =>
+							setAttributes( { showSearch: value } )
+						}
+					/>
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
@@ -81,6 +94,21 @@ export default function Edit( { attributes, setAttributes } ) {
 				) }
 				<div className="wmpgf-filter__form">
 					<div className="wmpgf-filter__bar">
+						{ showSearch && (
+							<input
+								type="search"
+								className="wmpgf-filter__search"
+								placeholder={ __(
+									'Search posts',
+									'wm-posts-grid-filter'
+								) }
+								aria-label={ __(
+									'Search posts',
+									'wm-posts-grid-filter'
+								) }
+								disabled
+							/>
+						) }
 						{ total !== null && (
 							<p className="wmpgf-filter__count">
 								{ sprintf(

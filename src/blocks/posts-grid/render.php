@@ -24,12 +24,13 @@ if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
 }
 
-$result = WMPGF_Query::page(
-	WMPGF_Request::filters(),
+$filters = WMPGF_Request::filters();
+$result  = WMPGF_Query::page(
+	$filters,
 	$attributes['postsPerPage'] ?? 6,
 	WMPGF_Request::page()
 );
-$query  = $result['query'];
+$query   = $result['query'];
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-grid-block' ) );
 ?>
@@ -62,7 +63,16 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-gri
 			wp_reset_postdata();
 			?>
 		<?php else : ?>
-			<p class="wmpgf-grid__empty"><?php esc_html_e( 'No posts match these filters.', 'wm-posts-grid-filter' ); ?></p>
+			<p class="wmpgf-grid__empty">
+				<?php
+				if ( '' !== $filters['search'] ) {
+					/* translators: %s: the search term. */
+					printf( esc_html__( 'No posts match "%s".', 'wm-posts-grid-filter' ), esc_html( $filters['search'] ) );
+				} else {
+					esc_html_e( 'No posts match these filters.', 'wm-posts-grid-filter' );
+				}
+				?>
+			</p>
 		<?php endif; ?>
 	</div>
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
