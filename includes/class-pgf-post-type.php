@@ -18,14 +18,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PGF_Post_Type {
 
-	const POST_TYPE   = 'pgf_post';
+	const POST_TYPE    = 'pgf_post';
 	const TAX_CATEGORY = 'pgf_category';
-	const TAX_TAG       = 'pgf_tag';
+	const TAX_TAG      = 'pgf_tag';
 
 	/**
 	 * Hooks registration into WordPress.
 	 *
-	 * register_taxonomies() is deliberately hooked before register_post_type()
+	 * Registration order matters here: `register_taxonomies()` is deliberately
+	 * hooked before `register_post_type()`
 	 * (both otherwise default priority 10, so registration order here is
 	 * registration order in the compiled rewrite rules too): pgf_category's
 	 * own archive rule (prefixed with the literal "pgf_category/") and the
@@ -176,14 +177,23 @@ class PGF_Post_Type {
 			return;
 		}
 
+		/*
+		 * Neither value is ever output -- $requested_path is only ever
+		 * compared for equality below, and $query_string is only ever
+		 * appended to a URL passed to wp_safe_redirect(), which validates
+		 * the destination host itself -- so there's nothing here for
+		 * sanitize_text_field()-style sanitizing to protect against; the
+		 * wp_parse_url()/wp_unslash() calls already applied are what
+		 * actually matters for correctness.
+		 */
 		$canonical_path = (string) wp_parse_url( $canonical, PHP_URL_PATH );
-		$requested_path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$requested_path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		if ( untrailingslashit( $requested_path ) === untrailingslashit( $canonical_path ) ) {
 			return;
 		}
 
-		$query_string = isset( $_SERVER['QUERY_STRING'] ) ? (string) wp_unslash( $_SERVER['QUERY_STRING'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$query_string = isset( $_SERVER['QUERY_STRING'] ) ? (string) wp_unslash( $_SERVER['QUERY_STRING'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$redirect_to  = $query_string ? $canonical . '?' . $query_string : $canonical;
 
 		wp_safe_redirect( $redirect_to, 301 );

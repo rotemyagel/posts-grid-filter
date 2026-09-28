@@ -11,7 +11,6 @@
  * an earlier GD-based version of this file) no PHP image extension either:
  * SVG is plain XML text, so there is nothing to fall back to or skip.
  *
-
  * @package PostsGridFilter
  */
 
@@ -24,8 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PGF_Seeder {
 
-	const SEEDED_OPTION      = 'pgf_seeded';
-	const DEMO_PAGE_OPTION   = 'pgf_demo_page_id';
+	const SEEDED_OPTION    = 'pgf_seeded';
+	const DEMO_PAGE_OPTION = 'pgf_demo_page_id';
 
 	/**
 	 * Options recording exactly which posts/attachments this seeder created,
@@ -71,8 +70,8 @@ class PGF_Seeder {
 			return;
 		}
 
-		$categories = $this->create_terms();
-		$tags       = $this->create_tags();
+		$categories   = $this->create_terms();
+		$tags         = $this->create_tags();
 		$category_ids = $categories['ids'];
 		$tag_ids      = $tags['ids'];
 
@@ -96,6 +95,7 @@ class PGF_Seeder {
 		$this->create_demo_page();
 
 		update_option( self::SEEDED_OPTION, true );
+
 		/*
 		 * Only genuinely-created IDs are persisted here, not every ID these
 		 * calls returned -- an adopted pre-existing post/term (matched by
@@ -223,7 +223,7 @@ class PGF_Seeder {
 	 */
 	private function create_posts( $category_ids, $tag_ids ) {
 		$category_names = array_keys( $category_ids );
-		$tag_names       = array_keys( $tag_ids );
+		$tag_names      = array_keys( $tag_ids );
 
 		$titles = array(
 			'The Future of Headless WordPress',
@@ -245,14 +245,27 @@ class PGF_Seeder {
 		$attachment_ids   = array();
 
 		foreach ( $titles as $index => $title ) {
-			$existing = get_page_by_title( $title, OBJECT, PGF_Post_Type::POST_TYPE );
-			if ( $existing ) {
-				$post_ids[] = $existing->ID;
+			// get_page_by_title() is deprecated since WP 6.2.0; WP_Query's
+			// own 'title' parameter does the same exact-match lookup.
+			$existing = new WP_Query(
+				array(
+					'post_type'              => PGF_Post_Type::POST_TYPE,
+					'title'                  => $title,
+					'post_status'            => 'any',
+					'posts_per_page'         => 1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				)
+			);
+			if ( $existing->have_posts() ) {
+				$post_ids[] = (int) $existing->posts[0];
 				continue;
 			}
 
-			$primary_category = $category_names[ $index % count( $category_names ) ];
-			$secondary_index   = ( $index + 1 ) % count( $category_names );
+			$primary_category    = $category_names[ $index % count( $category_names ) ];
+			$secondary_index     = ( $index + 1 ) % count( $category_names );
 			$assigned_categories = array( $category_ids[ $primary_category ] );
 			if ( 0 === $index % 3 ) {
 				$assigned_categories[] = $category_ids[ $category_names[ $secondary_index ] ];
@@ -308,7 +321,7 @@ class PGF_Seeder {
 		return array(
 			'post_ids'         => $post_ids,
 			'created_post_ids' => $created_post_ids,
-			'attachment_ids' => $attachment_ids,
+			'attachment_ids'   => $attachment_ids,
 		);
 	}
 
@@ -464,11 +477,11 @@ class PGF_Seeder {
 			return;
 		}
 
-		$content = "<!-- wp:heading --><h2>" . esc_html__( 'Browse the grid', 'wm-posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
+		$content = '<!-- wp:heading --><h2>' . esc_html__( 'Browse the grid', 'wm-posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
 			"<!-- wp:pgf/posts-filter /-->\n\n" .
 			"<!-- wp:pgf/posts-grid {\"columns\":3,\"postsPerPage\":6} -->\n" .
 			"<!-- wp:pgf/pagination /-->\n" .
-			"<!-- /wp:pgf/posts-grid -->";
+			'<!-- /wp:pgf/posts-grid -->';
 
 		$page_id = wp_insert_post(
 			array(

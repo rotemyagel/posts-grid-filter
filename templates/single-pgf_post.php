@@ -48,10 +48,10 @@ get_header();
 
 				<?php if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) : ?>
 					<div class="pgf-single__terms pgf-single__terms--categories">
-						<?php foreach ( $categories as $term ) : ?>
-							<?php $link = get_term_link( $term ); ?>
-							<?php if ( ! is_wp_error( $link ) ) : ?>
-								<a href="<?php echo esc_url( $link ); ?>" class="pgf-single__term"><?php echo esc_html( $term->name ); ?></a>
+						<?php foreach ( $categories as $category_term ) : ?>
+							<?php $category_link = get_term_link( $category_term ); ?>
+							<?php if ( ! is_wp_error( $category_link ) ) : ?>
+								<a href="<?php echo esc_url( $category_link ); ?>" class="pgf-single__term"><?php echo esc_html( $category_term->name ); ?></a>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
@@ -64,10 +64,10 @@ get_header();
 
 			<?php if ( ! empty( $tags ) && ! is_wp_error( $tags ) ) : ?>
 				<div class="pgf-single__terms pgf-single__terms--tags">
-					<?php foreach ( $tags as $term ) : ?>
-						<?php $link = get_term_link( $term ); ?>
-						<?php if ( ! is_wp_error( $link ) ) : ?>
-							<a href="<?php echo esc_url( $link ); ?>" class="pgf-single__term pgf-single__term--tag">#<?php echo esc_html( $term->name ); ?></a>
+					<?php foreach ( $tags as $tag_term ) : ?>
+						<?php $tag_link = get_term_link( $tag_term ); ?>
+						<?php if ( ! is_wp_error( $tag_link ) ) : ?>
+							<a href="<?php echo esc_url( $tag_link ); ?>" class="pgf-single__term pgf-single__term--tag">#<?php echo esc_html( $tag_term->name ); ?></a>
 						<?php endif; ?>
 					<?php endforeach; ?>
 				</div>

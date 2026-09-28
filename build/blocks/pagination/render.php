@@ -53,7 +53,8 @@ $current_page = PGF_Blocks::clamp_page( PGF_Blocks::get_requested_page(), $total
 wp_interactivity_state(
 	'posts-grid-filter',
 	array(
-		'totalPages' => $total_pages,
+		'totalPages'            => $total_pages,
+
 		/*
 		 * A plain {current}/{total} placeholder template rather than a
 		 * PHP-side sprintf() call, since the label needs re-rendering
@@ -102,8 +103,8 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 		printf(
 			/* translators: 1: current page, 2: total pages */
 			esc_html__( 'Page %1$d of %2$d', 'wm-posts-grid-filter' ),
-			$current_page,
-			$total_pages
+			(int) $current_page,
+			(int) $total_pages
 		);
 		?>
 	</span>

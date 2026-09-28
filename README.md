@@ -41,6 +41,7 @@ Built for the WordPress Web Development Technical Assessment.
 | WordPress | 6.5+ | Uses the Interactivity API and Script Modules |
 | PHP | 7.4+ | No image library (GD/Imagick) needed — demo images are generated as SVG |
 | Node.js | any current LTS | Only needed if rebuilding from source |
+| Composer | any current version | Only needed to run the PHP linter (`npm run lint:php`) — not a runtime dependency |
 
 ### From the packaged zip / a checked-out repo with `build/` present
 
@@ -80,6 +81,14 @@ npm run start        # Webpack watch — auto-rebuild on src/ changes
 npm run lint:js      # ESLint via @wordpress/scripts
 npm run env stop     # Stop containers (preserves DB)
 npm run env destroy  # Wipe containers + DB
+```
+
+PHP linting is Composer-managed, separately from the npm-based JS tooling above:
+
+```bash
+composer install      # once, installs PHPCS + WordPress Coding Standards
+npm run lint:php       # checks; exits clean
+npm run lint:php-fix   # auto-fixes what it can
 ```
 
 ---
@@ -150,6 +159,8 @@ wm-posts-grid-filter/
 ├── uninstall.php                  Ownership-aware demo cleanup on plugin delete
 ├── .wp-env.json                   wp-env (Docker) config
 ├── package.json                   Dev dependencies, npm scripts
+├── composer.json                  Dev-only: PHPCS + WordPress Coding Standards
+├── phpcs.xml.dist                 PHPCS ruleset for this plugin
 ├── README.md                      This file
 ├── CHANGELOG.md                   Full development history, both review passes
 │
@@ -193,7 +204,7 @@ wm-posts-grid-filter/
 
 ## ✅ Coding standards
 
-- **PHP** — WordPress Coding Standards conventions: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout.
+- **PHP** — checked with the actual [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards) ruleset via PHPCS (`phpcs.xml.dist`, `npm run lint:php`), not just followed by convention: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout. One rule is disabled with a documented reason in `phpcs.xml.dist` — the naming check for `templates/single-pgf_post.php`, whose underscore is required by WordPress's own template-hierarchy convention (`single-{$post_type}.php`), not a style inconsistency.
 - **JavaScript** — `@wordpress/scripts` ESLint config. Only `@wordpress/*` packages; no external React libraries.
 - **i18n** — every user-facing string wrapped with `__()`/`_e()`/`esc_html__()`/`esc_html_e()` under the `wm-posts-grid-filter` text domain, including strings rendered client-side (passed through from PHP via `wp_interactivity_state()`, not hardcoded in JS).
 - **Security** — output escaping on every dynamic value; client-rendered cards build real DOM nodes with element properties rather than string-interpolated HTML, so a title can't break out of an attribute.

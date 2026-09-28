@@ -37,8 +37,8 @@ $heading = isset( $attributes['heading'] ) && '' !== $attributes['heading']
 	: __( 'Filter posts', 'wm-posts-grid-filter' );
 
 $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
-$selected_tags        = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
-$has_active_filters   = $selected_categories || $selected_tags;
+$selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
+$has_active_filters  = $selected_categories || $selected_tags;
 
 /*
  * A real, crawlable link to the unfiltered page -- not just a JS-only
@@ -85,18 +85,18 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 		<fieldset class="pgf-filter__group">
 			<legend><?php esc_html_e( 'Categories', 'wm-posts-grid-filter' ); ?></legend>
 			<div class="pgf-filter__options">
-				<?php foreach ( $categories as $term ) : ?>
+				<?php foreach ( $categories as $category_term ) : ?>
 					<label
 						class="pgf-filter__option"
-						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $term->term_id ) ) ); ?>'
+						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $category_term->term_id ) ) ); ?>'
 					>
 						<input
 							type="checkbox"
-							<?php checked( in_array( (int) $term->term_id, $selected_categories, true ) ); ?>
+							<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
 							data-wp-on--change="actions.toggleCategory"
 							data-wp-bind--checked="state.isCategoryChecked"
 						/>
-						<?php echo esc_html( $term->name ); ?>
+						<?php echo esc_html( $category_term->name ); ?>
 					</label>
 				<?php endforeach; ?>
 			</div>
@@ -107,18 +107,18 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 		<fieldset class="pgf-filter__group">
 			<legend><?php esc_html_e( 'Tags', 'wm-posts-grid-filter' ); ?></legend>
 			<div class="pgf-filter__options">
-				<?php foreach ( $tags as $term ) : ?>
+				<?php foreach ( $tags as $tag_term ) : ?>
 					<label
 						class="pgf-filter__option"
-						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $term->term_id ) ) ); ?>'
+						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $tag_term->term_id ) ) ); ?>'
 					>
 						<input
 							type="checkbox"
-							<?php checked( in_array( (int) $term->term_id, $selected_tags, true ) ); ?>
+							<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
 							data-wp-on--change="actions.toggleTag"
 							data-wp-bind--checked="state.isTagChecked"
 						/>
-						<?php echo esc_html( $term->name ); ?>
+						<?php echo esc_html( $tag_term->name ); ?>
 					</label>
 				<?php endforeach; ?>
 			</div>

@@ -352,3 +352,64 @@ counts, `debug.log` clean, real-browser check that both the server-rendered
 first paint and a client-side filtered re-render display the images
 correctly with zero console errors) and by re-running `npm run lint:js`
 to a clean, zero-error exit after the JS fixes.
+
+## Fifth pass: actually running WordPress Coding Standards
+
+The README claimed WPCS compliance "by convention" throughout, without an
+automated check ever having been run against this plugin -- PHPCS itself
+was available on the development machine, but the WordPress ruleset
+specifically was never installed. Set this up properly rather than
+continuing to assert it: a project-local `composer.json` (dev-only,
+`vendor/` gitignored the same way `node_modules/` already is) pulling in
+`squizlabs/php_codesniffer` + `wp-coding-standards/wpcs` (3.4.1, current
+stable) + the Dealerdirect Composer installer, plus a `phpcs.xml.dist`
+scoped to the plugin's own PHP and targeting `testVersion=7.4-` to match
+the plugin header's declared minimum. `npm run lint:php` / `lint:php-fix`
+wrap it, alongside the existing `lint:js`/`lint:css`.
+
+First run found 26 real issues across 6 files. `phpcbf` auto-fixed 16
+(equals-sign/array-arrow alignment, doc-comment spacing, unnecessary
+double-quoted strings). The rest were fixed by hand:
+
+- **A real deprecated-function usage**: `create_posts()`'s idempotency
+  check used `get_page_by_title()`, deprecated since WordPress 6.2 (this
+  plugin's own minimum is 6.5) -- every seed check was silently triggering
+  a `_deprecated_function()` notice. Replaced with `WP_Query`'s own
+  `title` parameter, which does the same exact-match lookup, per core's
+  own deprecation notice.
+- **Two `$_SERVER` sanitization findings** in the canonical-redirect
+  method: the values are never output, only compared for equality or
+  passed to `wp_safe_redirect()` (which validates the destination host
+  itself), so there was nothing for further sanitizing to protect against
+  beyond the `wp_unslash()`/`wp_parse_url()` already applied -- documented
+  inline and the specific sniff code added to the existing
+  `phpcs:ignore` comments (they were already there for a different,
+  adjacent sniff, which is why this hadn't been caught before).
+- **Nine "overriding a WordPress global is prohibited" findings**
+  (`$term`, `$link`, `$post_type`, `$post_id`, `$taxonomy` used as local
+  variable names in `posts-filter/render.php`, `templates/single-pgf_post.php`,
+  and `uninstall.php`) -- renamed to non-colliding names
+  (`$category_term`, `$tag_term`, `$category_link`, `$tag_link`,
+  `$pgf_post_type`, `$seeded_post_id`, `$taxonomy_name`, `$found_term`).
+  None of these were an active bug (all well inside function/file scope,
+  never actually read back through the global), but the sniff exists to
+  catch exactly this kind of footgun before a refactor turns it into one.
+
+One finding was a genuine false positive, given a documented, targeted
+exclusion rather than silently disabled everywhere: WPCS's filename sniff
+wants `templates/single-pgf-post.php` (hyphens only), but WordPress's own
+template-hierarchy convention requires `single-{$post_type}.php` exactly
+-- and the post type is `pgf_post` (underscore), so the "wrong" filename
+is the one that actually works, matching the exact string
+`PGF_Single_Template`'s own `locate_template()` call looks for so a theme
+can override it the same way core's own hierarchy expects. Renaming the
+file to satisfy the sniff would have silently broken that override
+mechanism.
+
+`vendor/bin/phpcs` now exits clean: 0 errors, 0 warnings, across all 11
+scanned files. Verified the fixes didn't change behavior with a full
+fresh-install cycle (12 posts, 4 categories, an explicit second
+reactivation cycle to specifically re-exercise the replaced
+`get_page_by_title()` idempotency check -- confirmed no duplicate posts
+and no deprecation notice in `debug.log`) and a real-browser check with
+zero console errors.

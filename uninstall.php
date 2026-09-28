@@ -39,9 +39,9 @@ require_once __DIR__ . '/includes/class-pgf-post-type.php';
  * reading the code: posts were correctly removed, but all 10 taxonomy terms
  * were left behind untouched.
  */
-$post_type = new PGF_Post_Type();
-$post_type->register_post_type();
-$post_type->register_taxonomies();
+$pgf_post_type = new PGF_Post_Type();
+$pgf_post_type->register_post_type();
+$pgf_post_type->register_taxonomies();
 
 /*
  * Deleted only if this plugin actually created it (pgf_demo_page_owned).
@@ -74,9 +74,9 @@ $seeded_post_ids       = get_option( 'pgf_seeded_post_ids' );
 $seeded_attachment_ids = get_option( 'pgf_seeded_attachment_ids' );
 
 if ( is_array( $seeded_post_ids ) ) {
-	foreach ( $seeded_post_ids as $post_id ) {
-		if ( PGF_Post_Type::POST_TYPE === get_post_type( $post_id ) ) {
-			wp_delete_post( (int) $post_id, true );
+	foreach ( $seeded_post_ids as $seeded_post_id ) {
+		if ( PGF_Post_Type::POST_TYPE === get_post_type( $seeded_post_id ) ) {
+			wp_delete_post( (int) $seeded_post_id, true );
 		}
 	}
 }
@@ -108,10 +108,10 @@ if ( is_array( $seeded_term_ids ) ) {
 		// A given ID only ever belongs to whichever one of these two
 		// taxonomies it was actually inserted into; checking both is just
 		// how that's found back out, not a sign it could be ambiguous.
-		foreach ( array( PGF_Post_Type::TAX_CATEGORY, PGF_Post_Type::TAX_TAG ) as $taxonomy ) {
-			$term = get_term( $term_id, $taxonomy );
-			if ( $term && ! is_wp_error( $term ) ) {
-				wp_delete_term( $term_id, $taxonomy );
+		foreach ( array( PGF_Post_Type::TAX_CATEGORY, PGF_Post_Type::TAX_TAG ) as $taxonomy_name ) {
+			$found_term = get_term( $term_id, $taxonomy_name );
+			if ( $found_term && ! is_wp_error( $found_term ) ) {
+				wp_delete_term( $term_id, $taxonomy_name );
 				break;
 			}
 		}
