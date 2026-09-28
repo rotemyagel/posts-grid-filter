@@ -57,8 +57,12 @@ class WMPGF_Seeder {
 	private $author_id = 0;
 
 	/**
-	 * Runs once on plugin activation. Idempotent: a second activation
-	 * (e.g. deactivate/reactivate) will not create duplicate content.
+	 * Runs on plugin activation until one run completes. Every step reuses
+	 * what already exists (terms by name, posts by title, the page by slug),
+	 * so a retry after a partial failure fills the gaps without duplicates.
+	 *
+	 * On multisite this seeds only the site it runs on; network activation
+	 * seeds the main site. See the README's known limitations.
 	 */
 	public function seed() {
 		if ( get_option( self::SEEDED_OPTION ) ) {
@@ -66,71 +70,89 @@ class WMPGF_Seeder {
 		}
 
 		$this->author_id = $this->default_author_id();
+		$demo_posts      = require WMPGF_DIR . 'includes/demo-content.php';
 
-		$categories   = $this->create_terms();
-		$tags         = $this->create_tags();
+		$categories   = $this->create_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
+		$tags         = $this->create_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
 		$category_ids = $categories['ids'];
 		$tag_ids      = $tags['ids'];
 
-		// Without terms, create_posts() would divide by zero. Not marking the
-		// run as seeded lets the next activation retry.
+		// Recorded before anything can stop the run, so uninstall still
+		// removes what this attempt created.
+		self::remember( self::SEEDED_TERM_IDS_OPTION, array_merge( $categories['created_ids'], $tags['created_ids'] ) );
+
 		if ( ! $category_ids || ! $tag_ids ) {
-			self::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
+			self::log( 'Seeding stopped: no usable categories or tags, so no demo posts were created. The next activation will retry.' );
 			return;
 		}
 
-		$result         = $this->create_posts( $category_ids, $tag_ids );
-		$post_ids       = $result['post_ids'];
-		$attachment_ids = $result['attachment_ids'];
+		$result = $this->create_posts( $demo_posts, $category_ids, $tag_ids );
+		self::remember( self::SEEDED_POST_IDS_OPTION, $result['created_post_ids'] );
+		self::remember( self::SEEDED_ATTACHMENT_IDS_OPTION, $result['attachment_ids'] );
 
 		$this->create_demo_page();
 
-		update_option( self::SEEDED_OPTION, true );
+		$complete = count( $category_ids ) === count( $this->categories )
+			&& count( $tag_ids ) === count( $this->tags )
+			&& count( $result['post_ids'] ) === count( $demo_posts )
+			&& get_option( self::DEMO_PAGE_OPTION );
 
-		// Created IDs only: adopted pre-existing posts/terms aren't ours to delete.
-		update_option( self::SEEDED_POST_IDS_OPTION, $result['created_post_ids'] );
-		update_option( self::SEEDED_ATTACHMENT_IDS_OPTION, $attachment_ids );
-		update_option(
-			self::SEEDED_TERM_IDS_OPTION,
-			array_merge( $categories['created_ids'], $tags['created_ids'] )
-		);
-
-		if ( count( $category_ids ) < count( $this->categories )
-			|| count( $tag_ids ) < count( $this->tags )
-			|| count( $post_ids ) < 12
-		) {
+		if ( ! $complete ) {
 			self::log(
 				sprintf(
-					'Seeding finished with fewer items than expected: %d/%d categories, %d/%d tags, %d/12 posts. See prior log lines for individual failures.',
+					'Seeding incomplete: %d/%d categories, %d/%d tags, %d/%d posts, demo page %s. See the log lines above for each failure. The next activation will retry.',
 					count( $category_ids ),
 					count( $this->categories ),
 					count( $tag_ids ),
 					count( $this->tags ),
-					count( $post_ids )
+					count( $result['post_ids'] ),
+					count( $demo_posts ),
+					get_option( self::DEMO_PAGE_OPTION ) ? 'created' : 'missing'
 				)
 			);
+			return;
 		}
+
+		update_option( self::SEEDED_OPTION, true );
 	}
 
 	/**
-	 * Creates the wmpgf_category terms, reusing any that already exist.
+	 * Adds IDs to one of the "created by the seeder" lists. Merged, not
+	 * replaced: on a retry, posts from the earlier attempt are adopted
+	 * rather than created, and must stay on the list for uninstall.
 	 *
+	 * @param string $option Option name.
+	 * @param int[]  $ids    IDs created by this run.
+	 */
+	private static function remember( $option, array $ids ) {
+		$known = get_option( $option, array() );
+		$known = is_array( $known ) ? $known : array();
+
+		// Not autoloaded: only uninstall.php reads these.
+		update_option( $option, array_values( array_unique( array_merge( $known, $ids ) ) ), false );
+	}
+
+	/**
+	 * Creates terms in one taxonomy, reusing any that already exist.
+	 *
+	 * @param string[] $names    Term names.
+	 * @param string   $taxonomy Taxonomy name.
 	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` maps
 	 *              name => term_id for every usable term; `created_ids` holds
 	 *              only the ones inserted by this call.
 	 */
-	private function create_terms() {
+	private function create_terms( array $names, $taxonomy ) {
 		$ids         = array();
 		$created_ids = array();
 
-		foreach ( array_keys( $this->categories ) as $name ) {
-			$existing = term_exists( $name, WMPGF_Post_Type::TAX_CATEGORY );
+		foreach ( $names as $name ) {
+			$existing = term_exists( $name, $taxonomy );
 			$term     = $existing;
 			if ( ! $term ) {
-				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_CATEGORY );
+				$term = wp_insert_term( $name, $taxonomy );
 			}
 			if ( is_wp_error( $term ) ) {
-				self::log( sprintf( 'Failed to create category "%s": %s', $name, $term->get_error_message() ) );
+				self::log( sprintf( 'Failed to create %s term "%s": %s', $taxonomy, $name, $term->get_error_message() ) );
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
@@ -146,49 +168,17 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Creates the wmpgf_tag terms, reusing any that already exist.
+	 * Inserts the demo posts.
 	 *
-	 * @return array{ids: array<string, int>, created_ids: int[]}
-	 */
-	private function create_tags() {
-		$ids         = array();
-		$created_ids = array();
-
-		foreach ( $this->tags as $name ) {
-			$existing = term_exists( $name, WMPGF_Post_Type::TAX_TAG );
-			$term     = $existing;
-			if ( ! $term ) {
-				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_TAG );
-			}
-			if ( is_wp_error( $term ) ) {
-				self::log( sprintf( 'Failed to create tag "%s": %s', $name, $term->get_error_message() ) );
-				continue;
-			}
-			$ids[ $name ] = (int) $term['term_id'];
-			if ( ! $existing ) {
-				$created_ids[] = (int) $term['term_id'];
-			}
-		}
-
-		return array(
-			'ids'         => $ids,
-			'created_ids' => $created_ids,
-		);
-	}
-
-	/**
-	 * Inserts the demo posts from includes/demo-content.php.
-	 *
-	 * @param array $category_ids Category name => term_id.
-	 * @param array $tag_ids      Tag name => term_id.
+	 * @param array[] $demo_posts   From includes/demo-content.php.
+	 * @param array   $category_ids Category name => term_id.
+	 * @param array   $tag_ids      Tag name => term_id.
 	 * @return array{post_ids: int[], created_post_ids: int[], attachment_ids: int[]}
 	 *              `post_ids` includes adopted posts; the other two hold only
 	 *              what this call inserted.
 	 */
-	private function create_posts( $category_ids, $tag_ids ) {
-		$demo_posts = require WMPGF_DIR . 'includes/demo-content.php';
-
-		$post_ids         = array();
+	private function create_posts( array $demo_posts, $category_ids, $tag_ids ) {
+		$post_ids        = array();
 		$created_post_ids = array();
 		$attachment_ids   = array();
 
