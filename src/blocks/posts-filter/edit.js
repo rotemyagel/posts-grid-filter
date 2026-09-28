@@ -10,9 +10,9 @@ export default function Edit( { attributes, setAttributes } ) {
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Filter settings', 'rotem-posts-grid-filter' ) }>
+				<PanelBody title={ __( 'Filter settings', 'wm-posts-grid-filter' ) }>
 					<TextControl
-						label={ __( 'Heading', 'rotem-posts-grid-filter' ) }
+						label={ __( 'Heading', 'wm-posts-grid-filter' ) }
 						value={ heading }
 						onChange={ ( value ) => setAttributes( { heading: value } ) }
 					/>
@@ -24,7 +24,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					<em>
 						{ __(
 							'Category and tag checkboxes render on the frontend, populated from your Grid Categories / Grid Tags.',
-							'rotem-posts-grid-filter'
+							'wm-posts-grid-filter'
 						) }
 					</em>
 				</p>

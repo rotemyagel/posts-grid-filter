@@ -75,8 +75,8 @@ wp_interactivity_state(
 			'categoryParam' => PGF_Blocks::CATEGORY_PARAM,
 			'tagParam'      => PGF_Blocks::TAG_PARAM,
 			'i18n'          => array(
-				'noResults' => __( 'No posts found.', 'rotem-posts-grid-filter' ),
-				'loadError' => __( 'Could not load posts. Please try again.', 'rotem-posts-grid-filter' ),
+				'noResults' => __( 'No posts found.', 'wm-posts-grid-filter' ),
+				'loadError' => __( 'Could not load posts. Please try again.', 'wm-posts-grid-filter' ),
 			),
 		),
 		'page'               => $current_page,
@@ -114,7 +114,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-grid-
 			wp_reset_postdata();
 			?>
 		<?php else : ?>
-			<p class="pgf-grid__empty"><?php esc_html_e( 'No posts found.', 'rotem-posts-grid-filter' ); ?></p>
+			<p class="pgf-grid__empty"><?php esc_html_e( 'No posts found.', 'wm-posts-grid-filter' ); ?></p>
 		<?php endif; ?>
 	</div>
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

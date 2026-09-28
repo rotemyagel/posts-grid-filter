@@ -5,5 +5,5 @@
 		'wp-blocks',
 		'wp-i18n'
 	),
-	'version' => 'f9b2b0361fc498537fd3'
+	'version' => '61ddcd9aae5e0c938ed2'
 );

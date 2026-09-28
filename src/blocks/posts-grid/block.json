@@ -7,7 +7,7 @@
 	"icon": "grid-view",
 	"description": "Displays Grid Posts in a configurable grid. Sync with a Posts Filter block placed anywhere on the page.",
 	"keywords": [ "posts", "grid", "query" ],
-	"textdomain": "rotem-posts-grid-filter",
+	"textdomain": "wm-posts-grid-filter",
 	"attributes": {
 		"columns": { "type": "number", "default": 3 },
 		"postsPerPage": { "type": "number", "default": 6 }

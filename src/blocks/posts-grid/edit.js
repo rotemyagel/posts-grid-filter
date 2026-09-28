@@ -43,9 +43,9 @@ export default function Edit( { attributes, setAttributes } ) {
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Grid settings', 'rotem-posts-grid-filter' ) }>
+				<PanelBody title={ __( 'Grid settings', 'wm-posts-grid-filter' ) }>
 					<ToggleGroupControl
-						label={ __( 'Columns', 'rotem-posts-grid-filter' ) }
+						label={ __( 'Columns', 'wm-posts-grid-filter' ) }
 						value={ columns }
 						onChange={ ( value ) => setAttributes( { columns: Number( value ) } ) }
 						isBlock
@@ -55,7 +55,7 @@ export default function Edit( { attributes, setAttributes } ) {
 						) ) }
 					</ToggleGroupControl>
 					<RangeControl
-						label={ __( 'Posts per page', 'rotem-posts-grid-filter' ) }
+						label={ __( 'Posts per page', 'wm-posts-grid-filter' ) }
 						min={ 1 }
 						max={ 24 }
 						value={ postsPerPage }
@@ -65,9 +65,9 @@ export default function Edit( { attributes, setAttributes } ) {
 			</InspectorControls>
 			<div { ...blockProps }>
 				<div className={ `pgf-grid pgf-grid--cols-${ columns }` }>
-					{ ! posts && <p>{ __( 'Loading…', 'rotem-posts-grid-filter' ) }</p> }
+					{ ! posts && <p>{ __( 'Loading…', 'wm-posts-grid-filter' ) }</p> }
 					{ posts && posts.length === 0 && (
-						<p>{ __( 'No grid posts yet.', 'rotem-posts-grid-filter' ) }</p>
+						<p>{ __( 'No grid posts yet.', 'wm-posts-grid-filter' ) }</p>
 					) }
 					{ posts &&
 						posts.map( ( post ) => {

@@ -8,11 +8,11 @@ export default function Edit() {
 	return (
 		<div { ...blockProps }>
 			<button type="button" disabled>
-				{ __( '‹ Prev', 'rotem-posts-grid-filter' ) }
+				{ __( '‹ Prev', 'wm-posts-grid-filter' ) }
 			</button>
-			<span>{ __( 'Page 1 of 1', 'rotem-posts-grid-filter' ) }</span>
+			<span>{ __( 'Page 1 of 1', 'wm-posts-grid-filter' ) }</span>
 			<button type="button" disabled>
-				{ __( 'Next ›', 'rotem-posts-grid-filter' ) }
+				{ __( 'Next ›', 'wm-posts-grid-filter' ) }
 			</button>
 		</div>
 	);

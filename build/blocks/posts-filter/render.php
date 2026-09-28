@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $heading = isset( $attributes['heading'] ) && '' !== $attributes['heading']
 	? $attributes['heading']
-	: __( 'Filter posts', 'rotem-posts-grid-filter' );
+	: __( 'Filter posts', 'wm-posts-grid-filter' );
 
 $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
 $selected_tags        = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
@@ -77,13 +77,13 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 			data-wp-bind--hidden="state.hideClearFilters"
 			data-wp-on--click="actions.clearFilters"
 		>
-			<?php esc_html_e( 'Clear filters', 'rotem-posts-grid-filter' ); ?>
+			<?php esc_html_e( 'Clear filters', 'wm-posts-grid-filter' ); ?>
 		</a>
 	</div>
 
 	<?php if ( ! is_wp_error( $categories ) && $categories ) : ?>
 		<fieldset class="pgf-filter__group">
-			<legend><?php esc_html_e( 'Categories', 'rotem-posts-grid-filter' ); ?></legend>
+			<legend><?php esc_html_e( 'Categories', 'wm-posts-grid-filter' ); ?></legend>
 			<div class="pgf-filter__options">
 				<?php foreach ( $categories as $term ) : ?>
 					<label
@@ -105,7 +105,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 
 	<?php if ( ! is_wp_error( $tags ) && $tags ) : ?>
 		<fieldset class="pgf-filter__group">
-			<legend><?php esc_html_e( 'Tags', 'rotem-posts-grid-filter' ); ?></legend>
+			<legend><?php esc_html_e( 'Tags', 'wm-posts-grid-filter' ); ?></legend>
 			<div class="pgf-filter__options">
 				<?php foreach ( $tags as $term ) : ?>
 					<label

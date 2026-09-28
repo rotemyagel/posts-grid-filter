@@ -75,7 +75,7 @@ get_header();
 
 			<?php if ( $demo_page_id && get_post_status( $demo_page_id ) ) : ?>
 				<p class="pgf-single__back">
-					<a href="<?php echo esc_url( get_permalink( $demo_page_id ) ); ?>">&larr; <?php esc_html_e( 'Back to the grid', 'rotem-posts-grid-filter' ); ?></a>
+					<a href="<?php echo esc_url( get_permalink( $demo_page_id ) ); ?>">&larr; <?php esc_html_e( 'Back to the grid', 'wm-posts-grid-filter' ); ?></a>
 				</p>
 			<?php endif; ?>
 		</article>
