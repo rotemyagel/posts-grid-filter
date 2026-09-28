@@ -5,10 +5,9 @@ import {
 	useInnerBlocksProps,
 	InspectorControls,
 } from '@wordpress/block-editor';
-import { PanelBody, RangeControl } from '@wordpress/components';
+import { Disabled, PanelBody, RangeControl } from '@wordpress/components';
 import * as wpComponents from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
+import ServerSideRender from '@wordpress/server-side-render';
 
 // Stable name in newer WordPress, __experimental prefix in older versions.
 const ToggleGroupControl =
@@ -27,15 +26,6 @@ export default function Edit( { attributes, setAttributes } ) {
 	const innerBlocksProps = useInnerBlocksProps(
 		{ className: 'wmpgf-grid__pagination-slot' },
 		{ template: TEMPLATE, templateLock: 'all' }
-	);
-
-	const posts = useSelect(
-		( select ) =>
-			select( coreStore ).getEntityRecords( 'postType', 'wmpgf_post', {
-				per_page: postsPerPage,
-				_embed: true,
-			} ),
-		[ postsPerPage ]
 	);
 
 	return (
@@ -72,48 +62,14 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				<div className={ `wmpgf-grid wmpgf-grid--cols-${ columns }` }>
-					{ ! posts && (
-						<p>{ __( 'Loading…', 'wm-posts-grid-filter' ) }</p>
-					) }
-					{ posts && posts.length === 0 && (
-						<p>
-							{ __(
-								'No grid posts yet.',
-								'wm-posts-grid-filter'
-							) }
-						</p>
-					) }
-					{ posts &&
-						posts.map( ( post ) => {
-							const image =
-								post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ]
-									?.source_url;
-							const altText = (
-								post.title?.rendered || ''
-							).replace( /<[^>]+>/g, '' );
-							return (
-								<div
-									className="wmpgf-grid__card"
-									key={ post.id }
-								>
-									{ image && (
-										<img src={ image } alt={ altText } />
-									) }
-									<h3
-										dangerouslySetInnerHTML={ {
-											__html: post.title?.rendered,
-										} }
-									/>
-									<div
-										dangerouslySetInnerHTML={ {
-											__html: post.excerpt?.rendered,
-										} }
-									/>
-								</div>
-							);
-						} ) }
-				</div>
+				{ /* The cards come from render.php, the same template the site uses. */ }
+				<Disabled>
+					<ServerSideRender
+						block="wmpgf/posts-grid"
+						attributes={ { columns, postsPerPage } }
+						skipBlockSupportAttributes
+					/>
+				</Disabled>
 				<div { ...innerBlocksProps } />
 			</div>
 		</>

@@ -3,12 +3,13 @@
  * Server-side render for wmpgf/posts-filter.
  *
  * One checkbox per term, pre-checked from the URL. The selection lives in
- * the shared wmpgf store, which is what lets this block sit
- * anywhere on the page. Without JavaScript the checkboxes submit as a
- * plain GET form via a <noscript> "Apply filters" button.
+ * the shared wmpgf store, which is what lets this block sit anywhere on the
+ * page: changing it builds a new URL and the Interactivity Router renders
+ * the grid for that URL on the server. Without JavaScript the checkboxes
+ * submit as a plain GET form via a <noscript> "Apply filters" button.
  *
  * @var array    $attributes Block attributes.
- * @var string   $content    Rendered inner content (none, no children).
+ * @var string   $content    Rendered inner content (none).
  * @var WP_Block $block      Block instance.
  *
  * @package WMPGF
@@ -18,110 +19,111 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$heading = isset( $attributes['heading'] ) && '' !== $attributes['heading']
-	? $attributes['heading']
-	: __( 'Filter posts', 'wm-posts-grid-filter' );
+$heading = $attributes['heading'] ?? '';
+$filters = WMPGF_Request::filters();
+$count   = WMPGF_Query::count( $filters );
 
-$selected_categories = WMPGF_Request::term_ids( WMPGF_Request::CATEGORY_PARAM );
-$selected_tags       = WMPGF_Request::term_ids( WMPGF_Request::TAG_PARAM );
-$has_active_filters  = $selected_categories || $selected_tags;
-
-// For the address-bar sync in view.js, which works with term IDs.
-wp_interactivity_state( 'wmpgf', array( 'termSlugs' => WMPGF_Request::term_slug_map() ) );
-
-// A real link for no-JS; view.js intercepts it to clear without a reload.
-$clear_url = WMPGF_Request::page_url( 1, array(), array() );
-
-// A GET form replaces the whole query string, so other params (e.g.
-// ?page_id= under plain permalinks) are carried over as hidden inputs.
-$form_action     = strtok( $clear_url, '?' );
-$preserved_query = array();
-wp_parse_str( (string) wp_parse_url( $clear_url, PHP_URL_QUERY ), $preserved_query );
-
-$categories = get_terms(
+wp_interactivity_config( 'wmpgf', array( 'params' => WMPGF_Request::params() ) );
+wp_interactivity_state(
+	'wmpgf',
 	array(
-		'taxonomy'   => WMPGF_Post_Type::TAX_CATEGORY,
-		'hide_empty' => true,
+		'selectedCategories' => $filters['categories'],
+		'selectedTags'       => $filters['tags'],
+		'resultsLabel'       => sprintf(
+			/* translators: %s: number of matching posts. */
+			_n( '%s post', '%s posts', $count, 'wm-posts-grid-filter' ),
+			number_format_i18n( $count )
+		),
 	)
 );
 
-$tags = get_terms(
+$groups = array(
 	array(
-		'taxonomy'   => WMPGF_Post_Type::TAX_TAG,
-		'hide_empty' => true,
+		'legend'   => __( 'Categories', 'wm-posts-grid-filter' ),
+		'taxonomy' => WMPGF_Post_Type::TAX_CATEGORY,
+		'param'    => WMPGF_Request::CATEGORY_PARAM,
+		'selected' => $filters['categories'],
+		'action'   => 'actions.toggleCategory',
+		'checked'  => 'state.isCategoryChecked',
+	),
+	array(
+		'legend'   => __( 'Tags', 'wm-posts-grid-filter' ),
+		'taxonomy' => WMPGF_Post_Type::TAX_TAG,
+		'param'    => WMPGF_Request::TAG_PARAM,
+		'selected' => $filters['tags'],
+		'action'   => 'actions.toggleTag',
+		'checked'  => 'state.isTagChecked',
+	),
+);
+
+$own_params         = array( WMPGF_Request::PAGE_PARAM, WMPGF_Request::CATEGORY_PARAM, WMPGF_Request::TAG_PARAM );
+$clear_url          = WMPGF_Request::url(
+	array(
+		'categories' => array(),
+		'tags'       => array(),
 	)
 );
+$has_active_filters = $filters['categories'] || $filters['tags'];
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-filter' ) );
 ?>
-<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="wmpgf">
-	<div class="wmpgf-filter__head">
+<div
+	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	data-wp-interactive="wmpgf"
+	data-wp-watch="callbacks.syncFromServer"
+>
+	<?php if ( '' !== $heading ) : ?>
 		<h3 class="wmpgf-filter__heading"><?php echo esc_html( $heading ); ?></h3>
-		<a
-			href="<?php echo esc_url( $clear_url ); ?>"
-			class="wmpgf-filter__clear"
-			<?php echo $has_active_filters ? '' : 'hidden'; ?>
-			data-wp-bind--hidden="state.hideClearFilters"
-			data-wp-on--click="actions.clearFilters"
-		>
-			<?php esc_html_e( 'Clear filters', 'wm-posts-grid-filter' ); ?>
-		</a>
-	</div>
+	<?php endif; ?>
 
-	<form class="wmpgf-filter__form" method="get" action="<?php echo esc_url( $form_action ); ?>">
-		<?php foreach ( $preserved_query as $query_key => $query_value ) : ?>
-			<?php if ( is_scalar( $query_value ) ) : ?>
-				<input type="hidden" name="<?php echo esc_attr( $query_key ); ?>" value="<?php echo esc_attr( $query_value ); ?>" />
-			<?php endif; ?>
+	<form class="wmpgf-filter__form" method="get" action="<?php echo esc_url( strtok( $clear_url, '?' ) ); ?>">
+		<?php WMPGF_Request::hidden_inputs( $own_params ); ?>
+
+		<div class="wmpgf-filter__bar">
+			<p class="wmpgf-filter__count" aria-live="polite" data-wp-text="state.resultsLabel"></p>
+			<a
+				href="<?php echo esc_url( $clear_url ); ?>"
+				class="wmpgf-filter__clear"
+				<?php echo $has_active_filters ? '' : 'hidden'; ?>
+				data-wp-bind--hidden="state.hideClearFilters"
+				data-wp-on--click="actions.clearFilters"
+			><?php esc_html_e( 'Clear filters', 'wm-posts-grid-filter' ); ?></a>
+		</div>
+
+		<?php foreach ( $groups as $group ) : ?>
+			<?php
+			$group_terms = get_terms(
+				array(
+					'taxonomy'   => $group['taxonomy'],
+					'hide_empty' => true,
+				)
+			);
+			if ( is_wp_error( $group_terms ) || ! $group_terms ) {
+				continue;
+			}
+			?>
+			<fieldset class="wmpgf-filter__group">
+				<legend><?php echo esc_html( $group['legend'] ); ?></legend>
+				<div class="wmpgf-filter__options">
+					<?php foreach ( $group_terms as $group_term ) : ?>
+						<label
+							class="wmpgf-filter__option"
+							data-wp-context="<?php echo esc_attr( wp_json_encode( array( 'slug' => $group_term->slug ) ) ); ?>"
+						>
+							<input
+								type="checkbox"
+								name="<?php echo esc_attr( $group['param'] ); ?>[]"
+								value="<?php echo esc_attr( $group_term->slug ); ?>"
+								<?php checked( in_array( $group_term->slug, $group['selected'], true ) ); ?>
+								data-wp-on--change="<?php echo esc_attr( $group['action'] ); ?>"
+								data-wp-bind--checked="<?php echo esc_attr( $group['checked'] ); ?>"
+							/>
+							<?php echo esc_html( $group_term->name ); ?>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</fieldset>
 		<?php endforeach; ?>
-
-		<?php if ( ! is_wp_error( $categories ) && $categories ) : ?>
-			<fieldset class="wmpgf-filter__group">
-				<legend><?php esc_html_e( 'Categories', 'wm-posts-grid-filter' ); ?></legend>
-				<div class="wmpgf-filter__options">
-					<?php foreach ( $categories as $category_term ) : ?>
-						<label
-							class="wmpgf-filter__option"
-							data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $category_term->term_id ) ) ); ?>'
-						>
-							<input
-								type="checkbox"
-								name="<?php echo esc_attr( WMPGF_Request::CATEGORY_PARAM ); ?>[]"
-								value="<?php echo esc_attr( $category_term->slug ); ?>"
-								<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
-								data-wp-on--change="actions.toggleCategory"
-								data-wp-bind--checked="state.isCategoryChecked"
-							/>
-							<?php echo esc_html( $category_term->name ); ?>
-						</label>
-					<?php endforeach; ?>
-				</div>
-			</fieldset>
-		<?php endif; ?>
-
-		<?php if ( ! is_wp_error( $tags ) && $tags ) : ?>
-			<fieldset class="wmpgf-filter__group">
-				<legend><?php esc_html_e( 'Tags', 'wm-posts-grid-filter' ); ?></legend>
-				<div class="wmpgf-filter__options">
-					<?php foreach ( $tags as $tag_term ) : ?>
-						<label
-							class="wmpgf-filter__option"
-							data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $tag_term->term_id ) ) ); ?>'
-						>
-							<input
-								type="checkbox"
-								name="<?php echo esc_attr( WMPGF_Request::TAG_PARAM ); ?>[]"
-								value="<?php echo esc_attr( $tag_term->slug ); ?>"
-								<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
-								data-wp-on--change="actions.toggleTag"
-								data-wp-bind--checked="state.isTagChecked"
-							/>
-							<?php echo esc_html( $tag_term->name ); ?>
-						</label>
-					<?php endforeach; ?>
-				</div>
-			</fieldset>
-		<?php endif; ?>
 
 		<noscript>
 			<button type="submit" class="wmpgf-filter__submit"><?php esc_html_e( 'Apply filters', 'wm-posts-grid-filter' ); ?></button>

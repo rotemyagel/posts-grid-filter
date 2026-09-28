@@ -6,7 +6,7 @@
 
 A dynamic **Posts Grid** and a companion **Posts Filter** — kept in sync via a shared Interactivity API store, with pagination as a real inner block and zero manual setup after activation.
 
-[![WordPress 6.5+](https://img.shields.io/badge/WordPress-6.5%2B-21759b?logo=wordpress&logoColor=white)](https://wordpress.org)
+[![WordPress 6.6+](https://img.shields.io/badge/WordPress-6.6%2B-21759b?logo=wordpress&logoColor=white)](https://wordpress.org)
 [![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net)
 [![Block API v3](https://img.shields.io/badge/Block%20API-v3-0073aa)](https://developer.wordpress.org/block-editor/reference-guides/block-api/)
 [![Built with @wordpress/scripts](https://img.shields.io/badge/built%20with-%40wordpress%2Fscripts-21759b)](https://www.npmjs.com/package/@wordpress/scripts)
@@ -37,7 +37,7 @@ Built for the WordPress Web Development Technical Assessment.
 
 | Tool | Version | Notes |
 |---|---|---|
-| WordPress | 6.5+ | Uses the Interactivity API and Script Modules |
+| WordPress | 6.6+ | Interactivity API, its router and getServerState() |
 | PHP | 7.4+ | No image library (GD/Imagick) needed — demo images are generated as SVG |
 | Node.js | any current LTS | Only needed if rebuilding from source |
 | Composer | any current version | Only needed to run the PHP linter (`npm run lint:php`) — not a runtime dependency |

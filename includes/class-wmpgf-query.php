@@ -1,7 +1,7 @@
 <?php
 /**
  * Builds the grid's queries. Results are cached for the request, so the
- * grid and the pagination block share one count query.
+ * filter, the grid and the pagination block share one count.
  *
  * @package WMPGF
  */
@@ -23,83 +23,78 @@ class WMPGF_Query {
 	const MAX_POSTS_PER_PAGE = 24;
 
 	/**
-	 * Total pages, keyed by query args.
+	 * Matching-post counts, keyed by filters.
 	 *
 	 * @var array<string, int>
 	 */
-	private static $total_pages = array();
+	private static $counts = array();
 
 	/**
-	 * Builds a tax_query with the same semantics the REST API uses: OR
-	 * within a taxonomy, AND across them. include_children => false matches
-	 * the REST default, so nested categories filter the same on both paths.
+	 * Page results, keyed by filters, page size and page.
 	 *
-	 * @param int[] $category_ids Selected wmpgf_category term IDs.
-	 * @param int[] $tag_ids      Selected wmpgf_tag term IDs.
-	 * @return array Empty if no filters are selected.
+	 * @var array<string, array>
 	 */
-	public static function tax_query( $category_ids, $tag_ids ) {
-		$tax_query = array();
-
-		if ( $category_ids ) {
-			$tax_query[] = array(
-				'taxonomy'         => WMPGF_Post_Type::TAX_CATEGORY,
-				'field'            => 'term_id',
-				'terms'            => $category_ids,
-				'include_children' => false,
-			);
-		}
-
-		if ( $tag_ids ) {
-			$tax_query[] = array(
-				'taxonomy'         => WMPGF_Post_Type::TAX_TAG,
-				'field'            => 'term_id',
-				'terms'            => $tag_ids,
-				'include_children' => false,
-			);
-		}
-
-		return $tax_query;
-	}
+	private static $pages = array();
 
 	/**
-	 * Total pages for the given filters. A separate query because a
-	 * WP_Query run past its last page reports max_num_pages as 0, leaving
-	 * nothing to clamp against.
+	 * Number of posts matching the filters.
 	 *
-	 * @param int   $posts_per_page Posts per page.
-	 * @param array $tax_query      Result of tax_query(), or empty.
-	 * @return int At least 1.
-	 */
-	public static function total_pages( $posts_per_page, $tax_query ) {
-		$query_args = array(
-			'post_type'      => WMPGF_Post_Type::POST_TYPE,
-			'posts_per_page' => $posts_per_page,
-			'post_status'    => 'publish',
-			'fields'         => 'ids',
-		);
-
-		if ( $tax_query ) {
-			$query_args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-		}
-
-		$key = md5( wp_json_encode( $query_args ) );
-		if ( ! isset( self::$total_pages[ $key ] ) ) {
-			self::$total_pages[ $key ] = max( 1, (int) ( new WP_Query( $query_args ) )->max_num_pages );
-		}
-
-		return self::$total_pages[ $key ];
-	}
-
-	/**
-	 * Clamps an out-of-range ?wmpgf-page= (e.g. a stale bookmark) to the last page.
-	 *
-	 * @param int $requested_page As returned by WMPGF_Request::page().
-	 * @param int $total_pages    As returned by total_pages().
+	 * @param array $filters As returned by WMPGF_Request::filters().
 	 * @return int
 	 */
-	public static function clamp_page( $requested_page, $total_pages ) {
-		return min( $requested_page, $total_pages );
+	public static function count( array $filters ) {
+		$key = md5( wp_json_encode( $filters ) );
+
+		if ( ! isset( self::$counts[ $key ] ) ) {
+			$query                = new WP_Query(
+				self::base_args( $filters ) + array(
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+				)
+			);
+			self::$counts[ $key ] = (int) $query->found_posts;
+		}
+
+		return self::$counts[ $key ];
+	}
+
+	/**
+	 * One page of matching posts. An out-of-range page (e.g. a stale
+	 * bookmark) is clamped to the last page, which is why the count runs
+	 * first: WP_Query reports no totals once it's past the last page.
+	 *
+	 * @param array $filters        As returned by WMPGF_Request::filters().
+	 * @param int   $posts_per_page Posts per page.
+	 * @param int   $requested_page As returned by WMPGF_Request::page().
+	 * @return array{query: WP_Query, page: int, total_pages: int, total: int}
+	 */
+	public static function page( array $filters, $posts_per_page, $requested_page ) {
+		$posts_per_page = self::sanitize_posts_per_page( $posts_per_page );
+		$total          = self::count( $filters );
+		$total_pages    = max( 1, (int) ceil( $total / $posts_per_page ) );
+		$page           = min( max( 1, (int) $requested_page ), $total_pages );
+		$key            = md5( wp_json_encode( array( $filters, $posts_per_page, $page ) ) );
+
+		if ( ! isset( self::$pages[ $key ] ) ) {
+			$query = new WP_Query(
+				self::base_args( $filters ) + array(
+					'posts_per_page' => $posts_per_page,
+					'paged'          => $page,
+					'no_found_rows'  => true,
+				)
+			);
+			// One query for all featured images instead of two per card.
+			update_post_thumbnail_cache( $query );
+
+			self::$pages[ $key ] = array(
+				'query'       => $query,
+				'page'        => $page,
+				'total_pages' => $total_pages,
+				'total'       => $total,
+			);
+		}
+
+		return self::$pages[ $key ];
 	}
 
 	/**
@@ -110,5 +105,52 @@ class WMPGF_Query {
 	 */
 	public static function sanitize_posts_per_page( $value ) {
 		return min( self::MAX_POSTS_PER_PAGE, max( self::MIN_POSTS_PER_PAGE, absint( $value ) ) );
+	}
+
+	/**
+	 * Query args shared by the count and the page queries.
+	 *
+	 * @param array $filters As returned by WMPGF_Request::filters().
+	 * @return array
+	 */
+	private static function base_args( array $filters ) {
+		$args = array(
+			'post_type'   => WMPGF_Post_Type::POST_TYPE,
+			'post_status' => 'publish',
+		);
+
+		$tax_query = self::tax_query( $filters['categories'], $filters['tags'] );
+		if ( $tax_query ) {
+			$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		}
+
+		return $args;
+	}
+
+	/**
+	 * OR within a taxonomy (several terms in one clause), AND across
+	 * taxonomies (several clauses).
+	 *
+	 * @param string[] $category_slugs Selected wmpgf_category slugs.
+	 * @param string[] $tag_slugs      Selected wmpgf_tag slugs.
+	 * @return array Empty if nothing is selected.
+	 */
+	private static function tax_query( array $category_slugs, array $tag_slugs ) {
+		$tax_query = array();
+
+		foreach ( array(
+			WMPGF_Post_Type::TAX_CATEGORY => $category_slugs,
+			WMPGF_Post_Type::TAX_TAG      => $tag_slugs,
+		) as $taxonomy => $slugs ) {
+			if ( $slugs ) {
+				$tax_query[] = array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'slug',
+					'terms'    => $slugs,
+				);
+			}
+		}
+
+		return $tax_query;
 	}
 }

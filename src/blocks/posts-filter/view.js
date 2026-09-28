@@ -1,69 +1,75 @@
 /**
- * Filter state/actions for the shared store. The OR/AND logic is left to
- * the REST API's own tax_query handling of the two ID arrays.
+ * Filter state and actions in the shared `wmpgf` store. A change builds the
+ * new URL and hands it to the router; the server does the filtering.
  */
-import { store, getContext } from '@wordpress/interactivity';
-import { buildFilterUrl } from '../../shared/filter-url';
+import {
+	store,
+	getContext,
+	getConfig,
+	getServerState,
+} from '@wordpress/interactivity';
+import { urlWith } from '../../shared/url';
+import { navigateTo } from '../../shared/navigate';
 
-// replaceState, not pushState: Back shouldn't step through every toggle.
-const syncUrl = () => {
-	window.history.replaceState(
-		window.history.state,
-		'',
-		buildFilterUrl( {
-			page: 1,
-			categories: state.selectedCategories,
-			tags: state.selectedTags,
-			termSlugs: state.termSlugs,
-			config: state.config,
-		} )
+const toggle = ( list, value, on ) =>
+	on ? [ ...list, value ] : list.filter( ( item ) => item !== value );
+
+function* applyFilters() {
+	yield* navigateTo(
+		state,
+		urlWith(
+			{ categories: state.selectedCategories, tags: state.selectedTags },
+			getConfig().params
+		)
 	);
-};
+}
 
-// A new selection always starts from page one.
-const applySelection = () => {
-	state.page = 1;
-	syncUrl();
-	actions.refresh();
-};
-
-const { state, actions } = store( 'wmpgf', {
+const { state } = store( 'wmpgf', {
 	state: {
 		get isCategoryChecked() {
-			const { termId } = getContext();
-			return state.selectedCategories.includes( termId );
+			return state.selectedCategories.includes( getContext().slug );
 		},
 		get isTagChecked() {
-			const { termId } = getContext();
-			return state.selectedTags.includes( termId );
+			return state.selectedTags.includes( getContext().slug );
 		},
 		get hideClearFilters() {
 			return (
-				state.selectedCategories.length === 0 &&
-				state.selectedTags.length === 0
+				! state.selectedCategories.length && ! state.selectedTags.length
 			);
 		},
 	},
 	actions: {
-		toggleCategory( event ) {
-			const { termId } = getContext();
-			state.selectedCategories = event.target.checked
-				? [ ...state.selectedCategories, termId ]
-				: state.selectedCategories.filter( ( id ) => id !== termId );
-			applySelection();
+		*toggleCategory( event ) {
+			state.selectedCategories = toggle(
+				state.selectedCategories,
+				getContext().slug,
+				event.target.checked
+			);
+			yield* applyFilters();
 		},
-		toggleTag( event ) {
-			const { termId } = getContext();
-			state.selectedTags = event.target.checked
-				? [ ...state.selectedTags, termId ]
-				: state.selectedTags.filter( ( id ) => id !== termId );
-			applySelection();
+		*toggleTag( event ) {
+			state.selectedTags = toggle(
+				state.selectedTags,
+				getContext().slug,
+				event.target.checked
+			);
+			yield* applyFilters();
 		},
-		clearFilters( event ) {
+		*clearFilters( event ) {
 			event.preventDefault();
 			state.selectedCategories = [];
 			state.selectedTags = [];
-			applySelection();
+			yield* applyFilters();
+		},
+	},
+	callbacks: {
+		// After every navigation (including Back and Forward) the router
+		// updates the server state; copy the selection and count from it.
+		syncFromServer() {
+			const server = getServerState();
+			state.selectedCategories = server.selectedCategories;
+			state.selectedTags = server.selectedTags;
+			state.resultsLabel = server.resultsLabel;
 		},
 	},
 } );

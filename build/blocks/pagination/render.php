@@ -2,13 +2,14 @@
 /**
  * Server-side render for wmpgf/pagination.
  *
- * Counts pages itself, because block context can only pass attributes
- * (postsPerPage), not the grid's query result. Prev/Next are plain links
- * with a full reload, so every page is a crawlable URL that keeps the
- * current filters.
+ * Prev/Next are real links, so every page is a crawlable URL that keeps
+ * the current filters. view.js intercepts the click and loads the page
+ * through the Interactivity Router instead of a full reload. This block
+ * sits inside the grid's router region, so it is re-rendered here on the
+ * server after every navigation.
  *
  * @var array    $attributes Block attributes.
- * @var string   $content    Rendered inner content (none, this block has no children).
+ * @var string   $content    Rendered inner content (none).
  * @var WP_Block $block      Block instance.
  *
  * @package WMPGF
@@ -18,72 +19,60 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$posts_per_page      = WMPGF_Query::sanitize_posts_per_page( $block->context['wmpgf/postsPerPage'] ?? 6 );
-$selected_categories = WMPGF_Request::term_ids( WMPGF_Request::CATEGORY_PARAM );
-$selected_tags       = WMPGF_Request::term_ids( WMPGF_Request::TAG_PARAM );
-$tax_query           = WMPGF_Query::tax_query( $selected_categories, $selected_tags );
-
-// Same helpers as posts-grid/render.php, so both agree on the clamped page.
-$total_pages  = WMPGF_Query::total_pages( $posts_per_page, $tax_query );
-$current_page = WMPGF_Query::clamp_page( WMPGF_Request::page(), $total_pages );
-
-wp_interactivity_state(
-	'wmpgf',
-	array(
-		'totalPages'            => $total_pages,
-		// Translated template; view.js fills it in when the page count changes.
-		'paginationLabelFormat' => __( 'Page {current} of {total}', 'wm-posts-grid-filter' ),
-	)
+// Same cached query as the grid, so both agree on the clamped page.
+$result = WMPGF_Query::page(
+	WMPGF_Request::filters(),
+	$block->context['wmpgf/postsPerPage'] ?? 6,
+	WMPGF_Request::page()
 );
 
-$is_first_page = $current_page <= 1;
-$is_last_page  = $current_page >= $total_pages;
+if ( $result['total_pages'] <= 1 ) {
+	return;
+}
 
-$prev_href = $is_first_page ? '' : WMPGF_Request::page_url( $current_page - 1, $selected_categories, $selected_tags );
-$next_href = $is_last_page ? '' : WMPGF_Request::page_url( $current_page + 1, $selected_categories, $selected_tags );
-
-// Disabled state is also rendered server-side, for first paint and no-JS.
-$prev_class = 'wmpgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );
-$next_class = 'wmpgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
+$current_page = $result['page'];
+$page_links   = array(
+	'prev' => array(
+		'page'  => $current_page - 1,
+		'label' => __( '‹ Prev', 'wm-posts-grid-filter' ),
+		'rel'   => 'prev',
+	),
+	'next' => array(
+		'page'  => $current_page + 1,
+		'label' => __( 'Next ›', 'wm-posts-grid-filter' ),
+		'rel'   => 'next',
+	),
+);
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-pagination' ) );
 ?>
-<div
+<nav
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-	<?php echo $total_pages <= 1 ? 'hidden' : ''; ?>
+	aria-label="<?php esc_attr_e( 'Posts pagination', 'wm-posts-grid-filter' ); ?>"
 	data-wp-interactive="wmpgf"
-	data-wp-bind--hidden="state.isSinglePage"
 >
-	<a
-		class="<?php echo esc_attr( $prev_class ); ?>"
-		rel="prev"
-		<?php echo $prev_href ? 'href="' . esc_url( $prev_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		<?php echo $is_first_page ? 'aria-disabled="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-bind--href="state.prevHref"
-		data-wp-bind--aria-disabled="state.isFirstPage"
-		data-wp-class--is-disabled="state.isFirstPage"
-	>
-		<?php esc_html_e( '‹ Prev', 'wm-posts-grid-filter' ); ?>
-	</a>
-	<span class="wmpgf-pagination__status" data-wp-text="state.paginationLabel">
-		<?php
-		printf(
-			/* translators: 1: current page, 2: total pages */
-			esc_html__( 'Page %1$d of %2$d', 'wm-posts-grid-filter' ),
-			(int) $current_page,
-			(int) $total_pages
-		);
-		?>
-	</span>
-	<a
-		class="<?php echo esc_attr( $next_class ); ?>"
-		rel="next"
-		<?php echo $next_href ? 'href="' . esc_url( $next_href ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		<?php echo $is_last_page ? 'aria-disabled="true"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-bind--href="state.nextHref"
-		data-wp-bind--aria-disabled="state.isLastPage"
-		data-wp-class--is-disabled="state.isLastPage"
-	>
-		<?php esc_html_e( 'Next ›', 'wm-posts-grid-filter' ); ?>
-	</a>
-</div>
+	<?php foreach ( $page_links as $key => $page_link ) : ?>
+		<?php if ( 'next' === $key ) : ?>
+			<span class="wmpgf-pagination__status">
+				<?php
+				printf(
+					/* translators: 1: current page, 2: total pages */
+					esc_html__( 'Page %1$d of %2$d', 'wm-posts-grid-filter' ),
+					(int) $current_page,
+					(int) $result['total_pages']
+				);
+				?>
+			</span>
+		<?php endif; ?>
+		<?php if ( $page_link['page'] >= 1 && $page_link['page'] <= $result['total_pages'] ) : ?>
+			<a
+				class="wmpgf-pagination__link wmpgf-pagination__<?php echo esc_attr( $key ); ?>"
+				href="<?php echo esc_url( WMPGF_Request::url( array( 'page' => $page_link['page'] ) ) ); ?>"
+				rel="<?php echo esc_attr( $page_link['rel'] ); ?>"
+				data-wp-on--click="actions.goToPage"
+			><?php echo esc_html( $page_link['label'] ); ?></a>
+		<?php else : ?>
+			<span class="wmpgf-pagination__link wmpgf-pagination__<?php echo esc_attr( $key ); ?> is-disabled" aria-disabled="true"><?php echo esc_html( $page_link['label'] ); ?></span>
+		<?php endif; ?>
+	<?php endforeach; ?>
+</nav>

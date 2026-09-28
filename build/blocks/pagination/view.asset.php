@@ -1,7 +1,11 @@
 <?php return array(
 	'dependencies' => array(
-		'@wordpress/interactivity'
+		'@wordpress/interactivity',
+		array(
+			'id' => '@wordpress/interactivity-router',
+			'import' => 'dynamic'
+		)
 	),
-	'version' => '80967a0d6a8d75adfa7c',
+	'version' => '03c45dcc3a882cfd21f1',
 	'type' => 'module'
 );

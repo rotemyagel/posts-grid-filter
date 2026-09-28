@@ -1,43 +1,34 @@
 /**
- * Pagination state for the shared store. Prev/Next navigate normally (no
- * click handlers); these getters only keep their hrefs, label, and
- * visibility in step with filter changes made without a reload.
+ * Prev/Next are real links (see render.php). With JavaScript, a plain
+ * click loads the page through the router instead of a full reload; the
+ * link's href stays the source of truth.
  */
-import { store } from '@wordpress/interactivity';
-import { buildFilterUrl } from '../../shared/filter-url';
-
-const urlForPage = ( page ) =>
-	buildFilterUrl( {
-		page,
-		categories: state.selectedCategories,
-		tags: state.selectedTags,
-		termSlugs: state.termSlugs,
-		config: state.config,
-	} );
+import { store, getElement } from '@wordpress/interactivity';
+import { navigateTo } from '../../shared/navigate';
 
 const { state } = store( 'wmpgf', {
-	state: {
-		get isFirstPage() {
-			return state.page <= 1;
-		},
-		get isLastPage() {
-			return state.page >= state.totalPages;
-		},
-		get isSinglePage() {
-			return state.totalPages <= 1;
-		},
-		get paginationLabel() {
-			const format =
-				state.paginationLabelFormat || 'Page {current} of {total}';
-			return format
-				.replace( '{current}', state.page )
-				.replace( '{total}', state.totalPages );
-		},
-		get prevHref() {
-			return state.isFirstPage ? false : urlForPage( state.page - 1 );
-		},
-		get nextHref() {
-			return state.isLastPage ? false : urlForPage( state.page + 1 );
+	actions: {
+		*goToPage( event ) {
+			// Let the browser handle new-tab and new-window clicks.
+			if (
+				event.button !== 0 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey ||
+				event.altKey
+			) {
+				return;
+			}
+			event.preventDefault();
+
+			const { ref } = getElement();
+			const region = ref.closest( '[data-wp-router-region]' );
+			yield* navigateTo( state, ref.href );
+
+			// Bring the new page's first posts into view if we scrolled past them.
+			if ( region && region.getBoundingClientRect().top < 0 ) {
+				region.scrollIntoView( { block: 'start' } );
+			}
 		},
 	},
 } );
