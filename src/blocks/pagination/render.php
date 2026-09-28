@@ -4,8 +4,8 @@
  *
  * Counts pages itself, because block context can only pass attributes
  * (postsPerPage), not the grid's query result. Prev/Next are plain links
- * with a full reload, so every page is a crawlable URL; add_query_arg()
- * keeps the current filter params on them.
+ * with a full reload, so every page is a crawlable URL that keeps the
+ * current filters.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner content (none, this block has no children).
@@ -39,15 +39,8 @@ wp_interactivity_state(
 $is_first_page = $current_page <= 1;
 $is_last_page  = $current_page >= $total_pages;
 
-// Page 1 is the plain URL with no page param, matching the client-side hrefs.
-if ( $is_first_page ) {
-	$prev_href = '';
-} elseif ( 2 === $current_page ) {
-	$prev_href = esc_url( remove_query_arg( PGF_Blocks::PAGE_PARAM ) );
-} else {
-	$prev_href = esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) );
-}
-$next_href = $is_last_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) );
+$prev_href = $is_first_page ? '' : PGF_Blocks::page_url( $current_page - 1, $selected_categories, $selected_tags );
+$next_href = $is_last_page ? '' : PGF_Blocks::page_url( $current_page + 1, $selected_categories, $selected_tags );
 
 // Disabled state is also rendered server-side, for first paint and no-JS.
 $prev_class = 'pgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );

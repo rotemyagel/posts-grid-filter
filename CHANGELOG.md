@@ -499,3 +499,30 @@ found. That history lives in this file, so the code comments were cut down
 to the reason behind each non-obvious choice. Comments only, verified
 mechanically: every PHP file is token-identical to before with comments
 stripped (`php -w`), and every built JS file is byte-identical.
+## Readable, slug-based URLs (1.3.1)
+
+Requests showed up as `pgf_post?...&_embed=wp%3Afeaturedmedia&_fields=id%2Clink%2C...&pgf_category%5B%5D=153`,
+and the address bar as `?pgf_category%5B%5D=153`. The browser doesn't do
+that; `URLSearchParams` does, encoding everything but letters, digits and a
+few symbols. URLs are now written by hand, and page URLs use term slugs
+instead of IDs:
+
+- Page: `/posts-grid-filter-demo/?pgf_category=design,culture&pgf_tag=trends&pgf-page=2`
+- REST: `/wp-json/wp/v2/pgf_post?per_page=6&page=1&pgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`
+
+The REST request keeps term IDs, because the REST API's taxonomy filter
+only takes IDs; it accepts them comma-separated (verified: same totals, 8
+and 4, as the `[]` form). On the server, `get_requested_term_ids()` turns
+slugs into IDs, in the order given, from either `pgf_category=a,b` or the
+`pgf_category[]=a` form the no-JS form submits (checkbox values are now
+slugs). Unknown slugs are ignored, and old numeric-ID URLs no longer filter,
+so a slug that happens to be a number can't be mistaken for an ID.
+`PGF_Blocks::term_slug_map()` passes an ID-to-slug map to the browser, so
+the store and REST requests keep working with IDs while
+`buildFilterUrl()` (JS) and `PGF_Blocks::page_url()` (PHP) write slugs.
+Unrelated params on the page URL are kept as they were.
+
+Verified with curl (slug, `[]`, mixed-case, duplicate and unknown-slug
+URLs; Prev/Next keep the order given) and in the browser (exact
+address-bar and request strings, no `%`, page 2 via Next, no console
+errors).

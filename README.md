@@ -137,7 +137,9 @@ Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — 
 
 ### Filtering: instant with JavaScript, a plain form without it
 
-The checkboxes are real `name="pgf_category[]"` / `name="pgf_tag[]"` inputs inside a `<form method="get">`, i.e. the same URL params the grid already reads server-side. With JavaScript, each change filters instantly over REST and `history.replaceState()` mirrors the selection into the address bar, so a refresh or a copied link reopens the same view. Without JavaScript, an "Apply filters" button (inside `<noscript>`) submits the form as a normal page load. Both paths build URLs through one shared helper (`src/shared/filter-url.js`), also used by pagination. Result-count changes are announced to screen readers through an `aria-live` region.
+With JavaScript, each change filters instantly over REST and `history.replaceState()` mirrors the selection into the address bar, so a refresh or a copied link reopens the same view. Without JavaScript, the checkboxes are a plain `<form method="get">` with an "Apply filters" button (inside `<noscript>`). Result-count changes are announced to screen readers through an `aria-live` region.
+
+URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?pgf_category=design,culture&pgf_tag=trends&pgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/pgf_post?per_page=6&page=1&pgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `PGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`PGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `pgf_category[]=design&pgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
 
 ### Category-prefixed permalinks
 
@@ -186,7 +188,7 @@ wm-posts-grid-filter/
 │
 ├── src/
 │   ├── shared/
-│   │   └── filter-url.js          Builds ?pgf-page=/pgf_category[]=/pgf_tag[]= URLs (filter + pagination)
+│   │   └── filter-url.js          Builds readable ?pgf_category=design,culture&pgf-page=2 URLs
 │   │
 │   └── blocks/                    Each block: block.json, index.js (registration), edit.js,
 │       │                          save.js, render.php, view.js, style.css
@@ -241,14 +243,14 @@ A smoke test you can run after activation:
 ### Programmatic checks
 
 ```bash
-# OR within a taxonomy: two categories should return their union
-curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category[]=8&pgf_category[]=10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
+# OR within a taxonomy: two categories (REST takes term IDs) should return their union
+curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category=8,10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
 # AND across taxonomies: adding a tag should narrow the same request
-curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category[]=8&pgf_category[]=10&pgf_tag[]=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
+curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category=8,10&pgf_tag=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
 # No-JS pagination + filtering, server-rendered
-curl -s "http://your-site.test/posts-grid-filter-demo/?pgf-page=2&pgf_category[]=8" | grep -o 'Page [0-9]* of [0-9]*'
+curl -s "http://your-site.test/posts-grid-filter-demo/?pgf_category=design,culture&pgf-page=2" | grep -o 'Page [0-9]* of [0-9]*'
 ```
 
 ---
@@ -264,7 +266,7 @@ Two items previously listed here were fixed rather than left as limitations — 
 Two more are deliberate design decisions, not bugs to fix:
 
 - **Pagination is a full page reload, not instant.** This was built this way on purpose, specifically *instead of* an earlier AJAX version — full-reload navigation is what makes page 2+ a real, crawlable URL that works with JavaScript disabled, which instant pagination structurally cannot do. Reverting this would reintroduce the exact problem it was built to solve. Filtering is a separate concern and stays instant.
-- **Filtered *and* paginated views are both crawlable** (`?pgf_category[]=` combined with `?pgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
+- **Filtered *and* paginated views are both crawlable** (`?pgf_category=` combined with `?pgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
 
 ---
 

@@ -11,6 +11,7 @@ const urlForPage = ( page ) =>
 		page,
 		categories: state.selectedCategories,
 		tags: state.selectedTags,
+		termSlugs: state.termSlugs,
 		config: state.config,
 	} );
 

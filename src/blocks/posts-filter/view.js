@@ -14,6 +14,7 @@ const syncUrl = () => {
 			page: 1,
 			categories: state.selectedCategories,
 			tags: state.selectedTags,
+			termSlugs: state.termSlugs,
 			config: state.config,
 		} )
 	);

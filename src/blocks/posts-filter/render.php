@@ -26,8 +26,11 @@ $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_
 $selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 $has_active_filters  = $selected_categories || $selected_tags;
 
+// For the address-bar sync in view.js, which works with term IDs.
+wp_interactivity_state( 'posts-grid-filter', array( 'termSlugs' => PGF_Blocks::term_slug_map() ) );
+
 // A real link for no-JS; view.js intercepts it to clear without a reload.
-$clear_url = remove_query_arg( array( PGF_Blocks::CATEGORY_PARAM, PGF_Blocks::TAG_PARAM, PGF_Blocks::PAGE_PARAM ) );
+$clear_url = PGF_Blocks::page_url( 1, array(), array() );
 
 // A GET form replaces the whole query string, so other params (e.g.
 // ?page_id= under plain permalinks) are carried over as hidden inputs.
@@ -84,7 +87,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 							<input
 								type="checkbox"
 								name="<?php echo esc_attr( PGF_Blocks::CATEGORY_PARAM ); ?>[]"
-								value="<?php echo (int) $category_term->term_id; ?>"
+								value="<?php echo esc_attr( $category_term->slug ); ?>"
 								<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
 								data-wp-on--change="actions.toggleCategory"
 								data-wp-bind--checked="state.isCategoryChecked"
@@ -108,7 +111,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 							<input
 								type="checkbox"
 								name="<?php echo esc_attr( PGF_Blocks::TAG_PARAM ); ?>[]"
-								value="<?php echo (int) $tag_term->term_id; ?>"
+								value="<?php echo esc_attr( $tag_term->slug ); ?>"
 								<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
 								data-wp-on--change="actions.toggleTag"
 								data-wp-bind--checked="state.isTagChecked"

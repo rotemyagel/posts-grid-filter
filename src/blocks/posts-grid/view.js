@@ -4,6 +4,7 @@
  * which is how the blocks stay in sync without being nested.
  */
 import { store } from '@wordpress/interactivity';
+import { listParam } from '../../shared/filter-url';
 
 /**
  * The same "medium" size the server render uses, with width/height so the
@@ -131,26 +132,23 @@ const { state } = store( 'posts-grid-filter', {
 				return;
 			}
 
-			// URL + searchParams, not string concatenation: with plain
-			// permalinks restUrl already contains `?rest_route=`.
-			const url = new URL( restUrl, window.location.origin );
-			url.searchParams.set( 'per_page', state.config?.postsPerPage || 6 );
-			url.searchParams.set( 'page', state.page );
-			url.searchParams.set( '_embed', 'wp:featuredmedia' );
-			url.searchParams.set(
-				'_fields',
-				'id,link,title,excerpt,_links,_embedded'
-			);
-			state.selectedCategories.forEach( ( id ) =>
-				url.searchParams.append( 'pgf_category[]', id )
-			);
-			state.selectedTags.forEach( ( id ) =>
-				url.searchParams.append( 'pgf_tag[]', id )
-			);
+			// Readable query: every value is a number or a fixed ASCII string,
+			// and the REST API accepts comma-separated term IDs.
+			const query = [
+				`per_page=${ state.config?.postsPerPage || 6 }`,
+				`page=${ state.page }`,
+				...listParam( 'pgf_category', state.selectedCategories ),
+				...listParam( 'pgf_tag', state.selectedTags ),
+				'_embed=wp:featuredmedia',
+				'_fields=id,link,title,excerpt,_links,_embedded',
+			].join( '&' );
+			// With plain permalinks restUrl already contains `?rest_route=`.
+			const requestUrl =
+				restUrl + ( restUrl.includes( '?' ) ? '&' : '?' ) + query;
 
 			let result;
 			try {
-				const response = await fetch( url.toString() );
+				const response = await fetch( requestUrl );
 				result = {
 					ok: response.ok,
 					posts: response.ok ? await response.json() : null,

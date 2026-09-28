@@ -2,8 +2,8 @@
 /**
  * Server-side render for pgf/posts-grid.
  *
- * The query comes only from URL params (?pgf-page=, ?pgf_category[]=,
- * ?pgf_tag[]=), so every filtered or paged view is a real URL that renders
+ * The query comes only from URL params (?pgf_category=design,culture&
+ * pgf_tag=news&pgf-page=2), so every filtered or paged view is a real URL that renders
  * without JavaScript. view.js then refreshes the list over REST on filter
  * changes.
  *
@@ -65,6 +65,7 @@ wp_interactivity_state(
 		'page'               => $current_page,
 		'selectedCategories' => $selected_categories,
 		'selectedTags'       => $selected_tags,
+		'termSlugs'          => PGF_Blocks::term_slug_map(),
 	)
 );
 

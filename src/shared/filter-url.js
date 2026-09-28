@@ -1,58 +1,82 @@
 /**
- * Builds page URLs with the current selection, for pagination hrefs and
- * the filter's address-bar sync.
+ * Builds readable page URLs with the current selection, e.g.
+ * `?pgf_category=design,culture&pgf-page=2`, for pagination hrefs and the
+ * filter's address-bar sync. Written by hand rather than through
+ * URLSearchParams, which would encode `,` as %2C.
  */
 
 /**
- * Removes both `name[]` and the `name[0]` form that add_query_arg()
- * produces; PHP would merge the two into one array.
+ * Whether a raw query key is one of ours, in any form: `pgf_category`,
+ * `pgf_category[]`, `pgf_category[0]`, or their %5B/%5D-encoded versions.
  *
- * @param {URLSearchParams} searchParams Mutated in place.
- * @param {string}          name         Base param name, e.g. "pgf_category".
+ * @param {string}   rawKey Key as it appears in the query string.
+ * @param {string[]} names  Our param names.
+ * @return {boolean} True if the key should be replaced.
  */
-const clearArrayParam = ( searchParams, name ) => {
-	const toDelete = [];
-	for ( const key of searchParams.keys() ) {
-		if (
-			key === `${ name }[]` ||
-			( key.startsWith( name ) &&
-				/^\[\d+\]$/.test( key.slice( name.length ) ) )
-		) {
-			toDelete.push( key );
-		}
-	}
-	toDelete.forEach( ( key ) => searchParams.delete( key ) );
+const isOwnKey = ( rawKey, names ) => {
+	const key = rawKey.replace( /%5B/gi, '[' ).replace( /%5D/gi, ']' );
+	return names.some(
+		( name ) => key === name || key.startsWith( `${ name }[` )
+	);
 };
 
 /**
- * @param {Object}   args
- * @param {number}   args.page       Page number; 1 omits the page param.
- * @param {number[]} args.categories Selected pgf_category term IDs.
- * @param {number[]} args.tags       Selected pgf_tag term IDs.
- * @param {Object}   [args.config]   state.config (param names), if present.
- * @return {string} Absolute URL.
+ * Joins values with commas into a query param, or nothing if none.
+ *
+ * @param {string}               name   Param name.
+ * @param {Array<string|number>} values Term IDs or slugs.
+ * @return {string[]} Zero or one `name=a,b` parts.
  */
-export const buildFilterUrl = ( { page, categories, tags, config } ) => {
-	const url = new URL( window.location.href );
+export const listParam = ( name, values ) =>
+	values?.length ? [ `${ name }=${ values.join( ',' ) }` ] : [];
+
+/**
+ * @param {Object}   args
+ * @param {number}   args.page        Page number; 1 omits the page param.
+ * @param {number[]} args.categories  Selected pgf_category term IDs.
+ * @param {number[]} args.tags        Selected pgf_tag term IDs.
+ * @param {Object}   [args.termSlugs] state.termSlugs: param => { id: slug }.
+ * @param {Object}   [args.config]    state.config (param names), if present.
+ * @return {string} Path and query for the current page.
+ */
+export const buildFilterUrl = ( {
+	page,
+	categories,
+	tags,
+	termSlugs,
+	config,
+} ) => {
 	const pageParam = config?.pageParam || 'pgf-page';
 	const categoryParam = config?.categoryParam || 'pgf_category';
 	const tagParam = config?.tagParam || 'pgf_tag';
 
+	// Other params are kept exactly as they were, not re-encoded.
+	const parts = window.location.search
+		.slice( 1 )
+		.split( '&' )
+		.filter(
+			( part ) =>
+				part &&
+				! isOwnKey( part.split( '=' )[ 0 ], [
+					pageParam,
+					categoryParam,
+					tagParam,
+				] )
+		);
+
+	const slugs = ( param, ids ) =>
+		( ids || [] )
+			.map( ( id ) => termSlugs?.[ param ]?.[ id ] )
+			.filter( Boolean );
+
+	parts.push(
+		...listParam( categoryParam, slugs( categoryParam, categories ) ),
+		...listParam( tagParam, slugs( tagParam, tags ) )
+	);
 	if ( page > 1 ) {
-		url.searchParams.set( pageParam, page );
-	} else {
-		url.searchParams.delete( pageParam );
+		parts.push( `${ pageParam }=${ page }` );
 	}
 
-	clearArrayParam( url.searchParams, categoryParam );
-	( categories || [] ).forEach( ( id ) =>
-		url.searchParams.append( `${ categoryParam }[]`, id )
-	);
-
-	clearArrayParam( url.searchParams, tagParam );
-	( tags || [] ).forEach( ( id ) =>
-		url.searchParams.append( `${ tagParam }[]`, id )
-	);
-
-	return url.toString();
+	const query = parts.length ? `?${ parts.join( '&' ) }` : '';
+	return window.location.pathname + query;
 };
