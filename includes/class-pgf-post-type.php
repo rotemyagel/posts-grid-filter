@@ -1,10 +1,7 @@
 <?php
 /**
- * Registers the custom post type and taxonomies that back the demo content.
- *
- * A dedicated post type + taxonomies (rather than core post/category/tag)
- * keeps the assessment's demo content fully isolated from whatever real
- * content already exists on the install the plugin is activated on.
+ * Registers the pgf_post post type and its taxonomies, kept separate from
+ * core post/category/tag so demo content never mixes with a site's own.
  *
  * @package PostsGridFilter
  */
@@ -25,20 +22,9 @@ class PGF_Post_Type {
 	/**
 	 * Hooks registration into WordPress.
 	 *
-	 * Registration order matters here: `register_taxonomies()` is deliberately
-	 * hooked before `register_post_type()`
-	 * (both otherwise default priority 10, so registration order here is
-	 * registration order in the compiled rewrite rules too): pgf_category's
-	 * own archive rule (prefixed with the literal "pgf_category/") and the
-	 * pgf_post permastruct (a bare %pgf_category%/%pgf_post% pattern with no
-	 * literal prefix, so it can match ANY two path segments, including
-	 * "pgf_category/some-term/") both need to run before WordPress compiles
-	 * its final rule list, and whichever is compiled first wins when a URL
-	 * matches both. Verified directly against the generated rewrite_rules
-	 * option after swapping this order: with post_type registered first,
-	 * /pgf_category/business/ was wrongly swallowed by the CPT's generic
-	 * two-segment pattern before the taxonomy's own, more specific rule ever
-	 * got a chance.
+	 * Taxonomies must register before the post type: the post's bare
+	 * %pgf_category%/%postname% rule matches any two path segments, so if it
+	 * compiled first it would swallow /pgf_category/{term}/ archive URLs.
 	 */
 	public function init() {
 		add_action( 'init', array( $this, 'register_rewrite_tag' ), 5 );
@@ -49,47 +35,20 @@ class PGF_Post_Type {
 	}
 
 	/**
-	 * Registers the %pgf_category% rewrite tag used by register_post_type()'s
-	 * own rewrite slug below. Must run before rewrite rules are generated
-	 * (any time before a flush is fine -- both this and register_post_type()
-	 * only accumulate state that gets compiled together at flush time), and
-	 * on every request, since WordPress's rewrite tag registry is rebuilt
-	 * fresh each time rather than persisted. The 'pgf_category=' query var
-	 * this maps to is the taxonomy's own default query var (see
-	 * register_taxonomies() below), so a single-post URL's category segment
-	 * becomes a real tax_query constraint alongside the post name -- the
-	 * same mechanism WooCommerce uses for its own %product_cat%/%postname%
-	 * permalink option.
+	 * Registers the %pgf_category% permalink tag, mapped to the taxonomy's
+	 * query var (the same approach WooCommerce uses for %product_cat%).
 	 */
 	public function register_rewrite_tag() {
 		add_rewrite_tag( '%pgf_category%', '([^/]+)', self::TAX_CATEGORY . '=' );
 	}
 
 	/**
-	 * Registers the pgf_post custom post type. The rewrite slug is a
-	 * %pgf_category% placeholder rather than a fixed string, so permalinks
-	 * are e.g. /product-news/some-post/ instead of /grid-posts/some-post/ --
-	 * filter_permalink() below fills in the actual category slug per post,
-	 * the same way WordPress core fills in %category% for the built-in
-	 * `post` type, which register_post_type() has no equivalent built-in
-	 * support for on a custom post type.
+	 * Registers pgf_post with /{category}/{post}/ permalinks; core has no
+	 * built-in %category% support for custom post types.
 	 */
 	public function register_post_type() {
-		/*
-		 * 'walk_dirs' => false matters here, not just style: WordPress's
-		 * rewrite generator normally also emits progressively shorter
-		 * prefix-only variants of a permastruct (the same mechanism that
-		 * makes /2020/06/ work as a standalone archive alongside the full
-		 * /2020/06/15/post-name/ date structure). With a bare %pgf_category%
-		 * placeholder and no literal text in front of it, that shorter
-		 * variant comes out as a completely unprefixed ([^/]+)/?$ rule --
-		 * verified directly against the generated rewrite_rules option,
-		 * where it was silently swallowing every top-level page on the
-		 * site, including this plugin's own demo page, ahead of
-		 * WordPress's actual page-matching rule. 'walk_dirs' => false
-		 * suppresses that shorter variant, leaving only the intended
-		 * two-segment structure.
-		 */
+		// walk_dirs => false: otherwise WordPress also emits a bare ([^/]+)/?$
+		// rule for the placeholder, which swallows every top-level page.
 		register_post_type(
 			self::POST_TYPE,
 			array(
@@ -118,15 +77,8 @@ class PGF_Post_Type {
 	}
 
 	/**
-	 * Replaces the %pgf_category% placeholder left in a pgf_post permalink
-	 * by register_post_type()'s own rewrite slug with the post's actual
-	 * category slug -- the lowest term ID among however many categories are
-	 * assigned, mirroring exactly which one WordPress core picks for a
-	 * regular post's %category% tag. Falls back to a literal 'uncategorized'
-	 * segment (never an empty one, which would collapse two slashes
-	 * together into a malformed URL) for the rare case of a pgf_post saved
-	 * with no category at all -- normal seeded content always has one, but
-	 * nothing stops a post being created by hand without it.
+	 * Fills in %pgf_category% with the post's lowest-ID category, the same
+	 * choice core makes for %category%, or 'uncategorized' if it has none.
 	 *
 	 * @param string  $post_link Permalink still containing the placeholder.
 	 * @param WP_Post $post      Post object.
@@ -154,18 +106,9 @@ class PGF_Post_Type {
 	}
 
 	/**
-	 * Redirects a pgf_post request to its canonical URL when the category
-	 * segment doesn't match. Needed because, unlike core's own %category%
-	 * permalink tag on the built-in `post` type, WordPress's redirect_canonical()
-	 * does not generalize this correction to a custom rewrite tag on a custom
-	 * post type: verified directly that /wrong-category/real-post-slug/ (and
-	 * even a made-up, non-existent category segment) resolved the right post
-	 * with a 200 and no redirect, rather than either 404ing or self-correcting.
-	 * The post's <link rel="canonical"> already points to the right URL
-	 * regardless (WordPress's default rel_canonical() uses get_permalink(),
-	 * which already runs through filter_permalink() above), so this isn't
-	 * fixing broken content -- it's closing a duplicate-URL gap that would
-	 * otherwise let the same post live at unlimited category-prefixed URLs.
+	 * 301s /wrong-category/post/ to the canonical URL. Core's
+	 * redirect_canonical() doesn't do this for custom rewrite tags, so any
+	 * category segment would otherwise serve the post.
 	 */
 	public function redirect_to_canonical() {
 		if ( ! is_singular( self::POST_TYPE ) ) {
@@ -177,15 +120,8 @@ class PGF_Post_Type {
 			return;
 		}
 
-		/*
-		 * Neither value is ever output -- $requested_path is only ever
-		 * compared for equality below, and $query_string is only ever
-		 * appended to a URL passed to wp_safe_redirect(), which validates
-		 * the destination host itself -- so there's nothing here for
-		 * sanitize_text_field()-style sanitizing to protect against; the
-		 * wp_parse_url()/wp_unslash() calls already applied are what
-		 * actually matters for correctness.
-		 */
+		// Neither value is output: the path is only compared, and the query
+		// string goes to wp_safe_redirect(), which validates the host.
 		$canonical_path = (string) wp_parse_url( $canonical, PHP_URL_PATH );
 		$requested_path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 

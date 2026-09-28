@@ -491,3 +491,11 @@ are the gaps a reviewer would likely notice, now fixed:
 - **CSS lint clean.** `npm run lint:css` reported 20 existing errors
   (whitespace inside parentheses, `currentColor` casing, blank lines); all
   fixed, formatting only.
+## Comment cleanup
+
+Inline comments had grown into a development diary: about 40-60% of
+non-blank lines in most files, retelling earlier versions and how bugs were
+found. That history lives in this file, so the code comments were cut down
+to the reason behind each non-obvious choice. Comments only, verified
+mechanically: every PHP file is token-identical to before with comments
+stripped (`php -w`), and every built JS file is byte-identical.

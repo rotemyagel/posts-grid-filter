@@ -1,12 +1,7 @@
 <?php
 /**
- * Single-post template for the pgf_post custom post type.
- *
- * Loaded via the single_template filter in class-pgf-single-template.php,
- * only when the active theme has no single-pgf_post.php of its own. Calls
- * get_header()/get_footer() like a normal theme template so it inherits
- * whatever header/nav/footer the active theme (or, on this install, its
- * Elementor Theme Builder templates) already renders.
+ * Single-post template for pgf_post, used only when the theme has none.
+ * Uses get_header()/get_footer() so the theme's own chrome still renders.
  *
  * @package PostsGridFilter
  */

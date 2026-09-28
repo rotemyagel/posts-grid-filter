@@ -15,48 +15,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 class PGF_Blocks {
 
 	/**
-	 * Query string key used for page-1-and-up pagination links. A plain GET
-	 * parameter (rather than a registered rewrite/query var) so it works on
-	 * any page regardless of permalink structure, with no rewrite flush.
+	 * Plain GET params rather than rewrite rules, so they work under any
+	 * permalink structure without a flush.
 	 */
-	const PAGE_PARAM = 'pgf-page';
-
-	/**
-	 * Query string keys for the currently selected category/tag term IDs.
-	 * Read directly from $_GET (same reasoning as PAGE_PARAM: no rewrite
-	 * registration needed, works under any permalink structure) by every
-	 * block that needs to filter or reflect the current filter selection --
-	 * posts-grid (to filter its query), pagination (to filter its count
-	 * query and to preserve the selection when a Prev/Next link causes a
-	 * full page reload), and posts-filter (to pre-check the matching
-	 * checkboxes on a direct/shared link, before any JS has run).
-	 */
+	const PAGE_PARAM     = 'pgf-page';
 	const CATEGORY_PARAM = 'pgf_category';
 	const TAG_PARAM      = 'pgf_tag';
 
 	/**
-	 * Bounds for the postsPerPage block attribute, matching the editor's own
-	 * RangeControl (min=1, max=24). Enforced again here because block
-	 * attributes are stored in post_content and can be edited directly
-	 * (raw HTML/REST, a hand-edited import) without ever touching the
-	 * RangeControl UI -- an untrusted value flows straight into WP_Query's
-	 * posts_per_page otherwise, where -1 means "return every post".
+	 * Matches the editor's RangeControl. Re-checked server-side because the
+	 * attribute lives in post_content, and -1 would mean "every post".
 	 */
 	const MIN_POSTS_PER_PAGE = 1;
 	const MAX_POSTS_PER_PAGE = 24;
 
 	/**
-	 * Block directories, relative to the build/ output, in registration
-	 * order. Order does not matter functionally but keeps grid before its
-	 * inner pagination block for readability.
+	 * Block directories under build/blocks/.
 	 *
 	 * @var string[]
 	 */
 	private $blocks = array( 'posts-grid', 'pagination', 'posts-filter' );
 
 	/**
-	 * Slug of the custom block-inserter category this plugin's blocks are
-	 * grouped under, instead of the generic "widgets" core category.
+	 * Block-inserter category the plugin's blocks are grouped under.
 	 */
 	const BLOCK_CATEGORY_SLUG = 'wm-widgets';
 
@@ -69,17 +50,8 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Adds a "WM Widgets" category to the block inserter so Posts Grid,
-	 * Pagination, and Posts Filter (each block.json's own "category" is set
-	 * to self::BLOCK_CATEGORY_SLUG) appear grouped together under their own
-	 * heading, rather than mixed into core's generic "widgets" category
-	 * alongside every other plugin's uncategorized blocks. Registered first
-	 * in the list (array_merge with this category first) so it appears near
-	 * the top of the inserter rather than at the bottom. No 'icon' key: every
-	 * other category heading in the inserter (Text, Media, Design, Widgets,
-	 * Theme, Embeds) is plain text with no icon, so adding one here would be
-	 * the one heading that looks inconsistent with the rest, not the blocks
-	 * within it (which already have their own icons).
+	 * Adds the "WM Widgets" inserter category first in the list, so it shows
+	 * near the top. No icon, matching core's own category headings.
 	 *
 	 * @param array $categories Existing block categories.
 	 * @return array
@@ -97,11 +69,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Reads the current grid page from the URL. Read by both posts-grid's
-	 * render.php (so the correct page is server-rendered on direct load or
-	 * a no-JS request) and pagination's render.php (so Prev/Next links are
-	 * built from the same number), so the two can never disagree about
-	 * which page is "current".
+	 * Current grid page from the URL, shared by the grid and pagination.
 	 *
 	 * @return int
 	 */
@@ -114,9 +82,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Reads a list of term IDs from a $_GET[ $param ][] array parameter,
-	 * e.g. ?pgf_category[]=8&pgf_category[]=10, sanitizing every value to a
-	 * positive integer and dropping anything that isn't one.
+	 * Positive term IDs from an array param, e.g. ?pgf_category[]=8.
 	 *
 	 * @param string $param One of self::CATEGORY_PARAM / self::TAG_PARAM.
 	 * @return int[]
@@ -133,21 +99,9 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Builds a WP_Query tax_query array from selected category/tag term IDs:
-	 * OR within a taxonomy (multiple terms in one clause), AND across
-	 * taxonomies (multiple clauses) -- the same semantics the REST API
-	 * applies automatically for the client-side filtered fetch, kept
-	 * consistent here for the server-rendered/no-JS path.
-	 *
-	 * 'include_children' is set explicitly to false, matching
-	 * WP_REST_Posts_Controller's own default for a plain array-of-term-IDs
-	 * taxonomy query var (verified directly against WordPress core source --
-	 * it defaults there to false, not WP_Tax_Query's own default of true).
-	 * The seeded pgf_category terms are flat, so this has no visible effect
-	 * on the demo content, but without it, a real site that later nests
-	 * pgf_category terms would get different filtered results server-side
-	 * (a page-2 reload, or any no-JS request) than the AJAX-filtered REST
-	 * path gives for the exact same selection.
+	 * Builds a tax_query with the same semantics the REST API uses: OR
+	 * within a taxonomy, AND across them. include_children => false matches
+	 * the REST default, so nested categories filter the same on both paths.
 	 *
 	 * @param int[] $category_ids Selected pgf_category term IDs.
 	 * @param int[] $tag_ids      Selected pgf_tag term IDs.
@@ -178,18 +132,9 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Total page count for the given filters, from a dedicated `fields =>
-	 * ids` query with no `paged` value of its own. Shared by posts-grid's
-	 * render.php (to clamp an out-of-range ?pgf-page= before running its
-	 * main query) and pagination's render.php (to render "Page X of Y" and
-	 * disable Prev/Next correctly) specifically so the two can never
-	 * disagree about how many pages exist. This has to come from a
-	 * *separate* query rather than reusing the main content query's own
-	 * `max_num_pages` afterward -- verified directly that a WP_Query already
-	 * run with `paged` set far beyond the real last page comes back with
-	 * `found_posts`/`max_num_pages` both 0, not the true total, so there is
-	 * nothing reliable to clamp against from inside that same query once it
-	 * has already executed with an out-of-range offset.
+	 * Total pages for the given filters, shared by the grid and pagination.
+	 * A separate query because a WP_Query run past its last page reports
+	 * max_num_pages as 0, leaving nothing to clamp against.
 	 *
 	 * @param int   $posts_per_page Posts per page.
 	 * @param array $tax_query      Result of build_tax_query(), or empty.
@@ -211,10 +156,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Clamps a requested page number to the last real page, so an
-	 * out-of-range ?pgf-page= (a hand-edited URL, a stale bookmark) renders
-	 * real content and a matching "Page X of Y" instead of an empty grid
-	 * next to a label reporting the page that was actually asked for.
+	 * Clamps an out-of-range ?pgf-page= (e.g. a stale bookmark) to the last page.
 	 *
 	 * @param int $requested_page As returned by get_requested_page().
 	 * @param int $total_pages    As returned by get_total_pages().
@@ -225,9 +167,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Clamps a postsPerPage attribute value to a sane range. Used by both
-	 * posts-grid's render.php (the main query) and pagination's render.php
-	 * (its own count query), so the two can never disagree about page size.
+	 * Clamps the postsPerPage attribute to the allowed range.
 	 *
 	 * @param mixed $value Raw attribute value.
 	 * @return int
@@ -247,13 +187,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Logs a message via PHP's error log, but only when WP_DEBUG_LOG is
-	 * enabled -- the standard WordPress convention for diagnostic logging
-	 * that stays silent on production sites that never opted into it.
-	 * Used for failure paths (a seed post/term/image that couldn't be
-	 * created) that would otherwise fail completely silently, making a
-	 * partially-seeded install ("why do I only have 8 of 12 posts?")
-	 * impossible to diagnose after the fact.
+	 * Logs seeding failures, only when WP_DEBUG_LOG is enabled.
 	 *
 	 * @param string $message Message to log.
 	 */

@@ -2,27 +2,10 @@
 /**
  * Server-side render for pgf/pagination.
  *
- * Computes its own total-page count from a lightweight query rather than
- * receiving it from the parent grid block, since `providesContext` only
- * carries real block attributes and total pages is a runtime WP_Query
- * result, not an attribute. This keeps the two blocks loosely coupled:
- * pagination only depends on `postsPerPage` (a real attribute passed via
- * context), and applies the same ?pgf_category=/?pgf_tag= URL filters as
- * posts-grid's own query so its count (and therefore "Page X of Y") is
- * correct for a filtered, shared/bookmarked URL too.
- *
- * Prev/Next are plain <a href> navigation -- a full page reload, deliberately
- * not intercepted by JavaScript. That is what makes page 2+ (filtered or
- * not) a real, crawlable, no-JS-required URL rather than content that only
- * ever exists after a client-side fetch, which is the specific pattern
- * "SEO-friendly infinite scroll" guidance warns against. `add_query_arg()`
- * (called with no base URL) preserves whatever other query parameters --
- * including ?pgf_category[]=/?pgf_tag[]= -- are already on the current
- * request, so a filtered view's selection travels along automatically when
- * a visitor pages through it. The one place that still needs JavaScript is
- * keeping these hrefs in sync with a filter change made via the Posts
- * Filter block's own AJAX interaction *before* any navigation happens --
- * handled by the state.prevHref/nextHref getters in pagination/view.js.
+ * Counts pages itself, because block context can only pass attributes
+ * (postsPerPage), not the grid's query result. Prev/Next are plain links
+ * with a full reload, so every page is a crawlable URL; add_query_arg()
+ * keeps the current filter params on them.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner content (none, this block has no children).
@@ -40,13 +23,7 @@ $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_
 $selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 $tax_query           = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
 
-/*
- * Same get_total_pages()/clamp_page() pair posts-grid's render.php uses, so
- * an out-of-range ?pgf-page= (e.g. a stale bookmark past the real last
- * page) can never make this block report a different page/total than what
- * the grid actually rendered -- see posts-grid/render.php for why total
- * pages has to come from a query with no `paged` of its own.
- */
+// Same helpers as posts-grid/render.php, so both agree on the clamped page.
 $total_pages  = PGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
 $current_page = PGF_Blocks::clamp_page( PGF_Blocks::get_requested_page(), $total_pages );
 
@@ -54,14 +31,7 @@ wp_interactivity_state(
 	'posts-grid-filter',
 	array(
 		'totalPages'            => $total_pages,
-
-		/*
-		 * A plain {current}/{total} placeholder template rather than a
-		 * PHP-side sprintf() call, since the label needs re-rendering
-		 * client-side (state.paginationLabel in view.js) every time page or
-		 * totalPages changes after a filter update -- translated once here,
-		 * not hardcoded as English in JS.
-		 */
+		// Translated template; view.js fills it in when the page count changes.
 		'paginationLabelFormat' => __( 'Page {current} of {total}', 'wm-posts-grid-filter' ),
 	)
 );
@@ -79,15 +49,7 @@ if ( $is_first_page ) {
 }
 $next_href = $is_last_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) );
 
-/*
- * data-wp-bind--aria-disabled and data-wp-class--is-disabled only take
- * effect once client JS hydrates. Mirroring their computed value directly
- * in the initial markup (the same pattern already used for href and the
- * filter checkboxes' checked state) means a no-JS visitor or a screen
- * reader reading the page before hydration still sees a correctly
- * disabled, correctly styled control -- not a bare link with no
- * destination and no indication why.
- */
+// Disabled state is also rendered server-side, for first paint and no-JS.
 $prev_class = 'pgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );
 $next_class = 'pgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
 

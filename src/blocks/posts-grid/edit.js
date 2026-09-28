@@ -10,10 +10,7 @@ import * as wpComponents from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 
-// ToggleGroupControl graduated from an experimental API to a stable one at
-// different points across WordPress versions; importing both names and
-// falling back keeps this working whichever one the running core version
-// actually exports, rather than assuming a specific WP version's naming.
+// Stable name in newer WordPress, __experimental prefix in older versions.
 const ToggleGroupControl =
 	wpComponents.ToggleGroupControl ||
 	wpComponents.__experimentalToggleGroupControl;

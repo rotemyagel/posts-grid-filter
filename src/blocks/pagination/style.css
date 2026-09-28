@@ -20,10 +20,7 @@
 	opacity: 0.7;
 }
 
-/* Prev/Next are real <a> elements (see render.php) so page 2+ has a
-   crawlable URL even with JS disabled -- anchors have no native
-   :disabled state, so the disabled look is driven by the .is-disabled
-   class the Interactivity API toggles via data-wp-class--is-disabled. */
+/* Links have no :disabled state, so .is-disabled drives the disabled look. */
 .pgf-pagination__prev,
 .pgf-pagination__next {
 	display: inline-flex;

@@ -2,21 +2,10 @@
 /**
  * Server-side render for pgf/posts-grid.
  *
- * The query is driven entirely by plain `?pgf-page=`, `?pgf_category[]=`
- * and `?pgf_tag[]=` URL parameters (PGF_Blocks::get_requested_page() /
- * get_requested_term_ids()), not by client-side state: page 2, a filtered
- * view, or both together are all real, crawlable URLs that render correct
- * content on their own with or without JavaScript -- there is no
- * client-only page or filtered view that only exists after a fetch.
- *
- * Filtering itself still updates instantly via the Posts Filter block's
- * Interactivity API store (no reload) for a fast interactive experience,
- * patching `data-pgf-grid-list` via the REST API. Pagination, however, is
- * plain `<a href>` navigation with a full page reload (see
- * pagination/render.php) -- once a visitor moves to another page, the
- * currently-selected filters travel with it as URL parameters rather than
- * living only in client memory, which is also what keeps a filtered
- * page 2 shareable/bookmarkable and correct on a fresh, no-JS load.
+ * The query comes only from URL params (?pgf-page=, ?pgf_category[]=,
+ * ?pgf_tag[]=), so every filtered or paged view is a real URL that renders
+ * without JavaScript. view.js then refreshes the list over REST on filter
+ * changes.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner blocks (the pagination block).
@@ -41,15 +30,7 @@ if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 
 $tax_query = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
 
-/*
- * A requested page beyond the last real one (e.g. ?pgf-page=999 on a
- * two-page result set) would otherwise render an empty grid while
- * pagination's own render.php -- which runs the same get_total_pages() --
- * still reports the real total (e.g. "Page 999 of 2"), an inconsistent and
- * confusing result for a link that's easy to end up with by hand-editing a
- * URL or an out-of-date bookmark. Clamping through the same shared helper
- * pagination uses means the two can never disagree about the total.
- */
+// Same helpers as pagination/render.php, so both agree on the clamped page.
 $total_pages  = PGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
 $current_page = PGF_Blocks::clamp_page( $current_page, $total_pages );
 

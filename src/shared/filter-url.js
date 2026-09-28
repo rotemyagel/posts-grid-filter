@@ -1,20 +1,11 @@
 /**
- * Builds a URL for the current page carrying a given page number and
- * category/tag selection, in the same `?pgf-page=N&pgf_category[]=ID`
- * shape the server-side render.php files read. Shared by pagination's
- * Prev/Next hrefs and the filter's address-bar sync, so both always
- * produce identical URLs for the same selection.
+ * Builds page URLs with the current selection, for pagination hrefs and
+ * the filter's address-bar sync.
  */
 
 /**
- * Removes every representation of a bracketed array param: the plain
- * `name[]` form this plugin writes, and the indexed `name[0]`, `name[1]`
- * form that add_query_arg()/remove_query_arg() produce when they round-trip
- * an existing value through PHP's array parsing. Leaving the indexed form
- * in place while appending fresh `name[]=` values makes PHP merge both into
- * one array, so a changed selection would combine with the old one instead
- * of replacing it. The startsWith() check stops an unrelated param of the
- * same length (e.g. `foo_bar[0]` vs `pgf_tag`) from being deleted.
+ * Removes both `name[]` and the `name[0]` form that add_query_arg()
+ * produces; PHP would merge the two into one array.
  *
  * @param {URLSearchParams} searchParams Mutated in place.
  * @param {string}          name         Base param name, e.g. "pgf_category".

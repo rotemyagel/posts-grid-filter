@@ -1,14 +1,7 @@
 <?php
 /**
- * Renders a real single-post page for the pgf_post custom post type.
- *
- * Without this, the active theme falls back to whatever it does for a post
- * type it has no template for -- verified against the current site (a
- * Hello Elementor + Elementor Theme Builder install) to render an empty
- * <main>: no title, no featured image, no taxonomy terms, only the_content()
- * with no wrapper. Themes that DO already handle the post type properly are
- * still respected: the filter only takes over when locate_template() finds
- * nothing more specific in the active theme.
+ * Single-post template for pgf_post, used only when the active theme has
+ * none (many themes render just the_content() for an unknown post type).
  *
  * @package PostsGridFilter
  */

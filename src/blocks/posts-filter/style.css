@@ -47,14 +47,8 @@
 	gap: 0.5rem;
 }
 
-/*
- * A pill-shaped toggle rather than a bare checkbox: the native input stays
- * in the DOM (still keyboard-focusable, still a real checkbox for
- * assistive tech) but is visually hidden off-screen, and the label itself
- * -- already the full click target -- becomes the visible pill, filled in
- * once its checkbox is :checked. `:has()` is what makes styling the label
- * from its child input's state possible without any extra JS or markup.
- */
+/* The label is the visible pill; the real checkbox stays in the DOM for
+   keyboard and screen readers, visually hidden. */
 .pgf-filter__option {
 	position: relative;
 	display: inline-flex;
@@ -67,8 +61,6 @@
 	font-size: 0.9rem;
 	line-height: 1.2;
 
-	/* Comfortable tap target on touch devices without changing the visual
-	   size of the pill itself. */
 	min-height: 44px;
 	box-sizing: border-box;
 	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;

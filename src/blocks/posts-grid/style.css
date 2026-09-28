@@ -20,8 +20,6 @@
 	grid-template-columns: repeat(4, 1fr);
 }
 
-/* Tablet: step 3/4-column grids down to 2 rather than jumping straight
-   to a single column — keeps the grid feeling like a grid down to ~600px. */
 @media ( max-width: 782px ) {
 
 	.pgf-grid--cols-3,
@@ -30,7 +28,6 @@
 	}
 }
 
-/* Phone: everything collapses to a single column. */
 @media ( max-width: 480px ) {
 
 	.pgf-grid--cols-2,
@@ -56,9 +53,7 @@
 	display: block;
 	border-radius: 4px;
 
-	/* Backstops the width/height attributes on the <img> itself: reserves
-	   layout space immediately, before the image (or its dimensions) has
-	   loaded, so filtered re-renders don't cause a layout shift. */
+	/* Reserves space before the image loads, so filtering doesn't shift layout. */
 	aspect-ratio: 3 / 2;
 	object-fit: cover;
 	background-color: #f0f0f5;

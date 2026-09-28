@@ -1,21 +1,11 @@
 /**
- * Adds filter state/actions to the shared `posts-grid-filter` store.
- * Toggling a checkbox updates selectedCategories/selectedTags (OR within
- * a taxonomy is expressed by simply collecting every checked term ID into
- * one array; the AND-across-taxonomies half of the brief's filtering logic
- * is handled entirely server-side by WordPress's own REST tax_query
- * behavior when posts-grid's `refresh()` sends both arrays). clearFilters()
- * resets both arrays at once, for the "Clear filters" link in render.php.
+ * Filter state/actions for the shared store. The OR/AND logic is left to
+ * the REST API's own tax_query handling of the two ID arrays.
  */
 import { store, getContext } from '@wordpress/interactivity';
 import { buildFilterUrl } from '../../shared/filter-url';
 
-/**
- * Mirrors the selection into the address bar, so a refresh or a copied
- * link reopens the same filtered view (render.php reads these params on
- * the server). replaceState rather than pushState: one history entry per
- * checkbox click would make Back step through every individual toggle.
- */
+// replaceState, not pushState: Back shouldn't step through every toggle.
 const syncUrl = () => {
 	window.history.replaceState(
 		window.history.state,

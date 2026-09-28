@@ -2,30 +2,10 @@
 /**
  * Server-side render for pgf/posts-filter.
  *
- * Renders one checkbox per pgf_category and pgf_tag term. Each label
- * carries the term ID via data-wp-context so the shared actions know which
- * checkbox changed; selection state itself lives in the shared
- * posts-grid-filter store (selectedCategories/selectedTags), not locally,
- * so it survives this block being placed anywhere on the page relative to
- * the grid.
- *
- * Checkboxes matching the current ?pgf_category=/?pgf_tag= URL parameters
- * are marked checked() here on the server, so a shared/bookmarked filtered
- * link (reached via a pagination full-page reload -- see
- * pagination/render.php) shows the correct selection immediately, before
- * any JavaScript has run.
- *
- * The checkboxes sit in a GET form named with those same params, so with
- * JavaScript disabled an "Apply filters" button (inside <noscript>)
- * submits the selection as a normal page load -- the same no-JS path
- * pagination already has. With JavaScript, each change filters instantly
- * instead and there is no button.
- *
- * The "Clear filters" link is shown/hidden the same dual way: PHP decides
- * whether to render it visible on first paint (based on whether the current
- * URL has any filter selected), and a matching client-side getter
- * (state.hideClearFilters in view.js) keeps it correct as checkboxes are
- * toggled afterward without a page reload.
+ * One checkbox per term, pre-checked from the URL. The selection lives in
+ * the shared posts-grid-filter store, which is what lets this block sit
+ * anywhere on the page. Without JavaScript the checkboxes submit as a
+ * plain GET form via a <noscript> "Apply filters" button.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Rendered inner content (none, no children).
@@ -46,24 +26,11 @@ $selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_
 $selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
 $has_active_filters  = $selected_categories || $selected_tags;
 
-/*
- * A real, crawlable link to the unfiltered page -- not just a JS-only
- * reset -- built the same way pagination's Prev/Next hrefs are (see its
- * render.php), so a no-JS visitor or a shared/bookmarked filtered link
- * still gets a working way back to the unfiltered grid. The click is
- * additionally intercepted client-side (see actions.clearFilters in
- * view.js) so a JS-enabled visitor gets the same instant, no-reload
- * behavior as toggling a checkbox, instead of a full page reload.
- */
+// A real link for no-JS; view.js intercepts it to clear without a reload.
 $clear_url = remove_query_arg( array( PGF_Blocks::CATEGORY_PARAM, PGF_Blocks::TAG_PARAM, PGF_Blocks::PAGE_PARAM ) );
 
-/*
- * Without JavaScript, the checkboxes submit as a plain GET form to the same
- * URL params the grid already reads. A GET form replaces the whole query
- * string, so any other params on the current URL (e.g. ?page_id= under
- * plain permalinks) are carried over as hidden inputs, or the submit would
- * land on a different page.
- */
+// A GET form replaces the whole query string, so other params (e.g.
+// ?page_id= under plain permalinks) are carried over as hidden inputs.
 $form_action     = strtok( $clear_url, '?' );
 $preserved_query = array();
 wp_parse_str( (string) wp_parse_url( $clear_url, PHP_URL_QUERY ), $preserved_query );

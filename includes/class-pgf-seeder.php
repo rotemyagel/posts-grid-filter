@@ -1,15 +1,9 @@
 <?php
 /**
- * Seeds demo content on activation so the plugin is usable with zero
- * manual setup: posts, terms, featured images, and a demo page carrying
- * both blocks.
+ * Seeds demo posts, terms, featured images, and a demo page on activation.
  *
- * Featured images are generated on the fly as SVGs -- a solid rect plus a
- * text label, written directly with file_put_contents() -- rather than
- * bundled as binary assets or generated with an image library. This needs
- * no network access, no extra files to ship with the plugin, and (unlike
- * an earlier GD-based version of this file) no PHP image extension either:
- * SVG is plain XML text, so there is nothing to fall back to or skip.
+ * Images are generated as SVG text, so seeding needs no network access,
+ * no bundled binaries, and no PHP image extension.
  *
  * @package PostsGridFilter
  */
@@ -27,14 +21,8 @@ class PGF_Seeder {
 	const DEMO_PAGE_OPTION = 'pgf_demo_page_id';
 
 	/**
-	 * Options recording exactly which posts/attachments this seeder created,
-	 * read by uninstall.php so it deletes only content the plugin actually
-	 * owns -- not every pgf_post in the database. Without this, a real
-	 * pgf_post a site owner created by hand after activation (a normal,
-	 * expected use of the post type once seeded, not a demo-only leftover)
-	 * would be deleted right along with the demo content on uninstall, and
-	 * so would any existing media library image later chosen as its
-	 * featured image.
+	 * What this seeder created, so uninstall.php deletes only that and never
+	 * a site owner's own pgf_posts, images, or terms.
 	 */
 	const SEEDED_POST_IDS_OPTION       = 'pgf_seeded_post_ids';
 	const SEEDED_ATTACHMENT_IDS_OPTION = 'pgf_seeded_attachment_ids';
@@ -75,14 +63,8 @@ class PGF_Seeder {
 		$category_ids = $categories['ids'];
 		$tag_ids      = $tags['ids'];
 
-		/*
-		 * create_posts() picks a category/tag for each post via `$index %
-		 * count( $category_names )` -- if term creation fails completely
-		 * (both arrays empty), that becomes a modulo by zero. Bailing here
-		 * with nothing marked "seeded" means a later activation attempt
-		 * (deactivate/reactivate) gets a genuine retry instead of a
-		 * permanently half-seeded, permanently-skipped state.
-		 */
+		// Without terms, create_posts() would divide by zero. Not marking the
+		// run as seeded lets the next activation retry.
 		if ( ! $category_ids || ! $tag_ids ) {
 			PGF_Blocks::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
 			return;
@@ -96,13 +78,7 @@ class PGF_Seeder {
 
 		update_option( self::SEEDED_OPTION, true );
 
-		/*
-		 * Only genuinely-created IDs are persisted here, not every ID these
-		 * calls returned -- an adopted pre-existing post/term (matched by
-		 * title/name, kept for idempotency) is not something this plugin
-		 * created, so uninstall.php must not delete it. See create_terms()
-		 * and create_posts() for the created-vs-adopted distinction.
-		 */
+		// Created IDs only: adopted pre-existing posts/terms aren't ours to delete.
 		update_option( self::SEEDED_POST_IDS_OPTION, $result['created_post_ids'] );
 		update_option( self::SEEDED_ATTACHMENT_IDS_OPTION, $attachment_ids );
 		update_option(
@@ -128,22 +104,11 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Creates the pgf_category terms, keyed by name.
+	 * Creates the pgf_category terms, reusing any that already exist.
 	 *
-	 * `term_exists()` reuses a term that already has this name rather than
-	 * erroring or duplicating it -- necessary for idempotency, but a term
-	 * that already existed before this run was not created by the plugin
-	 * and is deliberately excluded from `created_ids`, the same ownership
-	 * distinction create_posts() below makes for adopted-vs-created posts.
-	 * A term this plugin didn't create might belong to a site owner's own
-	 * taxonomy usage (e.g. after an uninstall that cleared its own tracking
-	 * options but, for whatever reason, left the term rows behind), and
-	 * uninstall.php should never delete a term it didn't create.
-	 *
-	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` is
-	 *              name => term_id for every usable term (needed to build
-	 *              posts below); `created_ids` is only the ones actually
-	 *              inserted this call, for uninstall.php's ownership check.
+	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` maps
+	 *              name => term_id for every usable term; `created_ids` holds
+	 *              only the ones inserted by this call.
 	 */
 	private function create_terms() {
 		$ids         = array();
@@ -172,9 +137,7 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Creates the pgf_tag terms. See create_terms() above for why
-	 * pre-existing (adopted, not created) terms are excluded from
-	 * `created_ids`.
+	 * Creates the pgf_tag terms, reusing any that already exist.
 	 *
 	 * @return array{ids: array<string, int>, created_ids: int[]}
 	 */
@@ -212,14 +175,8 @@ class PGF_Seeder {
 	 * @param array $category_ids Category name => term_id.
 	 * @param array $tag_ids      Tag name => term_id.
 	 * @return array{post_ids: int[], created_post_ids: int[], attachment_ids: int[]}
-	 *              `post_ids` is every matched post (adopted or created),
-	 *              used for the completeness count in seed(); `created_post_ids`
-	 *              is only the ones actually inserted this call, for
-	 *              uninstall.php's ownership-based cleanup (see create_terms()
-	 *              for why an adopted pre-existing post is excluded);
-	 *              `attachment_ids` only ever contains generated-this-call
-	 *              images already, since create_placeholder_image() is only
-	 *              reached for a post this call itself just inserted.
+	 *              `post_ids` includes adopted posts; the other two hold only
+	 *              what this call inserted.
 	 */
 	private function create_posts( $category_ids, $tag_ids ) {
 		$category_names = array_keys( $category_ids );
@@ -245,8 +202,7 @@ class PGF_Seeder {
 		$attachment_ids   = array();
 
 		foreach ( $titles as $index => $title ) {
-			// get_page_by_title() is deprecated since WP 6.2.0; WP_Query's
-			// own 'title' parameter does the same exact-match lookup.
+			// WP_Query 'title' replaces get_page_by_title(), deprecated in 6.2.
 			$existing = new WP_Query(
 				array(
 					'post_type'              => PGF_Post_Type::POST_TYPE,
@@ -326,8 +282,7 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Builds a short excerpt from the title so every seeded post has one,
-	 * as required, without needing real editorial copy.
+	 * Builds a short excerpt from the title.
 	 *
 	 * @param string $title Post title.
 	 * @return string
@@ -351,12 +306,7 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Generates a solid-color placeholder SVG, uploads it through the normal
-	 * attachment pipeline, and returns the attachment ID. SVG needs no PHP
-	 * image extension at all -- it's XML text written with
-	 * file_put_contents() -- unlike the GD-based JPEG this replaced, which
-	 * silently produced no featured images at all on a PHP build without
-	 * the GD extension.
+	 * Writes a solid-color placeholder SVG and registers it as an attachment.
 	 *
 	 * @param int    $post_id  Parent post ID.
 	 * @param string $category Category name, used to pick a color.
@@ -398,14 +348,8 @@ class PGF_Seeder {
 			'post_status'    => 'inherit',
 		);
 
-		/*
-		 * WordPress blocks SVG uploads by default -- a real XSS risk for
-		 * user-supplied files, since an SVG can embed <script>. Allowed only
-		 * for this one insert, for a file this method just wrote itself
-		 * (a rect and a text label, nothing else), then immediately removed
-		 * again: the site's own upload restrictions for real user uploads
-		 * are never weakened.
-		 */
+		// SVG is blocked by default (it can carry scripts). Allowed only for
+		// this one insert of a file we just wrote, then removed again.
 		$allow_svg_mime = static function ( $mimes ) {
 			$mimes['svg'] = 'image/svg+xml';
 			return $mimes;
@@ -419,28 +363,8 @@ class PGF_Seeder {
 			return 0;
 		}
 
-		/*
-		 * wp_generate_attachment_metadata() runs the file through
-		 * wp_get_image_editor() (GD/Imagick), which doesn't know how to
-		 * introspect an SVG's dimensions -- the true width/height are set
-		 * directly instead, for the REST API and for is/has-thumbnail checks.
-		 *
-		 * No 'sizes' entries: tried adding an explicit 'medium' entry
-		 * pointing at this same file (there's no separate crop to generate;
-		 * this SVG scales losslessly), expecting the_post_thumbnail('medium')
-		 * to then report this file's real 1200x800 the same way the REST API
-		 * does -- but core's image_downsize() always re-constrains a *named*
-		 * size's reported width/height to that size's registered bounding
-		 * box (image_constrain_size_for_editor()) regardless of what's
-		 * stored in metadata, so the_post_thumbnail('medium') reports
-		 * 300x200 (medium's configured box) either way. This is harmless:
-		 * a 1200x800 source is 3:2, medium's box-constrained 300x200 is
-		 * also 3:2, so the two render paths report different absolute
-		 * numbers for the same image but an identical aspect ratio -- and
-		 * aspect ratio, not the absolute pixel values, is what a browser
-		 * actually needs from width/height to reserve correct layout space
-		 * and avoid a shift.
-		 */
+		// Image editors can't read SVG dimensions, so they're set directly.
+		// No 'sizes': the SVG scales, and core reports 'medium' at the same 3:2.
 		wp_update_attachment_metadata(
 			$attachment_id,
 			array(
@@ -455,16 +379,9 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Creates the demo page with both blocks already placed, so the
-	 * assessment environment is ready to use immediately after activation.
-	 *
-	 * DEMO_PAGE_OPTION is set either way (adopted or created) so the
-	 * single-post template's "back to grid" link always has somewhere to
-	 * point, regardless of who the page belongs to. DEMO_PAGE_OWNED_OPTION
-	 * is the separate, narrower flag uninstall.php actually checks before
-	 * deleting it -- only true when this call is the one that created the
-	 * page, never when it adopted a pre-existing one at that slug that this
-	 * plugin didn't make.
+	 * Creates the demo page with both blocks placed, or adopts an existing
+	 * page at that slug. Only a page created here is flagged as owned, so
+	 * uninstall.php never deletes an adopted one.
 	 */
 	private function create_demo_page() {
 		if ( get_option( self::DEMO_PAGE_OPTION ) ) {
