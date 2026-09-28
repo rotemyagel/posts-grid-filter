@@ -18,20 +18,20 @@ const ToggleGroupControlOption =
 	wpComponents.ToggleGroupControlOption ||
 	wpComponents.__experimentalToggleGroupControlOption;
 
-const TEMPLATE = [ [ 'pgf/pagination', {} ] ];
+const TEMPLATE = [ [ 'wmpgf/pagination', {} ] ];
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { columns, postsPerPage } = attributes;
 
 	const blockProps = useBlockProps();
 	const innerBlocksProps = useInnerBlocksProps(
-		{ className: 'pgf-grid__pagination-slot' },
+		{ className: 'wmpgf-grid__pagination-slot' },
 		{ template: TEMPLATE, templateLock: 'all' }
 	);
 
 	const posts = useSelect(
 		( select ) =>
-			select( coreStore ).getEntityRecords( 'postType', 'pgf_post', {
+			select( coreStore ).getEntityRecords( 'postType', 'wmpgf_post', {
 				per_page: postsPerPage,
 				_embed: true,
 			} ),
@@ -72,7 +72,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				<div className={ `pgf-grid pgf-grid--cols-${ columns }` }>
+				<div className={ `wmpgf-grid wmpgf-grid--cols-${ columns }` }>
 					{ ! posts && (
 						<p>{ __( 'Loading…', 'wm-posts-grid-filter' ) }</p>
 					) }
@@ -93,7 +93,10 @@ export default function Edit( { attributes, setAttributes } ) {
 								post.title?.rendered || ''
 							).replace( /<[^>]+>/g, '' );
 							return (
-								<div className="pgf-grid__card" key={ post.id }>
+								<div
+									className="wmpgf-grid__card"
+									key={ post.id }
+								>
 									{ image && (
 										<img src={ image } alt={ altText } />
 									) }

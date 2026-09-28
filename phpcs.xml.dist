@@ -23,18 +23,28 @@
 		</properties>
 	</rule>
 
+	<!-- Every global (function, class, constant, hook, variable) must carry the plugin prefix. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="wmpgf"/>
+			</property>
+		</properties>
+	</rule>
+
 	<!--
-		templates/single-pgf_post.php is named exactly the way WordPress's
-		own template-hierarchy convention requires: single-{$post_type}.php,
-		where the post type itself is pgf_post (underscore, matching how
-		register_post_type() names it), checked directly against
-		PGF_Single_Template's locate_template() call, which looks for this
-		exact filename so a theme can override it the same way core's own
-		template hierarchy expects. Renaming the file to satisfy this sniff's
-		generic hyphens only preference would silently break that override
-		mechanism for any theme that follows the same core convention.
+		These files are included inside a WordPress function (WP_Block::render(),
+		load_template(), uninstall_plugin()), so their variables are local, not
+		globals. Functions, classes, constants and hooks are still checked.
 	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+		<exclude-pattern>src/blocks/*/render\.php</exclude-pattern>
+		<exclude-pattern>templates/*</exclude-pattern>
+		<exclude-pattern>uninstall\.php</exclude-pattern>
+	</rule>
+
+	<!-- WordPress's template hierarchy requires single-{post_type}.php, underscore included. -->
 	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
-		<exclude-pattern>templates/single-pgf_post\.php</exclude-pattern>
+		<exclude-pattern>templates/single-wmpgf_post\.php</exclude-pattern>
 	</rule>
 </ruleset>

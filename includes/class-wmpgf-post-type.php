@@ -1,9 +1,9 @@
 <?php
 /**
- * Registers the pgf_post post type and its taxonomies, kept separate from
+ * Registers the wmpgf_post post type and its taxonomies, kept separate from
  * core post/category/tag so demo content never mixes with a site's own.
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,13 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class PGF_Post_Type
+ * Class WMPGF_Post_Type
  */
-class PGF_Post_Type {
+class WMPGF_Post_Type {
 
-	const POST_TYPE    = 'pgf_post';
-	const TAX_CATEGORY = 'pgf_category';
-	const TAX_TAG      = 'pgf_tag';
+	const POST_TYPE    = 'wmpgf_post';
+	const TAX_CATEGORY = 'wmpgf_category';
+	const TAX_TAG      = 'wmpgf_tag';
 
 	/**
 	 * Hooks registration into WordPress.
@@ -28,7 +28,7 @@ class PGF_Post_Type {
 	}
 
 	/**
-	 * Registers pgf_post. Single posts live under a fixed base
+	 * Registers wmpgf_post. Single posts live under a fixed base
 	 * (/grid-post/{slug}/), so the rule can never match another URL.
 	 */
 	public function register_post_type() {
@@ -59,7 +59,7 @@ class PGF_Post_Type {
 	}
 
 	/**
-	 * Registers the pgf_category (hierarchical) and pgf_tag (flat) taxonomies.
+	 * Registers the wmpgf_category (hierarchical) and wmpgf_tag (flat) taxonomies.
 	 */
 	public function register_taxonomies() {
 		register_taxonomy(

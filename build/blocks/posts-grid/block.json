@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
-  "name": "pgf/posts-grid",
+  "name": "wmpgf/posts-grid",
   "title": "Posts Grid",
-  "category": "wm-widgets",
+  "category": "wmpgf",
   "icon": "grid-view",
   "description": "Displays Grid Posts in a configurable grid. Sync with a Posts Filter block placed anywhere on the page.",
   "keywords": [
@@ -23,7 +23,7 @@
     }
   },
   "providesContext": {
-    "posts-grid-filter/postsPerPage": "postsPerPage"
+    "wmpgf/postsPerPage": "postsPerPage"
   },
   "supports": {
     "html": false

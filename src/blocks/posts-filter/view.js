@@ -27,7 +27,7 @@ const applySelection = () => {
 	actions.refresh();
 };
 
-const { state, actions } = store( 'posts-grid-filter', {
+const { state, actions } = store( 'wmpgf', {
 	state: {
 		get isCategoryChecked() {
 			const { termId } = getContext();

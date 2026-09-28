@@ -14,12 +14,12 @@ function TermGroup( { legend, terms } ) {
 	}
 
 	return (
-		<fieldset className="pgf-filter__group">
+		<fieldset className="wmpgf-filter__group">
 			<legend>{ legend }</legend>
-			<div className="pgf-filter__options">
+			<div className="wmpgf-filter__options">
 				{ /* Display-only pills: selecting happens on the published page. */ }
 				{ terms.map( ( term ) => (
-					<span className="pgf-filter__option" key={ term.id }>
+					<span className="wmpgf-filter__option" key={ term.id }>
 						{ term.name }
 					</span>
 				) ) }
@@ -30,17 +30,17 @@ function TermGroup( { legend, terms } ) {
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { heading } = attributes;
-	const blockProps = useBlockProps( { className: 'pgf-filter' } );
+	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
 
 	const { categories, tags } = useSelect( ( select ) => {
 		const { getEntityRecords } = select( coreStore );
 		return {
 			categories: getEntityRecords(
 				'taxonomy',
-				'pgf_category',
+				'wmpgf_category',
 				TERMS_QUERY
 			),
-			tags: getEntityRecords( 'taxonomy', 'pgf_tag', TERMS_QUERY ),
+			tags: getEntityRecords( 'taxonomy', 'wmpgf_tag', TERMS_QUERY ),
 		};
 	}, [] );
 
@@ -63,8 +63,8 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				<div className="pgf-filter__head">
-					<h3 className="pgf-filter__heading">{ heading }</h3>
+				<div className="wmpgf-filter__head">
+					<h3 className="wmpgf-filter__heading">{ heading }</h3>
 				</div>
 				{ isLoading && <Spinner /> }
 				{ isEmpty && (

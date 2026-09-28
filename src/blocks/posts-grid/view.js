@@ -1,5 +1,5 @@
 /**
- * Fetch/render logic for the shared `posts-grid-filter` store. The filter
+ * Fetch/render logic for the shared `wmpgf` store. The filter
  * and pagination blocks add their own state/actions to the same namespace,
  * which is how the blocks stay in sync without being nested.
  */
@@ -55,7 +55,7 @@ const decodeEntities = ( html ) => {
  * exception: it's WordPress-rendered HTML, output as-is like the_excerpt().
  *
  * @param {Object} post REST API post resource.
- * @return {HTMLElement} A `.pgf-grid__card` <article> element.
+ * @return {HTMLElement} A `.wmpgf-grid__card` <article> element.
  */
 const renderPostCard = ( post ) => {
 	const thumb = getThumbnail( post );
@@ -65,12 +65,12 @@ const renderPostCard = ( post ) => {
 	const excerpt = post.excerpt?.rendered || '';
 
 	const article = document.createElement( 'article' );
-	article.className = 'pgf-grid__card';
+	article.className = 'wmpgf-grid__card';
 
 	if ( thumb ) {
 		const thumbLink = document.createElement( 'a' );
 		thumbLink.href = post.link;
-		thumbLink.className = 'pgf-grid__thumb';
+		thumbLink.className = 'wmpgf-grid__thumb';
 
 		const img = document.createElement( 'img' );
 		img.src = thumb.url;
@@ -87,7 +87,7 @@ const renderPostCard = ( post ) => {
 	}
 
 	const heading = document.createElement( 'h3' );
-	heading.className = 'pgf-grid__title';
+	heading.className = 'wmpgf-grid__title';
 	const titleLink = document.createElement( 'a' );
 	titleLink.href = post.link;
 	titleLink.textContent = title;
@@ -95,7 +95,7 @@ const renderPostCard = ( post ) => {
 	article.appendChild( heading );
 
 	const excerptEl = document.createElement( 'div' );
-	excerptEl.className = 'pgf-grid__excerpt';
+	excerptEl.className = 'wmpgf-grid__excerpt';
 	excerptEl.innerHTML = excerpt;
 	article.appendChild( excerptEl );
 
@@ -106,7 +106,7 @@ const renderPostCard = ( post ) => {
 // rapid clicks can't show results for an older selection.
 let latestRequestId = 0;
 
-const { state } = store( 'posts-grid-filter', {
+const { state } = store( 'wmpgf', {
 	// Server-seeded state (page, totalPages, selected*) is not declared here:
 	// a client default could overwrite the hydrated server value.
 	state: {
@@ -122,7 +122,7 @@ const { state } = store( 'posts-grid-filter', {
 			state.isLoading = true;
 
 			const restUrl = state.config?.restUrl;
-			const list = document.querySelector( '[data-pgf-grid-list]' );
+			const list = document.querySelector( '[data-wmpgf-grid-list]' );
 			if ( list ) {
 				list.setAttribute( 'aria-busy', 'true' );
 			}
@@ -137,8 +137,8 @@ const { state } = store( 'posts-grid-filter', {
 			const query = [
 				`per_page=${ state.config?.postsPerPage || 6 }`,
 				`page=${ state.page }`,
-				...listParam( 'pgf_category', state.selectedCategories ),
-				...listParam( 'pgf_tag', state.selectedTags ),
+				...listParam( 'wmpgf_category', state.selectedCategories ),
+				...listParam( 'wmpgf_tag', state.selectedTags ),
 				'_embed=wp:featuredmedia',
 				'_fields=id,link,title,excerpt,_links,_embedded',
 			].join( '&' );
@@ -182,7 +182,7 @@ const { state } = store( 'posts-grid-filter', {
 				if ( list ) {
 					list.replaceChildren();
 					const notice = document.createElement( 'p' );
-					notice.className = 'pgf-grid__error';
+					notice.className = 'wmpgf-grid__error';
 					notice.setAttribute( 'role', 'alert' );
 					notice.textContent =
 						state.config?.i18n?.loadError ||
@@ -208,7 +208,7 @@ const { state } = store( 'posts-grid-filter', {
 					);
 				} else {
 					const empty = document.createElement( 'p' );
-					empty.className = 'pgf-grid__empty';
+					empty.className = 'wmpgf-grid__empty';
 					empty.textContent =
 						state.config?.i18n?.noResults || 'No posts found.';
 					list.replaceChildren( empty );

@@ -2,7 +2,7 @@
 /**
  * Registers the plugin's blocks from their built block.json metadata.
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,17 +10,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class PGF_Blocks
+ * Class WMPGF_Blocks
  */
-class PGF_Blocks {
+class WMPGF_Blocks {
 
 	/**
 	 * Plain GET params rather than rewrite rules, so they work under any
 	 * permalink structure without a flush.
 	 */
-	const PAGE_PARAM     = 'pgf-page';
-	const CATEGORY_PARAM = 'pgf_category';
-	const TAG_PARAM      = 'pgf_tag';
+	const PAGE_PARAM     = 'wmpgf-page';
+	const CATEGORY_PARAM = 'wmpgf-category';
+	const TAG_PARAM      = 'wmpgf-tag';
 
 	/**
 	 * Matches the editor's RangeControl. Re-checked server-side because the
@@ -39,7 +39,7 @@ class PGF_Blocks {
 	/**
 	 * Block-inserter category the plugin's blocks are grouped under.
 	 */
-	const BLOCK_CATEGORY_SLUG = 'wm-widgets';
+	const BLOCK_CATEGORY_SLUG = 'wmpgf';
 
 	/**
 	 * Hooks registration into WordPress.
@@ -82,8 +82,8 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Term IDs for the slugs in ?pgf_category=design,culture (our links) or
-	 * ?pgf_category[]=design&pgf_category[]=culture (the no-JS form), in the
+	 * Term IDs for the slugs in ?wmpgf-category=design,culture (our links) or
+	 * ?wmpgf-category[]=design&wmpgf-category[]=culture (the no-JS form), in the
 	 * order given. Unknown slugs are ignored.
 	 *
 	 * @param string $param One of self::CATEGORY_PARAM / self::TAG_PARAM.
@@ -136,12 +136,12 @@ class PGF_Blocks {
 
 	/**
 	 * Readable URL for the current page with a given page and selection,
-	 * e.g. ?pgf_category=design,culture&pgf-page=2. Mirrors
+	 * e.g. ?wmpgf-category=design,culture&wmpgf-page=2. Mirrors
 	 * buildFilterUrl() in src/shared/filter-url.js.
 	 *
 	 * @param int   $page         Page number; 1 omits the page param.
-	 * @param int[] $category_ids Selected pgf_category term IDs.
-	 * @param int[] $tag_ids      Selected pgf_tag term IDs.
+	 * @param int[] $category_ids Selected wmpgf_category term IDs.
+	 * @param int[] $tag_ids      Selected wmpgf_tag term IDs.
 	 * @return string Unescaped URL.
 	 */
 	public static function page_url( $page, $category_ids, $tag_ids ) {
@@ -180,7 +180,7 @@ class PGF_Blocks {
 	 * @return string
 	 */
 	private static function taxonomy_for( $param ) {
-		return self::TAG_PARAM === $param ? PGF_Post_Type::TAX_TAG : PGF_Post_Type::TAX_CATEGORY;
+		return self::TAG_PARAM === $param ? WMPGF_Post_Type::TAX_TAG : WMPGF_Post_Type::TAX_CATEGORY;
 	}
 
 	/**
@@ -188,8 +188,8 @@ class PGF_Blocks {
 	 * within a taxonomy, AND across them. include_children => false matches
 	 * the REST default, so nested categories filter the same on both paths.
 	 *
-	 * @param int[] $category_ids Selected pgf_category term IDs.
-	 * @param int[] $tag_ids      Selected pgf_tag term IDs.
+	 * @param int[] $category_ids Selected wmpgf_category term IDs.
+	 * @param int[] $tag_ids      Selected wmpgf_tag term IDs.
 	 * @return array Empty if no filters are selected.
 	 */
 	public static function build_tax_query( $category_ids, $tag_ids ) {
@@ -197,7 +197,7 @@ class PGF_Blocks {
 
 		if ( $category_ids ) {
 			$tax_query[] = array(
-				'taxonomy'         => PGF_Post_Type::TAX_CATEGORY,
+				'taxonomy'         => WMPGF_Post_Type::TAX_CATEGORY,
 				'field'            => 'term_id',
 				'terms'            => $category_ids,
 				'include_children' => false,
@@ -206,7 +206,7 @@ class PGF_Blocks {
 
 		if ( $tag_ids ) {
 			$tax_query[] = array(
-				'taxonomy'         => PGF_Post_Type::TAX_TAG,
+				'taxonomy'         => WMPGF_Post_Type::TAX_TAG,
 				'field'            => 'term_id',
 				'terms'            => $tag_ids,
 				'include_children' => false,
@@ -227,7 +227,7 @@ class PGF_Blocks {
 	 */
 	public static function get_total_pages( $posts_per_page, $tax_query ) {
 		$query_args = array(
-			'post_type'      => PGF_Post_Type::POST_TYPE,
+			'post_type'      => WMPGF_Post_Type::POST_TYPE,
 			'posts_per_page' => $posts_per_page,
 			'post_status'    => 'publish',
 			'fields'         => 'ids',
@@ -241,7 +241,7 @@ class PGF_Blocks {
 	}
 
 	/**
-	 * Clamps an out-of-range ?pgf-page= (e.g. a stale bookmark) to the last page.
+	 * Clamps an out-of-range ?wmpgf-page= (e.g. a stale bookmark) to the last page.
 	 *
 	 * @param int $requested_page As returned by get_requested_page().
 	 * @param int $total_pages    As returned by get_total_pages().
@@ -287,7 +287,7 @@ class PGF_Blocks {
 	 */
 	public function register_blocks() {
 		foreach ( $this->blocks as $block ) {
-			$path = PGF_DIR . 'build/blocks/' . $block;
+			$path = WMPGF_DIR . 'build/blocks/' . $block;
 
 			if ( ! file_exists( $path . '/block.json' ) ) {
 				continue;

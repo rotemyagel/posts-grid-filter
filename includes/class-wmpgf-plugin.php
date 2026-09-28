@@ -2,7 +2,7 @@
 /**
  * Plugin bootstrap: runtime hooks plus the activation/deactivation lifecycle.
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,27 +10,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class PGF_Plugin
+ * Class WMPGF_Plugin
  */
-class PGF_Plugin {
+class WMPGF_Plugin {
 
 	/**
 	 * Plugin version the rewrite rules were last flushed for, so an already
 	 * active install picks up permalink changes without a manual re-save.
 	 */
-	const REWRITE_VERSION_OPTION = 'pgf_rewrite_version';
+	const REWRITE_VERSION_OPTION = 'wmpgf_rewrite_version';
 
 	/**
 	 * Registers the hooks needed on every normal request.
 	 */
 	public function init() {
-		$post_type = new PGF_Post_Type();
+		$post_type = new WMPGF_Post_Type();
 		$post_type->init();
 
-		$blocks = new PGF_Blocks();
+		$blocks = new WMPGF_Blocks();
 		$blocks->init();
 
-		$single_template = new PGF_Single_Template();
+		$single_template = new WMPGF_Single_Template();
 		$single_template->init();
 
 		add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
@@ -41,12 +41,12 @@ class PGF_Plugin {
 	 * post type and taxonomies are registered, so it compiles current rules.
 	 */
 	public function maybe_flush_rewrite_rules() {
-		if ( get_option( self::REWRITE_VERSION_OPTION ) === PGF_VERSION ) {
+		if ( get_option( self::REWRITE_VERSION_OPTION ) === WMPGF_VERSION ) {
 			return;
 		}
 
 		flush_rewrite_rules();
-		update_option( self::REWRITE_VERSION_OPTION, PGF_VERSION );
+		update_option( self::REWRITE_VERSION_OPTION, WMPGF_VERSION );
 	}
 
 	/**
@@ -54,14 +54,14 @@ class PGF_Plugin {
 	 * registered here directly before flushing and seeding.
 	 */
 	public static function activate() {
-		$post_type = new PGF_Post_Type();
+		$post_type = new WMPGF_Post_Type();
 		$post_type->register_taxonomies();
 		$post_type->register_post_type();
 
 		flush_rewrite_rules();
-		update_option( self::REWRITE_VERSION_OPTION, PGF_VERSION );
+		update_option( self::REWRITE_VERSION_OPTION, WMPGF_VERSION );
 
-		$seeder = new PGF_Seeder();
+		$seeder = new WMPGF_Seeder();
 		$seeder->seed();
 	}
 

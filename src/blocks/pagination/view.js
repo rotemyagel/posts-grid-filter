@@ -15,7 +15,7 @@ const urlForPage = ( page ) =>
 		config: state.config,
 	} );
 
-const { state } = store( 'posts-grid-filter', {
+const { state } = store( 'wmpgf', {
 	state: {
 		get isFirstPage() {
 			return state.page <= 1;

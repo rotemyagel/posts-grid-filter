@@ -1,13 +1,13 @@
 /**
  * Builds readable page URLs with the current selection, e.g.
- * `?pgf_category=design,culture&pgf-page=2`, for pagination hrefs and the
+ * `?wmpgf-category=design,culture&wmpgf-page=2`, for pagination hrefs and the
  * filter's address-bar sync. Written by hand rather than through
  * URLSearchParams, which would encode `,` as %2C.
  */
 
 /**
- * Whether a raw query key is one of ours, in any form: `pgf_category`,
- * `pgf_category[]`, `pgf_category[0]`, or their %5B/%5D-encoded versions.
+ * Whether a raw query key is one of ours, in any form: `wmpgf-category`,
+ * `wmpgf-category[]`, `wmpgf-category[0]`, or their %5B/%5D-encoded versions.
  *
  * @param {string}   rawKey Key as it appears in the query string.
  * @param {string[]} names  Our param names.
@@ -33,8 +33,8 @@ export const listParam = ( name, values ) =>
 /**
  * @param {Object}   args
  * @param {number}   args.page        Page number; 1 omits the page param.
- * @param {number[]} args.categories  Selected pgf_category term IDs.
- * @param {number[]} args.tags        Selected pgf_tag term IDs.
+ * @param {number[]} args.categories  Selected wmpgf_category term IDs.
+ * @param {number[]} args.tags        Selected wmpgf_tag term IDs.
  * @param {Object}   [args.termSlugs] state.termSlugs: param => { id: slug }.
  * @param {Object}   [args.config]    state.config (param names), if present.
  * @return {string} Path and query for the current page.
@@ -46,9 +46,9 @@ export const buildFilterUrl = ( {
 	termSlugs,
 	config,
 } ) => {
-	const pageParam = config?.pageParam || 'pgf-page';
-	const categoryParam = config?.categoryParam || 'pgf_category';
-	const tagParam = config?.tagParam || 'pgf_tag';
+	const pageParam = config?.pageParam || 'wmpgf-page';
+	const categoryParam = config?.categoryParam || 'wmpgf-category';
+	const tagParam = config?.tagParam || 'wmpgf-tag';
 
 	// Other params are kept exactly as they were, not re-encoded.
 	const parts = window.location.search

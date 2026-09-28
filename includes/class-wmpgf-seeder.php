@@ -5,7 +5,7 @@
  * Images are generated as SVG text, so seeding needs no network access,
  * no bundled binaries, and no PHP image extension.
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,21 +13,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class PGF_Seeder
+ * Class WMPGF_Seeder
  */
-class PGF_Seeder {
+class WMPGF_Seeder {
 
-	const SEEDED_OPTION    = 'pgf_seeded';
-	const DEMO_PAGE_OPTION = 'pgf_demo_page_id';
+	const SEEDED_OPTION    = 'wmpgf_seeded';
+	const DEMO_PAGE_OPTION = 'wmpgf_demo_page_id';
 
 	/**
 	 * What this seeder created, so uninstall.php deletes only that and never
-	 * a site owner's own pgf_posts, images, or terms.
+	 * a site owner's own wmpgf_posts, images, or terms.
 	 */
-	const SEEDED_POST_IDS_OPTION       = 'pgf_seeded_post_ids';
-	const SEEDED_ATTACHMENT_IDS_OPTION = 'pgf_seeded_attachment_ids';
-	const SEEDED_TERM_IDS_OPTION       = 'pgf_seeded_term_ids';
-	const DEMO_PAGE_OWNED_OPTION       = 'pgf_demo_page_owned';
+	const SEEDED_POST_IDS_OPTION       = 'wmpgf_seeded_post_ids';
+	const SEEDED_ATTACHMENT_IDS_OPTION = 'wmpgf_seeded_attachment_ids';
+	const SEEDED_TERM_IDS_OPTION       = 'wmpgf_seeded_term_ids';
+	const DEMO_PAGE_OWNED_OPTION       = 'wmpgf_demo_page_owned';
 
 	/**
 	 * Category => color map used both as term data and as the seeded
@@ -75,7 +75,7 @@ class PGF_Seeder {
 		// Without terms, create_posts() would divide by zero. Not marking the
 		// run as seeded lets the next activation retry.
 		if ( ! $category_ids || ! $tag_ids ) {
-			PGF_Blocks::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
+			WMPGF_Blocks::log( 'Seeding aborted: term creation produced no usable categories or tags, so no demo posts were created. Not marking seeding complete -- a later activation will retry.' );
 			return;
 		}
 
@@ -99,7 +99,7 @@ class PGF_Seeder {
 			|| count( $tag_ids ) < count( $this->tags )
 			|| count( $post_ids ) < 12
 		) {
-			PGF_Blocks::log(
+			WMPGF_Blocks::log(
 				sprintf(
 					'Seeding finished with fewer items than expected: %d/%d categories, %d/%d tags, %d/12 posts. See prior log lines for individual failures.',
 					count( $category_ids ),
@@ -113,7 +113,7 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Creates the pgf_category terms, reusing any that already exist.
+	 * Creates the wmpgf_category terms, reusing any that already exist.
 	 *
 	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` maps
 	 *              name => term_id for every usable term; `created_ids` holds
@@ -124,13 +124,13 @@ class PGF_Seeder {
 		$created_ids = array();
 
 		foreach ( array_keys( $this->categories ) as $name ) {
-			$existing = term_exists( $name, PGF_Post_Type::TAX_CATEGORY );
+			$existing = term_exists( $name, WMPGF_Post_Type::TAX_CATEGORY );
 			$term     = $existing;
 			if ( ! $term ) {
-				$term = wp_insert_term( $name, PGF_Post_Type::TAX_CATEGORY );
+				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_CATEGORY );
 			}
 			if ( is_wp_error( $term ) ) {
-				PGF_Blocks::log( sprintf( 'Failed to create category "%s": %s', $name, $term->get_error_message() ) );
+				WMPGF_Blocks::log( sprintf( 'Failed to create category "%s": %s', $name, $term->get_error_message() ) );
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
@@ -146,7 +146,7 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Creates the pgf_tag terms, reusing any that already exist.
+	 * Creates the wmpgf_tag terms, reusing any that already exist.
 	 *
 	 * @return array{ids: array<string, int>, created_ids: int[]}
 	 */
@@ -155,13 +155,13 @@ class PGF_Seeder {
 		$created_ids = array();
 
 		foreach ( $this->tags as $name ) {
-			$existing = term_exists( $name, PGF_Post_Type::TAX_TAG );
+			$existing = term_exists( $name, WMPGF_Post_Type::TAX_TAG );
 			$term     = $existing;
 			if ( ! $term ) {
-				$term = wp_insert_term( $name, PGF_Post_Type::TAX_TAG );
+				$term = wp_insert_term( $name, WMPGF_Post_Type::TAX_TAG );
 			}
 			if ( is_wp_error( $term ) ) {
-				PGF_Blocks::log( sprintf( 'Failed to create tag "%s": %s', $name, $term->get_error_message() ) );
+				WMPGF_Blocks::log( sprintf( 'Failed to create tag "%s": %s', $name, $term->get_error_message() ) );
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
@@ -214,7 +214,7 @@ class PGF_Seeder {
 			// WP_Query 'title' replaces get_page_by_title(), deprecated in 6.2.
 			$existing = new WP_Query(
 				array(
-					'post_type'              => PGF_Post_Type::POST_TYPE,
+					'post_type'              => WMPGF_Post_Type::POST_TYPE,
 					'title'                  => $title,
 					'post_status'            => 'any',
 					'posts_per_page'         => 1,
@@ -246,7 +246,7 @@ class PGF_Seeder {
 
 			$post_id = wp_insert_post(
 				array(
-					'post_type'    => PGF_Post_Type::POST_TYPE,
+					'post_type'    => WMPGF_Post_Type::POST_TYPE,
 					'post_title'   => $title,
 					'post_status'  => 'publish',
 					'post_author'  => $this->author_id,
@@ -257,18 +257,18 @@ class PGF_Seeder {
 
 			if ( is_wp_error( $post_id ) || ! $post_id ) {
 				$reason = is_wp_error( $post_id ) ? $post_id->get_error_message() : 'wp_insert_post() returned no ID';
-				PGF_Blocks::log( sprintf( 'Failed to create seed post "%s": %s', $title, $reason ) );
+				WMPGF_Blocks::log( sprintf( 'Failed to create seed post "%s": %s', $title, $reason ) );
 				continue;
 			}
 
-			$category_result = wp_set_object_terms( $post_id, $assigned_categories, PGF_Post_Type::TAX_CATEGORY );
+			$category_result = wp_set_object_terms( $post_id, $assigned_categories, WMPGF_Post_Type::TAX_CATEGORY );
 			if ( is_wp_error( $category_result ) ) {
-				PGF_Blocks::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
+				WMPGF_Blocks::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
 			}
 
-			$tag_result = wp_set_object_terms( $post_id, $assigned_tags, PGF_Post_Type::TAX_TAG );
+			$tag_result = wp_set_object_terms( $post_id, $assigned_tags, WMPGF_Post_Type::TAX_TAG );
 			if ( is_wp_error( $tag_result ) ) {
-				PGF_Blocks::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
+				WMPGF_Blocks::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
 			}
 
 			$attachment_id = $this->create_placeholder_image( $post_id, $primary_category, $index );
@@ -277,7 +277,7 @@ class PGF_Seeder {
 				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
 				$attachment_ids[] = $attachment_id;
 			} else {
-				PGF_Blocks::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
+				WMPGF_Blocks::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
 			}
 
 			$post_ids[]         = $post_id;
@@ -369,11 +369,11 @@ class PGF_Seeder {
 		);
 
 		$upload_dir = wp_upload_dir();
-		$filename   = 'pgf-cover-' . $post_id . '.svg';
+		$filename   = 'wmpgf-cover-' . $post_id . '.svg';
 		$file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
 
 		if ( false === file_put_contents( $file_path, $svg ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			PGF_Blocks::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
+			WMPGF_Blocks::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
 			return 0;
 		}
 
@@ -395,7 +395,7 @@ class PGF_Seeder {
 		remove_filter( 'upload_mimes', $allow_svg_mime );
 
 		if ( is_wp_error( $attachment_id ) ) {
-			PGF_Blocks::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
+			WMPGF_Blocks::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
 			return 0;
 		}
 
@@ -431,10 +431,10 @@ class PGF_Seeder {
 		}
 
 		$content = '<!-- wp:heading --><h2>' . esc_html__( 'Browse the grid', 'wm-posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
-			"<!-- wp:pgf/posts-filter /-->\n\n" .
-			"<!-- wp:pgf/posts-grid {\"columns\":3,\"postsPerPage\":6} -->\n" .
-			"<!-- wp:pgf/pagination /-->\n" .
-			'<!-- /wp:pgf/posts-grid -->';
+			"<!-- wp:wmpgf/posts-filter /-->\n\n" .
+			"<!-- wp:wmpgf/posts-grid {\"columns\":3,\"postsPerPage\":6} -->\n" .
+			"<!-- wp:wmpgf/pagination /-->\n" .
+			'<!-- /wp:wmpgf/posts-grid -->';
 
 		$page_id = wp_insert_post(
 			array(
@@ -452,7 +452,7 @@ class PGF_Seeder {
 			update_option( self::DEMO_PAGE_OWNED_OPTION, true );
 		} else {
 			$reason = is_wp_error( $page_id ) ? $page_id->get_error_message() : 'wp_insert_post() returned no ID';
-			PGF_Blocks::log( 'Failed to create the demo page: ' . $reason );
+			WMPGF_Blocks::log( 'Failed to create the demo page: ' . $reason );
 		}
 	}
 }

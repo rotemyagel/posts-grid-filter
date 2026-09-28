@@ -1,25 +1,25 @@
-.pgf-filter__head {
+.wmpgf-filter__head {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 1rem;
 }
 
-.pgf-filter__heading {
+.wmpgf-filter__heading {
 	margin-top: 0;
 }
 
-.pgf-filter__clear {
+.wmpgf-filter__clear {
 	font-size: 0.9rem;
 	text-decoration: underline;
 	white-space: nowrap;
 }
 
-.pgf-filter__clear[hidden] {
+.wmpgf-filter__clear[hidden] {
 	display: none;
 }
 
-.pgf-filter__submit {
+.wmpgf-filter__submit {
 	padding: 0.4rem 0.9rem;
 	min-height: 44px;
 	border: 1px solid currentcolor;
@@ -29,19 +29,19 @@
 	cursor: pointer;
 }
 
-.pgf-filter__group {
+.wmpgf-filter__group {
 	border: none;
 	padding: 0;
 	margin: 0 0 1rem;
 }
 
-.pgf-filter__group legend {
+.wmpgf-filter__group legend {
 	font-weight: 600;
 	padding: 0;
 	margin-bottom: 0.4rem;
 }
 
-.pgf-filter__options {
+.wmpgf-filter__options {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
@@ -49,7 +49,7 @@
 
 /* The label is the visible pill; the real checkbox stays in the DOM for
    keyboard and screen readers, visually hidden. */
-.pgf-filter__option {
+.wmpgf-filter__option {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
@@ -66,18 +66,18 @@
 	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.pgf-filter__option:has(input:checked) {
+.wmpgf-filter__option:has(input:checked) {
 	background: #1e1e1e;
 	border-color: #1e1e1e;
 	color: #fff;
 }
 
-.pgf-filter__option:has(input:focus-visible) {
+.wmpgf-filter__option:has(input:focus-visible) {
 	outline: 2px solid #1e1e1e;
 	outline-offset: 2px;
 }
 
-.pgf-filter__option input {
+.wmpgf-filter__option input {
 	position: absolute;
 	width: 1px;
 	height: 1px;

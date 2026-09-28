@@ -10,39 +10,39 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       wm-posts-grid-filter
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'PGF_VERSION', '1.4.0' );
-define( 'PGF_FILE', __FILE__ );
-define( 'PGF_DIR', plugin_dir_path( __FILE__ ) );
-define( 'PGF_URL', plugin_dir_url( __FILE__ ) );
+define( 'WMPGF_VERSION', '1.4.0' );
+define( 'WMPGF_FILE', __FILE__ );
+define( 'WMPGF_DIR', plugin_dir_path( __FILE__ ) );
+define( 'WMPGF_URL', plugin_dir_url( __FILE__ ) );
 
-require_once PGF_DIR . 'includes/class-pgf-post-type.php';
-require_once PGF_DIR . 'includes/class-pgf-seeder.php';
-require_once PGF_DIR . 'includes/class-pgf-blocks.php';
-require_once PGF_DIR . 'includes/class-pgf-single-template.php';
-require_once PGF_DIR . 'includes/class-pgf-plugin.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-post-type.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-seeder.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-blocks.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-single-template.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-plugin.php';
 
 /**
  * Boots the plugin. Kept as a single accessor so activation/deactivation
  * hooks and the runtime bootstrap all go through the same instance.
  */
-function pgf_plugin() {
+function wmpgf_plugin() {
 	static $plugin = null;
 
 	if ( null === $plugin ) {
-		$plugin = new PGF_Plugin();
+		$plugin = new WMPGF_Plugin();
 	}
 
 	return $plugin;
 }
 
-register_activation_hook( __FILE__, array( 'PGF_Plugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'PGF_Plugin', 'deactivate' ) );
+register_activation_hook( __FILE__, array( 'WMPGF_Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'WMPGF_Plugin', 'deactivate' ) );
 
-pgf_plugin()->init();
+wmpgf_plugin()->init();

@@ -1,6 +1,6 @@
 <?php
 /**
- * Server-side render for pgf/pagination.
+ * Server-side render for wmpgf/pagination.
  *
  * Counts pages itself, because block context can only pass attributes
  * (postsPerPage), not the grid's query result. Prev/Next are plain links
@@ -11,24 +11,24 @@
  * @var string   $content    Rendered inner content (none, this block has no children).
  * @var WP_Block $block      Block instance.
  *
- * @package PostsGridFilter
+ * @package WMPGF
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$posts_per_page      = PGF_Blocks::sanitize_posts_per_page( $block->context['posts-grid-filter/postsPerPage'] ?? 6 );
-$selected_categories = PGF_Blocks::get_requested_term_ids( PGF_Blocks::CATEGORY_PARAM );
-$selected_tags       = PGF_Blocks::get_requested_term_ids( PGF_Blocks::TAG_PARAM );
-$tax_query           = PGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
+$posts_per_page      = WMPGF_Blocks::sanitize_posts_per_page( $block->context['wmpgf/postsPerPage'] ?? 6 );
+$selected_categories = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::CATEGORY_PARAM );
+$selected_tags       = WMPGF_Blocks::get_requested_term_ids( WMPGF_Blocks::TAG_PARAM );
+$tax_query           = WMPGF_Blocks::build_tax_query( $selected_categories, $selected_tags );
 
 // Same helpers as posts-grid/render.php, so both agree on the clamped page.
-$total_pages  = PGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
-$current_page = PGF_Blocks::clamp_page( PGF_Blocks::get_requested_page(), $total_pages );
+$total_pages  = WMPGF_Blocks::get_total_pages( $posts_per_page, $tax_query );
+$current_page = WMPGF_Blocks::clamp_page( WMPGF_Blocks::get_requested_page(), $total_pages );
 
 wp_interactivity_state(
-	'posts-grid-filter',
+	'wmpgf',
 	array(
 		'totalPages'            => $total_pages,
 		// Translated template; view.js fills it in when the page count changes.
@@ -39,19 +39,19 @@ wp_interactivity_state(
 $is_first_page = $current_page <= 1;
 $is_last_page  = $current_page >= $total_pages;
 
-$prev_href = $is_first_page ? '' : PGF_Blocks::page_url( $current_page - 1, $selected_categories, $selected_tags );
-$next_href = $is_last_page ? '' : PGF_Blocks::page_url( $current_page + 1, $selected_categories, $selected_tags );
+$prev_href = $is_first_page ? '' : WMPGF_Blocks::page_url( $current_page - 1, $selected_categories, $selected_tags );
+$next_href = $is_last_page ? '' : WMPGF_Blocks::page_url( $current_page + 1, $selected_categories, $selected_tags );
 
 // Disabled state is also rendered server-side, for first paint and no-JS.
-$prev_class = 'pgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );
-$next_class = 'pgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
+$prev_class = 'wmpgf-pagination__prev' . ( $is_first_page ? ' is-disabled' : '' );
+$next_class = 'wmpgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
 
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagination' ) );
+$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-pagination' ) );
 ?>
 <div
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 	<?php echo $total_pages <= 1 ? 'hidden' : ''; ?>
-	data-wp-interactive="posts-grid-filter"
+	data-wp-interactive="wmpgf"
 	data-wp-bind--hidden="state.isSinglePage"
 >
 	<a
@@ -65,7 +65,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagin
 	>
 		<?php esc_html_e( '‹ Prev', 'wm-posts-grid-filter' ); ?>
 	</a>
-	<span class="pgf-pagination__status" data-wp-text="state.paginationLabel">
+	<span class="wmpgf-pagination__status" data-wp-text="state.paginationLabel">
 		<?php
 		printf(
 			/* translators: 1: current page, 2: total pages */

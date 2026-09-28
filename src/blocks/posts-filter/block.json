@@ -1,9 +1,9 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "pgf/posts-filter",
+	"name": "wmpgf/posts-filter",
 	"title": "Posts Filter",
-	"category": "wm-widgets",
+	"category": "wmpgf",
 	"icon": "filter",
 	"description": "Category and tag checkboxes that filter the Posts Grid block. Can be placed anywhere on the page, not just next to the grid.",
 	"keywords": [ "filter", "category", "tag" ],

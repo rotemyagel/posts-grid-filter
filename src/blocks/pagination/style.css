@@ -1,4 +1,4 @@
-.pgf-pagination {
+.wmpgf-pagination {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -8,11 +8,11 @@
 }
 
 /* display:flex above would otherwise override the hidden attribute. */
-.pgf-pagination[hidden] {
+.wmpgf-pagination[hidden] {
 	display: none;
 }
 
-.pgf-pagination__note {
+.wmpgf-pagination__note {
 	flex-basis: 100%;
 	margin: 0;
 	text-align: center;
@@ -21,8 +21,8 @@
 }
 
 /* Links have no :disabled state, so .is-disabled drives the disabled look. */
-.pgf-pagination__prev,
-.pgf-pagination__next {
+.wmpgf-pagination__prev,
+.wmpgf-pagination__next {
 	display: inline-flex;
 	align-items: center;
 	cursor: pointer;
@@ -35,8 +35,8 @@
 	color: inherit;
 }
 
-.pgf-pagination__prev.is-disabled,
-.pgf-pagination__next.is-disabled {
+.wmpgf-pagination__prev.is-disabled,
+.wmpgf-pagination__next.is-disabled {
 	opacity: 0.4;
 	cursor: not-allowed;
 	pointer-events: none;

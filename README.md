@@ -26,7 +26,7 @@ Built for the WordPress Web Development Technical Assessment.
 - **Posts Filter** — category and tag checkboxes rendered as pill toggles, with a "Clear filters" link. Can be placed anywhere on the page, not nested inside the grid. The selection is mirrored into the address bar, so a refresh or a shared link reopens the same filtered view, and it still works with JavaScript disabled (a plain GET form).
 - **Pagination as a true inner block** — locked into the grid's template, registered as its own block rather than markup the grid just happens to render.
 - **Zero-JS-in-the-click-path pagination** — Prev/Next are plain, crawlable `<a href>` links with a full page reload; filtering stays instant via AJAX. See [why](#pagination-is-real-full-reload-navigation) below.
-- **Shared Interactivity API store, not nesting** — both blocks call `store('posts-grid-filter', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
+- **Shared Interactivity API store, not nesting** — both blocks call `store('wmpgf', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
 - **Idempotent, ownership-aware activation** — seeds 12 posts across 4 categories and 6 tags (each with a featured image and excerpt) plus a demo page. Reactivation never duplicates content, and `uninstall.php` only ever removes what the plugin itself created — never a site owner's own content, even if it shares a title or slug with seeded content.
 
 ---
@@ -98,11 +98,11 @@ npm run lint:php-fix   # auto-fixes what it can
 
 | Block | Type | Responsibility |
 |---|---|---|
-| `pgf/posts-grid` | Dynamic | Grid of posts, configurable columns/posts-per-page. Server-rendered; refreshes in place via REST when filters change. |
-| `pgf/pagination` | Dynamic, inner block | Prev / "Page X of Y" / Next. Locked into `pgf/posts-grid`'s template via `parent` + `templateLock: "all"`. |
-| `pgf/posts-filter` | Dynamic | Category/tag pill toggles + Clear filters. Independent of the grid — no nesting required. |
+| `wmpgf/posts-grid` | Dynamic | Grid of posts, configurable columns/posts-per-page. Server-rendered; refreshes in place via REST when filters change. |
+| `wmpgf/pagination` | Dynamic, inner block | Prev / "Page X of Y" / Next. Locked into `wmpgf/posts-grid`'s template via `parent` + `templateLock: "all"`. |
+| `wmpgf/posts-filter` | Dynamic | Category/tag pill toggles + Clear filters. Independent of the grid — no nesting required. |
 
-All three register into their own **"WM Widgets"** block-inserter category (`PGF_Blocks::register_block_category()`, via the `block_categories_all` filter) instead of core's generic "widgets" category, so they're grouped together and easy to find rather than mixed in among every other plugin's uncategorized blocks.
+All three register into their own **"WM Widgets"** block-inserter category (`WMPGF_Blocks::register_block_category()`, via the `block_categories_all` filter) instead of core's generic "widgets" category, so they're grouped together and easy to find rather than mixed in among every other plugin's uncategorized blocks.
 
 ### Seeded demo content
 
@@ -123,23 +123,23 @@ A short account of the calls made and why. The full round-by-round history — i
 
 ### A dedicated post type and taxonomies
 
-`pgf_post` with `pgf_category`/`pgf_tag`, not core `post`/`category`/`post_tag`. Keeps demo content fully isolated and identifiable — activation, reactivation, and uninstall never touch a site's real content — and satisfies the brief's requirement that the post type and taxonomy names carry a unique prefix.
+`wmpgf_post` with `wmpgf_category`/`wmpgf_tag`, not core `post`/`category`/`post_tag`. Keeps demo content fully isolated and identifiable — activation, reactivation, and uninstall never touch a site's real content — and satisfies the brief's requirement that the post type and taxonomy names carry a unique prefix.
 
 ### Inter-block sync: the Interactivity API, with REST doing the actual filtering
 
-Both blocks call `store('posts-grid-filter', { state, actions })` from their own `view.js`. WordPress merges every caller's partial state/actions into one shared store by namespace — the documented pattern for exactly this situation, and why the blocks can sit anywhere on the page without either needing to know the other exists.
+Both blocks call `store('wmpgf', { state, actions })` from their own `view.js`. WordPress merges every caller's partial state/actions into one shared store by namespace — the documented pattern for exactly this situation, and why the blocks can sit anywhere on the page without either needing to know the other exists.
 
 Filtering itself isn't reimplemented: any taxonomy registered with `show_in_rest => true` gets an automatic REST collection parameter, and WordPress's own `tax_query` behavior (`IN`/OR within one taxonomy, `AND` across taxonomies) is exactly the "OR within a filter type, AND across filter types" logic the brief asks for.
 
 ### Pagination is real, full-reload navigation
 
-Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`. Pagination is hidden when every result fits on one page (including zero results).
+Prev/Next are plain `<a href="?wmpgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`. Pagination is hidden when every result fits on one page (including zero results).
 
 ### Filtering: instant with JavaScript, a plain form without it
 
 With JavaScript, each change filters instantly over REST and `history.replaceState()` mirrors the selection into the address bar, so a refresh or a copied link reopens the same view. Without JavaScript, the checkboxes are a plain `<form method="get">` with an "Apply filters" button (inside `<noscript>`). Result-count changes are announced to screen readers through an `aria-live` region.
 
-URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?pgf_category=design,culture&pgf_tag=trends&pgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/pgf_post?per_page=6&page=1&pgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `PGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`PGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `pgf_category[]=design&pgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
+URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?wmpgf_category=design,culture&wmpgf_tag=trends&wmpgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/wmpgf_post?per_page=6&page=1&wmpgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `WMPGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`WMPGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `wmpgf_category[]=design&wmpgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
 
 ### Single-post permalinks use a fixed base
 
@@ -147,7 +147,7 @@ Single posts live at `/grid-post/{slug}/`. An earlier version put the category f
 
 ### Ownership-aware seeding and uninstall
 
-`pgf_post` is a public, registered post type — once seeded, a site owner creating one by hand is normal use, not a leftover. The seeder records exactly which posts, attachments, and taxonomy terms it *creates* (as opposed to *adopts*, when idempotency finds a pre-existing match), and `uninstall.php` deletes only those, never anything it can't prove it created — including the demo page itself, which is adopted rather than deleted if something already occupies that slug.
+`wmpgf_post` is a public, registered post type — once seeded, a site owner creating one by hand is normal use, not a leftover. The seeder records exactly which posts, attachments, and taxonomy terms it *creates* (as opposed to *adopts*, when idempotency finds a pre-existing match), and `uninstall.php` deletes only those, never anything it can't prove it created — including the demo page itself, which is adopted rather than deleted if something already occupies that slug.
 
 ### Scope: one grid + one filter per page
 
@@ -174,21 +174,21 @@ wm-posts-grid-filter/
 ├── LICENSE                        GPL-2.0 text
 │
 ├── includes/
-│   ├── class-pgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
-│   ├── class-pgf-post-type.php    pgf_post CPT + taxonomies
-│   ├── class-pgf-blocks.php       Block registration + shared query/param helpers
-│   ├── class-pgf-seeder.php       Idempotent, ownership-tracked demo content seeding
-│   └── class-pgf-single-template.php  Single-post template fallback for themes with none
+│   ├── class-wmpgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
+│   ├── class-wmpgf-post-type.php    wmpgf_post CPT + taxonomies
+│   ├── class-wmpgf-blocks.php       Block registration + shared query/param helpers
+│   ├── class-wmpgf-seeder.php       Idempotent, ownership-tracked demo content seeding
+│   └── class-wmpgf-single-template.php  Single-post template fallback for themes with none
 │
 ├── templates/
-│   └── single-pgf_post.php        Title/image/terms/content template for a single grid post
+│   └── single-wmpgf_post.php        Title/image/terms/content template for a single grid post
 │
 ├── assets/css/
 │   └── single.css                 Styling for the single-post template
 │
 ├── src/
 │   ├── shared/
-│   │   └── filter-url.js          Builds readable ?pgf_category=design,culture&pgf-page=2 URLs
+│   │   └── filter-url.js          Builds readable ?wmpgf_category=design,culture&wmpgf-page=2 URLs
 │   │
 │   └── blocks/                    Each block: block.json, index.js (registration), edit.js,
 │       │                          save.js, render.php, view.js, style.css
@@ -199,7 +199,7 @@ wm-posts-grid-filter/
 │       │   └── view.js            Frontend: REST refresh, request sequencing, card rendering
 │       │
 │       ├── pagination/
-│       │   ├── block.json         parent: ["pgf/posts-grid"]
+│       │   ├── block.json         parent: ["wmpgf/posts-grid"]
 │       │   ├── edit.js            Editor preview with the real page count
 │       │   ├── render.php         Prev/Next hrefs, total-page count, hidden on a single page
 │       │   └── view.js            Reactive href/label/visibility getters
@@ -216,7 +216,7 @@ wm-posts-grid-filter/
 
 ## ✅ Coding standards
 
-- **PHP** — checked with the actual [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards) ruleset via PHPCS (`phpcs.xml.dist`, `npm run lint:php`), not just followed by convention: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout. One rule is disabled with a documented reason in `phpcs.xml.dist` — the naming check for `templates/single-pgf_post.php`, whose underscore is required by WordPress's own template-hierarchy convention (`single-{$post_type}.php`), not a style inconsistency.
+- **PHP** — checked with the actual [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards) ruleset via PHPCS (`phpcs.xml.dist`, `npm run lint:php`), not just followed by convention: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout. One rule is disabled with a documented reason in `phpcs.xml.dist` — the naming check for `templates/single-wmpgf_post.php`, whose underscore is required by WordPress's own template-hierarchy convention (`single-{$post_type}.php`), not a style inconsistency.
 - **JavaScript** — `@wordpress/scripts` ESLint config (`npm run lint:js`, clean). Only `@wordpress/*` packages; no external React libraries.
 - **CSS** — `@wordpress/scripts` Stylelint config (`npm run lint:css`, clean).
 - **i18n** — every user-facing string wrapped with `__()`/`_e()`/`esc_html__()`/`esc_html_e()` under the `wm-posts-grid-filter` text domain, including strings rendered client-side (passed through from PHP via `wp_interactivity_state()`, not hardcoded in JS).
@@ -245,13 +245,13 @@ A smoke test you can run after activation:
 
 ```bash
 # OR within a taxonomy: two categories (REST takes term IDs) should return their union
-curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category=8,10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
+curl -s "http://your-site.test/wp-json/wp/v2/wmpgf_post?wmpgf_category=8,10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
 # AND across taxonomies: adding a tag should narrow the same request
-curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category=8,10&pgf_tag=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
+curl -s "http://your-site.test/wp-json/wp/v2/wmpgf_post?wmpgf_category=8,10&wmpgf_tag=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
 # No-JS pagination + filtering, server-rendered
-curl -s "http://your-site.test/posts-grid-filter-demo/?pgf_category=design,culture&pgf-page=2" | grep -o 'Page [0-9]* of [0-9]*'
+curl -s "http://your-site.test/posts-grid-filter-demo/?wmpgf_category=design,culture&wmpgf-page=2" | grep -o 'Page [0-9]* of [0-9]*'
 ```
 
 ---
@@ -267,7 +267,7 @@ Two items previously listed here were fixed rather than left as limitations — 
 Two more are deliberate design decisions, not bugs to fix:
 
 - **Pagination is a full page reload, not instant.** This was built this way on purpose, specifically *instead of* an earlier AJAX version — full-reload navigation is what makes page 2+ a real, crawlable URL that works with JavaScript disabled, which instant pagination structurally cannot do. Reverting this would reintroduce the exact problem it was built to solve. Filtering is a separate concern and stays instant.
-- **Filtered *and* paginated views are both crawlable** (`?pgf_category=` combined with `?pgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
+- **Filtered *and* paginated views are both crawlable** (`?wmpgf_category=` combined with `?wmpgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
 
 ---
 
