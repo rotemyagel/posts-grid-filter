@@ -1,4 +1,6 @@
-.wmpgf-pagination {
+.wp-block-wmpgf-pagination {
+	font-size: var(--wmpgf-text-s);
+	line-height: var(--wmpgf-leading-s);
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -8,21 +10,22 @@
 }
 
 /* display:flex above would otherwise override the hidden attribute. */
-.wmpgf-pagination[hidden] {
+.wp-block-wmpgf-pagination[hidden] {
 	display: none;
 }
 
-.wmpgf-pagination__note {
+.wp-block-wmpgf-pagination .wmpgf-pagination__note {
 	flex-basis: 100%;
 	margin: 0;
 	text-align: center;
-	font-size: 0.8rem;
+	font-size: var(--wmpgf-text-s);
 	opacity: 0.7;
 }
 
 /* Links have no :disabled state, so .is-disabled drives the disabled look. */
-.wmpgf-pagination__prev,
-.wmpgf-pagination__next {
+.wp-block-wmpgf-pagination .wmpgf-pagination__prev,
+.wp-block-wmpgf-pagination .wmpgf-pagination__next {
+	font-size: inherit;
 	display: inline-flex;
 	align-items: center;
 	cursor: pointer;
@@ -35,8 +38,8 @@
 	color: inherit;
 }
 
-.wmpgf-pagination__prev.is-disabled,
-.wmpgf-pagination__next.is-disabled {
+.wp-block-wmpgf-pagination .wmpgf-pagination__prev.is-disabled,
+.wp-block-wmpgf-pagination .wmpgf-pagination__next.is-disabled {
 	opacity: 0.4;
 	cursor: not-allowed;
 	pointer-events: none;

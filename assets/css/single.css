@@ -17,8 +17,9 @@
 
 .wmpgf-single__title {
 	margin: 0 0 0.75rem;
-	font-size: 2rem;
-	line-height: 1.2;
+	font-size: var(--wmpgf-text-l);
+	font-weight: var(--wmpgf-weight-strong);
+	line-height: var(--wmpgf-leading-l);
 }
 
 .wmpgf-single__terms {
@@ -32,7 +33,7 @@
 	display: inline-block;
 	padding: 0.2rem 0.7rem;
 	border-radius: 999px;
-	font-size: 0.85rem;
+	font-size: var(--wmpgf-text-s);
 	text-decoration: none;
 	background: #f0f0f5;
 }
@@ -44,8 +45,8 @@
 }
 
 .wmpgf-single__content {
-	font-size: 1.05rem;
-	line-height: 1.7;
+	font-size: var(--wmpgf-text-m);
+	line-height: var(--wmpgf-leading-m);
 }
 
 .wmpgf-single__back {
@@ -60,9 +61,5 @@
 
 	.wmpgf-single {
 		padding: 1.25rem 1rem 2rem;
-	}
-
-	.wmpgf-single__title {
-		font-size: 1.5rem;
 	}
 }

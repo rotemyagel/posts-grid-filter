@@ -54,9 +54,17 @@ class WMPGF_Blocks {
 	}
 
 	/**
-	 * Registers every block from its build/blocks/<name>/block.json.
+	 * Registers the shared design tokens, then every block from its
+	 * build/blocks/<name>/block.json (each lists "wmpgf-tokens" as a style).
 	 */
 	public function register_blocks() {
+		wp_register_style(
+			'wmpgf-tokens',
+			WMPGF_URL . 'assets/css/tokens.css',
+			array(),
+			(string) filemtime( WMPGF_DIR . 'assets/css/tokens.css' )
+		);
+
 		foreach ( $this->blocks as $block ) {
 			$path = WMPGF_DIR . 'build/blocks/' . $block;
 

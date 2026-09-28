@@ -1,0 +1,28 @@
+/*
+ * Design tokens shared by every block and the single-post template.
+ * Registered once as the "wmpgf-tokens" style handle. :where() keeps the
+ * specificity at zero, so a theme can override any token.
+ */
+
+:where(
+.wp-block-wmpgf-posts-grid,
+.wp-block-wmpgf-posts-filter,
+.wmpgf-single
+) {
+	--wmpgf-font: system-ui, sans-serif;
+
+	/* Three sizes: small (pills, labels, meta), medium (cards, body),
+	   large (headings). */
+	--wmpgf-text-s: 0.875rem;
+	--wmpgf-text-m: 1.0625rem;
+	--wmpgf-text-l: 1.75rem;
+	--wmpgf-leading-s: 1.4;
+	--wmpgf-leading-m: 1.6;
+	--wmpgf-leading-l: 1.15;
+
+	/* Two weights. */
+	--wmpgf-weight-regular: 400;
+	--wmpgf-weight-strong: 600;
+
+	font-family: var(--wmpgf-font);
+}

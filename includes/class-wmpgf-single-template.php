@@ -56,7 +56,7 @@ class WMPGF_Single_Template {
 		wp_enqueue_style(
 			'wmpgf-single',
 			WMPGF_URL . 'assets/css/single.css',
-			array(),
+			array( 'wmpgf-tokens' ),
 			file_exists( $path ) ? filemtime( $path ) : WMPGF_VERSION
 		);
 	}

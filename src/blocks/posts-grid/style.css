@@ -1,53 +1,53 @@
-.wmpgf-grid {
+.wp-block-wmpgf-posts-grid .wmpgf-grid {
 	display: grid;
 	gap: 1.5rem;
 	transition: opacity 0.15s ease;
 }
 
-.wmpgf-grid.is-loading {
+.wp-block-wmpgf-posts-grid.is-loading .wmpgf-grid {
 	opacity: 0.5;
 }
 
-.wmpgf-grid--cols-2 {
+.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-2 {
 	grid-template-columns: repeat(2, 1fr);
 }
 
-.wmpgf-grid--cols-3 {
+.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-3 {
 	grid-template-columns: repeat(3, 1fr);
 }
 
-.wmpgf-grid--cols-4 {
+.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-4 {
 	grid-template-columns: repeat(4, 1fr);
 }
 
 @media ( max-width: 782px ) {
 
-	.wmpgf-grid--cols-3,
-	.wmpgf-grid--cols-4 {
+	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-3,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-4 {
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
 @media ( max-width: 480px ) {
 
-	.wmpgf-grid--cols-2,
-	.wmpgf-grid--cols-3,
-	.wmpgf-grid--cols-4 {
+	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-2,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-3,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-4 {
 		grid-template-columns: 1fr;
 	}
 
-	.wmpgf-grid {
+	.wp-block-wmpgf-posts-grid .wmpgf-grid {
 		gap: 1rem;
 	}
 }
 
-.wmpgf-grid__card {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card {
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
 }
 
-.wmpgf-grid__thumb img {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb img {
 	width: 100%;
 	height: auto;
 	display: block;
@@ -59,21 +59,26 @@
 	background-color: #f0f0f5;
 }
 
-.wmpgf-grid__title {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__title {
 	margin: 0;
-	font-size: 1.1rem;
+	font-size: var(--wmpgf-text-m);
+	font-weight: var(--wmpgf-weight-strong);
+	line-height: var(--wmpgf-leading-m);
 }
 
-.wmpgf-grid__title a {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__title a {
+	font-size: inherit;
+	font-weight: inherit;
 	text-decoration: none;
 }
 
-.wmpgf-grid__excerpt {
-	font-size: 0.95rem;
+.wp-block-wmpgf-posts-grid .wmpgf-grid__excerpt {
+	font-size: var(--wmpgf-text-m);
+	line-height: var(--wmpgf-leading-m);
 	opacity: 0.85;
 }
 
-.wmpgf-sr-only {
+.wp-block-wmpgf-posts-grid .wmpgf-sr-only {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -85,7 +90,7 @@
 	border: 0;
 }
 
-.wmpgf-grid__empty {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__empty {
 	grid-column: 1 / -1;
 	opacity: 0.7;
 }
