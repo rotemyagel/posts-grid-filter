@@ -98,6 +98,40 @@ class WMPGF_Query {
 	}
 
 	/**
+	 * Each post's primary category (the first one assigned), for the whole
+	 * page in one query.
+	 *
+	 * @param int[] $post_ids Post IDs.
+	 * @return array<int, WP_Term> Post ID => term.
+	 */
+	public static function primary_categories( array $post_ids ) {
+		if ( ! $post_ids ) {
+			return array();
+		}
+
+		$terms = wp_get_object_terms(
+			$post_ids,
+			WMPGF_Post_Type::TAX_CATEGORY,
+			array(
+				'orderby'                => 'term_order',
+				'fields'                 => 'all_with_object_id',
+				'update_term_meta_cache' => false,
+			)
+		);
+
+		$primary = array();
+		if ( ! is_wp_error( $terms ) ) {
+			foreach ( $terms as $term ) {
+				if ( ! isset( $primary[ $term->object_id ] ) ) {
+					$primary[ $term->object_id ] = $term;
+				}
+			}
+		}
+
+		return $primary;
+	}
+
+	/**
 	 * Clamps the postsPerPage attribute to the allowed range.
 	 *
 	 * @param mixed $value Raw attribute value.

@@ -1,6 +1,6 @@
 .wp-block-wmpgf-posts-grid .wmpgf-grid {
 	display: grid;
-	gap: 1.5rem;
+	gap: 40px 24px;
 	transition: opacity 0.15s ease;
 }
 
@@ -35,52 +35,115 @@
 	.wp-block-wmpgf-posts-grid .wmpgf-grid--cols-4 {
 		grid-template-columns: 1fr;
 	}
-
-	.wp-block-wmpgf-posts-grid .wmpgf-grid {
-		gap: 1rem;
-	}
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__card {
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: 8px;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb {
+	margin-bottom: 8px;
+	overflow: hidden;
+	border-radius: 12px;
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__thumb img {
+	display: block;
 	width: 100%;
 	height: auto;
-	display: block;
-	border-radius: 4px;
 
 	/* Reserves space before the image loads, so filtering doesn't shift layout. */
 	aspect-ratio: 3 / 2;
 	object-fit: cover;
 	background-color: #f0f0f5;
+	transition: transform 0.3s ease;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__category {
+	margin: 0;
+	font-size: var(--wmpgf-text-s);
+	font-weight: var(--wmpgf-weight-strong);
+	line-height: var(--wmpgf-leading-s);
+	opacity: 0.65;
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__title {
+	display: -webkit-box;
 	margin: 0;
+	overflow: hidden;
 	font-size: var(--wmpgf-text-m);
 	font-weight: var(--wmpgf-weight-strong);
 	line-height: var(--wmpgf-leading-m);
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__title a {
+	color: inherit;
 	font-size: inherit;
 	font-weight: inherit;
 	text-decoration: none;
+	text-underline-offset: 3px;
+}
+
+/* Stretched link: the title's link covers the whole card, so the card is
+   one click target and one tab stop, and its focus ring outlines the card. */
+.wp-block-wmpgf-posts-grid .wmpgf-grid__title a::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 12px;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__title a:focus-visible {
+	outline: none;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__title a:focus-visible::after {
+	outline: 2px solid currentcolor;
+	outline-offset: 6px;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card:hover .wmpgf-grid__title a {
+	text-decoration: underline;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card:hover .wmpgf-grid__thumb img {
+	transform: scale(1.04);
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__excerpt {
 	font-size: var(--wmpgf-text-m);
 	line-height: var(--wmpgf-leading-m);
-	opacity: 0.85;
+	opacity: 0.8;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__excerpt p {
+	display: -webkit-box;
+	margin: 0;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__empty {
 	grid-column: 1 / -1;
 	opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.wp-block-wmpgf-posts-grid .wmpgf-grid,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb img {
+		transition: none;
+	}
+
+	.wp-block-wmpgf-posts-grid .wmpgf-grid__card:hover .wmpgf-grid__thumb img {
+		transform: none;
+	}
 }
 
 /* Themes often set a font on a, p and headings directly; inherit ours. */

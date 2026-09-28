@@ -177,9 +177,7 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Inserts the demo posts. Twelve posts across 4 categories, each with
-	 * 1-2 categories and 2-3 tags so filter combinations produce different,
-	 * meaningful result sets rather than every post matching everything.
+	 * Inserts the demo posts from includes/demo-content.php.
 	 *
 	 * @param array $category_ids Category name => term_id.
 	 * @param array $tag_ids      Tag name => term_id.
@@ -188,29 +186,15 @@ class WMPGF_Seeder {
 	 *              what this call inserted.
 	 */
 	private function create_posts( $category_ids, $tag_ids ) {
-		$category_names = array_keys( $category_ids );
-		$tag_names      = array_keys( $tag_ids );
-
-		$titles = array(
-			'The Future of Headless WordPress',
-			'A Designer\'s Guide to Design Tokens',
-			'Scaling a Small Team Without Losing Culture',
-			'What the Interactivity API Changes for Block Authors',
-			'Notes on Building a Sustainable Freelance Business',
-			'The Quiet Return of Skeuomorphism',
-			'Why Editorial Calendars Fail (and What Works Instead)',
-			'An Interview with a Block Theme Maintainer',
-			'Performance Budgets for Content Teams',
-			'Color Systems That Survive a Rebrand',
-			'The Economics of Open Source Plugins',
-			'Reading the Room: Culture Shifts in Remote Teams',
-		);
+		$demo_posts = require WMPGF_DIR . 'includes/demo-content.php';
 
 		$post_ids         = array();
 		$created_post_ids = array();
 		$attachment_ids   = array();
 
-		foreach ( $titles as $index => $title ) {
+		foreach ( $demo_posts as $index => $demo_post ) {
+			$title = $demo_post['title'];
+
 			// WP_Query 'title' replaces get_page_by_title(), deprecated in 6.2.
 			$existing = new WP_Query(
 				array(
@@ -229,19 +213,19 @@ class WMPGF_Seeder {
 				continue;
 			}
 
-			$primary_category    = $category_names[ $index % count( $category_names ) ];
-			$secondary_index     = ( $index + 1 ) % count( $category_names );
-			$assigned_categories = array( $category_ids[ $primary_category ] );
-			if ( 0 === $index % 3 ) {
-				$assigned_categories[] = $category_ids[ $category_names[ $secondary_index ] ];
+			// In the listed order, primary category first; the category
+			// taxonomy is sorted, so WordPress keeps that order.
+			$assigned_categories = array();
+			foreach ( $demo_post['categories'] as $name ) {
+				if ( isset( $category_ids[ $name ] ) ) {
+					$assigned_categories[] = $category_ids[ $name ];
+				}
 			}
-
-			$assigned_tags = array(
-				$tag_ids[ $tag_names[ $index % count( $tag_names ) ] ],
-				$tag_ids[ $tag_names[ ( $index + 2 ) % count( $tag_names ) ] ],
-			);
-			if ( 0 === $index % 2 ) {
-				$assigned_tags[] = $tag_ids[ $tag_names[ ( $index + 4 ) % count( $tag_names ) ] ];
+			$assigned_tags = array();
+			foreach ( $demo_post['tags'] as $name ) {
+				if ( isset( $tag_ids[ $name ] ) ) {
+					$assigned_tags[] = $tag_ids[ $name ];
+				}
 			}
 
 			$post_id = wp_insert_post(
@@ -250,8 +234,8 @@ class WMPGF_Seeder {
 					'post_title'   => $title,
 					'post_status'  => 'publish',
 					'post_author'  => $this->author_id,
-					'post_excerpt' => $this->excerpt_for( $title ),
-					'post_content' => $this->content_for( $title ),
+					'post_excerpt' => $demo_post['excerpt'],
+					'post_content' => $this->content_for( $demo_post['body'] ),
 				)
 			);
 
@@ -271,7 +255,7 @@ class WMPGF_Seeder {
 				self::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
 			}
 
-			$attachment_id = $this->create_placeholder_image( $post_id, $primary_category, $index );
+			$attachment_id = $this->create_cover_image( $post_id, $demo_post['categories'][0], $index );
 			if ( $attachment_id ) {
 				set_post_thumbnail( $post_id, $attachment_id );
 				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
@@ -328,55 +312,38 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Builds a short excerpt from the title.
+	 * Post content as paragraph blocks.
 	 *
-	 * @param string $title Post title.
+	 * @param string[] $paragraphs Plain-text paragraphs.
 	 * @return string
 	 */
-	private function excerpt_for( $title ) {
-		return sprintf(
-			/* translators: %s: post title */
-			__( 'A closer look at %s and what it means for teams working with WordPress today.', 'wm-posts-grid-filter' ),
-			lcfirst( $title )
-		);
+	private function content_for( array $paragraphs ) {
+		$blocks = array();
+		foreach ( $paragraphs as $paragraph ) {
+			$blocks[] = '<!-- wp:paragraph --><p>' . esc_html( $paragraph ) . '</p><!-- /wp:paragraph -->';
+		}
+
+		return implode( "\n\n", $blocks );
 	}
 
 	/**
-	 * Builds simple demo body content.
-	 *
-	 * @param string $title Post title.
-	 * @return string
-	 */
-	private function content_for( $title ) {
-		return '<!-- wp:paragraph --><p>' . esc_html( $this->excerpt_for( $title ) ) . '</p><!-- /wp:paragraph -->';
-	}
-
-	/**
-	 * Writes a solid-color placeholder SVG and registers it as an attachment.
+	 * Writes the post's cover SVG and registers it as an attachment.
 	 *
 	 * @param int    $post_id  Parent post ID.
-	 * @param string $category Category name, used to pick a color.
-	 * @param int    $index    Post index, mixed into the label.
+	 * @param string $category Primary category name, used to pick the colours.
+	 * @param int    $index    Post index, seeds the pattern.
 	 * @return int Attachment ID, or 0 on failure.
 	 */
-	private function create_placeholder_image( $post_id, $category, $index ) {
+	private function create_cover_image( $post_id, $category, $index ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		list( $r, $g, $b ) = isset( $this->categories[ $category ] ) ? $this->categories[ $category ] : array( 100, 100, 100 );
 
 		$width  = 1200;
 		$height = 800;
-		$label  = esc_html( $category . ' #' . ( $index + 1 ) );
-
-		$svg = sprintf(
-			'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%2$d" viewBox="0 0 %1$d %2$d" role="img" aria-hidden="true"><rect width="100%%" height="100%%" fill="rgb(%3$d,%4$d,%5$d)"/><text x="24" y="%6$d" font-family="sans-serif" font-size="36" fill="#ffffff">%7$s</text></svg>',
+		$svg    = $this->cover_svg(
+			isset( $this->categories[ $category ] ) ? $this->categories[ $category ] : array( 100, 100, 100 ),
+			$index,
 			$width,
-			$height,
-			$r,
-			$g,
-			$b,
-			$height - 32,
-			$label
+			$height
 		);
 
 		$upload_dir = wp_upload_dir();
@@ -384,7 +351,7 @@ class WMPGF_Seeder {
 		$file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
 
 		if ( false === file_put_contents( $file_path, $svg ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			self::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
+			self::log( sprintf( 'Could not write cover SVG to "%s".', $file_path ) );
 			return 0;
 		}
 
@@ -423,6 +390,99 @@ class WMPGF_Seeder {
 		);
 
 		return $attachment_id;
+	}
+
+	/**
+	 * A geometric cover: a 6x4 grid of tiles, each with a quarter circle,
+	 * half circle, circle, triangle or nothing, in tints of the category
+	 * colour. A small seeded generator picks the shapes, so the same post
+	 * always gets the same picture.
+	 *
+	 * @param int[] $rgb    Category colour.
+	 * @param int   $seed   Post index.
+	 * @param int   $width  Canvas width.
+	 * @param int   $height Canvas height.
+	 * @return string SVG markup.
+	 */
+	private function cover_svg( array $rgb, $seed, $width, $height ) {
+		$state  = ( (int) $seed + 1 ) * 7919;
+		$random = static function ( $max ) use ( &$state ) {
+			$state = ( $state * 1103515245 + 12345 ) & 0x7fffffff;
+			return $state % $max;
+		};
+		$mix    = static function ( array $target, $amount ) use ( $rgb ) {
+			$channels = array();
+			foreach ( $rgb as $i => $channel ) {
+				$channels[] = (int) round( $channel + ( $target[ $i ] - $channel ) * $amount );
+			}
+			return vsprintf( 'rgb(%d,%d,%d)', $channels );
+		};
+
+		$palette = array(
+			$mix( array( 255, 255, 255 ), 0.85 ),
+			$mix( array( 255, 255, 255 ), 0.5 ),
+			$mix( array( 255, 255, 255 ), 0 ),
+			$mix( array( 0, 0, 0 ), 0.35 ),
+		);
+		$size    = 200;
+		$shapes  = '';
+
+		$rows = intdiv( $height, $size );
+		$cols = intdiv( $width, $size );
+		for ( $row = 0; $row < $rows; $row++ ) {
+			for ( $col = 0; $col < $cols; $col++ ) {
+				$x          = $col * $size;
+				$y          = $row * $size;
+				$background = $random( 4 );
+				$fill       = $palette[ ( $background + 1 + $random( 3 ) ) % 4 ];
+				$shapes    .= sprintf( '<rect x="%d" y="%d" width="%d" height="%d" fill="%s"/>', $x, $y, $size, $size, $palette[ $background ] );
+
+				$r = $size / 2;
+				$s = $size;
+				switch ( $random( 6 ) ) {
+					case 0: // Quarter circle, centred on one corner.
+						$corners = array(
+							"M$x $y L" . ( $x + $s ) . " $y A$s $s 0 0 1 $x " . ( $y + $s ) . 'Z',
+							'M' . ( $x + $s ) . " $y L" . ( $x + $s ) . ' ' . ( $y + $s ) . " A$s $s 0 0 1 $x {$y}Z",
+							'M' . ( $x + $s ) . ' ' . ( $y + $s ) . " L$x " . ( $y + $s ) . " A$s $s 0 0 1 " . ( $x + $s ) . " {$y}Z",
+							"M$x " . ( $y + $s ) . " L$x $y A$s $s 0 0 1 " . ( $x + $s ) . ' ' . ( $y + $s ) . 'Z',
+						);
+						$shapes .= sprintf( '<path d="%s" fill="%s"/>', $corners[ $random( 4 ) ], $fill );
+						break;
+					case 1: // Half circle on one side, bulging inwards.
+						$sides   = array(
+							"M$x $y A$r $r 0 0 0 " . ( $x + $s ) . " {$y}Z",
+							"M$x " . ( $y + $s ) . " A$r $r 0 0 1 " . ( $x + $s ) . ' ' . ( $y + $s ) . 'Z',
+							"M$x $y A$r $r 0 0 1 $x " . ( $y + $s ) . 'Z',
+							'M' . ( $x + $s ) . " $y A$r $r 0 0 0 " . ( $x + $s ) . ' ' . ( $y + $s ) . 'Z',
+						);
+						$shapes .= sprintf( '<path d="%s" fill="%s"/>', $sides[ $random( 4 ) ], $fill );
+						break;
+					case 2: // Large circle.
+					case 3: // Small circle.
+						$shapes .= sprintf( '<circle cx="%d" cy="%d" r="%d" fill="%s"/>', $x + $r, $y + $r, 2 === $random( 3 ) ? $s * 0.18 : $s * 0.38, $fill );
+						break;
+					case 4: // Triangle across one diagonal.
+						$triangles = array(
+							array( $x, $y, $x + $s, $y, $x, $y + $s ),
+							array( $x + $s, $y, $x + $s, $y + $s, $x, $y ),
+							array( $x + $s, $y + $s, $x, $y + $s, $x + $s, $y ),
+							array( $x, $y + $s, $x, $y, $x + $s, $y + $s ),
+						);
+						$shapes   .= sprintf( '<polygon points="%s" fill="%s"/>', vsprintf( '%d,%d %d,%d %d,%d', $triangles[ $random( 4 ) ] ), $fill );
+						break;
+					default: // Leave the tile plain.
+						break;
+				}
+			}
+		}
+
+		return sprintf(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%2$d" viewBox="0 0 %1$d %2$d">%3$s</svg>',
+			$width,
+			$height,
+			$shapes
+		);
 	}
 
 	/**

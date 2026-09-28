@@ -31,6 +31,7 @@ $result  = WMPGF_Query::page(
 	WMPGF_Request::page()
 );
 $query   = $result['query'];
+$labels  = WMPGF_Query::primary_categories( wp_list_pluck( $query->posts, 'ID' ) );
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-grid-block' ) );
 ?>
@@ -49,11 +50,16 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-gri
 				?>
 				<article class="wmpgf-grid__card">
 					<?php if ( has_post_thumbnail() ) : ?>
-						<a href="<?php the_permalink(); ?>" class="wmpgf-grid__thumb" tabindex="-1" aria-hidden="true">
-							<?php the_post_thumbnail( 'medium' ); ?>
-						</a>
+						<div class="wmpgf-grid__thumb">
+							<?php // Decorative: the title below says the same thing. ?>
+							<?php the_post_thumbnail( 'medium', array( 'alt' => '' ) ); ?>
+						</div>
+					<?php endif; ?>
+					<?php if ( isset( $labels[ get_the_ID() ] ) ) : ?>
+						<p class="wmpgf-grid__category"><?php echo esc_html( $labels[ get_the_ID() ]->name ); ?></p>
 					<?php endif; ?>
 					<h3 class="wmpgf-grid__title">
+						<?php // Its ::after covers the card, so the whole card is one link. ?>
 						<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 					</h3>
 					<div class="wmpgf-grid__excerpt"><?php the_excerpt(); ?></div>
