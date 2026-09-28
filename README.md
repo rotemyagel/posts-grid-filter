@@ -103,6 +103,8 @@ npm run lint:php-fix   # auto-fixes what it can
 | `pgf/pagination` | Dynamic, inner block | Prev / "Page X of Y" / Next. Locked into `pgf/posts-grid`'s template via `parent` + `templateLock: "all"`. |
 | `pgf/posts-filter` | Dynamic | Category/tag pill toggles + Clear filters. Independent of the grid — no nesting required. |
 
+All three register into their own **"WM Features"** block-inserter category (`PGF_Blocks::register_block_category()`, via the `block_categories_all` filter) instead of core's generic "widgets" category, so they're grouped together and easy to find rather than mixed in among every other plugin's uncategorized blocks.
+
 ### Seeded demo content
 
 Created automatically on first activation, idempotently (reactivating never duplicates it):

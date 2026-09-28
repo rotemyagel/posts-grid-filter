@@ -55,10 +55,42 @@ class PGF_Blocks {
 	private $blocks = array( 'posts-grid', 'pagination', 'posts-filter' );
 
 	/**
+	 * Slug of the custom block-inserter category this plugin's blocks are
+	 * grouped under, instead of the generic "widgets" core category.
+	 */
+	const BLOCK_CATEGORY_SLUG = 'wm-features';
+
+	/**
 	 * Hooks registration into WordPress.
 	 */
 	public function init() {
 		add_action( 'init', array( $this, 'register_blocks' ) );
+		add_filter( 'block_categories_all', array( $this, 'register_block_category' ) );
+	}
+
+	/**
+	 * Adds a "WM Features" category to the block inserter so Posts Grid,
+	 * Pagination, and Posts Filter (each block.json's own "category" is set
+	 * to self::BLOCK_CATEGORY_SLUG) appear grouped together under their own
+	 * heading, rather than mixed into core's generic "widgets" category
+	 * alongside every other plugin's uncategorized blocks. Registered first
+	 * in the list (array_merge with this category first) so it appears near
+	 * the top of the inserter rather than at the bottom.
+	 *
+	 * @param array $categories Existing block categories.
+	 * @return array
+	 */
+	public function register_block_category( $categories ) {
+		return array_merge(
+			array(
+				array(
+					'slug'  => self::BLOCK_CATEGORY_SLUG,
+					'title' => __( 'WM Features', 'wm-posts-grid-filter' ),
+					'icon'  => 'grid-view',
+				),
+			),
+			$categories
+		);
 	}
 
 	/**

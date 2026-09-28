@@ -3,7 +3,7 @@
   "apiVersion": 3,
   "name": "pgf/posts-grid",
   "title": "Posts Grid",
-  "category": "widgets",
+  "category": "wm-features",
   "icon": "grid-view",
   "description": "Displays Grid Posts in a configurable grid. Sync with a Posts Filter block placed anywhere on the page.",
   "keywords": [

@@ -413,3 +413,25 @@ reactivation cycle to specifically re-exercise the replaced
 `get_page_by_title()` idempotency check -- confirmed no duplicate posts
 and no deprecation notice in `debug.log`) and a real-browser check with
 zero console errors.
+
+## Custom block-inserter category
+
+Requested: group the plugin's three blocks under their own heading in the
+block inserter, rather than leaving them mixed into core's generic
+"widgets" category alongside every other plugin's uncategorized blocks.
+Added `PGF_Blocks::register_block_category()`, hooked to
+`block_categories_all`, registering a `wm-features` category ("WM
+Features") ahead of the existing list (so it sorts near the top of the
+inserter rather than the bottom), and changed all three block.json files'
+`"category"` from `"widgets"` to `"wm-features"`.
+
+Verified directly in a real editor session, not just by reading the
+config: `wp.blocks.getBlockType()` confirmed all three blocks
+(`pgf/posts-grid`, `pgf/pagination`, `pgf/posts-filter`) report
+`category: "wm-features"`, `wp.data.select('core/blocks').getCategories()`
+confirmed the category itself is registered with the right slug/title,
+and a screenshot of the actual inserter panel shows "WM FEATURES" as a
+heading with Posts Grid and Posts Filter listed under it (Pagination
+doesn't appear there, correctly -- it's restricted to insertion only
+inside Posts Grid via its own `parent` field, so it was never listed
+standalone in the inserter to begin with, category or not).
