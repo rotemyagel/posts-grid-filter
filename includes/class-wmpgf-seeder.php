@@ -441,8 +441,7 @@ class WMPGF_Seeder {
 			return;
 		}
 
-		$content = '<!-- wp:heading --><h2>' . esc_html__( 'Browse the grid', 'wm-posts-grid-filter' ) . "</h2><!-- /wp:heading -->\n\n" .
-			"<!-- wp:wmpgf/posts-filter {\"align\":\"wide\"} /-->\n\n" .
+		$content = "<!-- wp:wmpgf/posts-filter {\"align\":\"wide\"} /-->\n\n" .
 			"<!-- wp:wmpgf/posts-grid {\"columns\":3,\"postsPerPage\":6,\"align\":\"wide\"} -->\n" .
 			"<!-- wp:wmpgf/pagination /-->\n" .
 			'<!-- /wp:wmpgf/posts-grid -->';

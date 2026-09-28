@@ -1,25 +1,40 @@
-.wp-block-wmpgf-posts-filter .wmpgf-filter__head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 1rem;
+.wp-block-wmpgf-posts-filter {
+	container-type: inline-size;
 }
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__heading {
-	margin-top: 0;
+	margin: 0 0 12px;
 	font-size: var(--wmpgf-text-l);
 	font-weight: var(--wmpgf-weight-strong);
 	line-height: var(--wmpgf-leading-l);
 }
 
-.wp-block-wmpgf-posts-filter .wmpgf-filter__count {
+.wp-block-wmpgf-posts-filter .wmpgf-filter__form {
+	display: grid;
+	gap: 12px;
 	margin: 0;
+}
+
+/* Row 1: search (added by the search feature) on the left, count and
+   Clear filters pushed to the right. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__bar {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-height: 40px;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__count {
+	margin: 0 0 0 auto;
 	font-size: var(--wmpgf-text-s);
 	line-height: var(--wmpgf-leading-s);
+	white-space: nowrap;
+	opacity: 0.7;
 }
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__clear {
 	font-size: var(--wmpgf-text-s);
+	line-height: var(--wmpgf-leading-s);
 	text-decoration: underline;
 	white-space: nowrap;
 }
@@ -29,32 +44,59 @@
 }
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__submit {
-	padding: 0.4rem 0.9rem;
-	min-height: 44px;
+	justify-self: start;
+	height: 32px;
+	padding: 0 12px;
 	border: 1px solid currentcolor;
-	border-radius: 4px;
+	border-radius: 999px;
 	background: transparent;
 	color: inherit;
+	font-size: var(--wmpgf-text-s);
 	cursor: pointer;
 }
 
-.wp-block-wmpgf-posts-filter .wmpgf-filter__group {
-	border: none;
-	padding: 0;
-	margin: 0 0 1rem;
+/* Row 2: both groups on one line. It never wraps; it scrolls sideways. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__groups {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding-block: 2px;
+	overflow-x: auto;
+	scroll-snap-type: x proximity;
+	scrollbar-width: thin;
 }
 
-.wp-block-wmpgf-posts-filter .wmpgf-filter__group legend {
-	font-weight: var(--wmpgf-weight-strong);
-	font-size: var(--wmpgf-text-s);
+.wp-block-wmpgf-posts-filter .wmpgf-filter__group {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	margin: 0;
 	padding: 0;
-	margin-bottom: 0.4rem;
+	border: 0;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__group + .wmpgf-filter__group {
+	padding-left: 16px;
+	border-left: 1px solid #ddd;
+}
+
+/* A floated legend is laid out like any other flex item, so the label
+   can sit inline before its pills while the fieldset keeps its meaning. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__group legend {
+	float: left;
+	margin: 0 4px 0 0;
+	padding: 0;
+	font-size: var(--wmpgf-text-s);
+	font-weight: var(--wmpgf-weight-strong);
+	line-height: var(--wmpgf-leading-s);
+	white-space: nowrap;
 }
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__options {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+	gap: 8px;
 }
 
 /* The label is the visible pill; the real checkbox stays in the DOM for
@@ -62,17 +104,19 @@
 .wp-block-wmpgf-posts-filter .wmpgf-filter__option {
 	position: relative;
 	display: inline-flex;
+	flex: none;
 	align-items: center;
+	box-sizing: border-box;
+	height: 32px;
 	margin: 0;
-	padding: 0.4rem 0.9rem;
+	padding: 0 12px;
 	border: 1px solid #ddd;
 	border-radius: 999px;
-	cursor: pointer;
 	font-size: var(--wmpgf-text-s);
-	line-height: var(--wmpgf-leading-s);
-
-	min-height: 44px;
-	box-sizing: border-box;
+	line-height: 1;
+	white-space: nowrap;
+	cursor: pointer;
+	scroll-snap-align: start;
 	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
@@ -99,8 +143,48 @@
 	border: 0;
 }
 
+/* 32px pills meet WCAG 2.2's 24px target minimum; on touch screens the
+   hit area grows to 44px without changing how the pill looks. */
+@media (pointer: coarse) {
+
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__option::after {
+		content: "";
+		position: absolute;
+		inset: -6px 0;
+	}
+}
+
+/* When the row is likely to overflow, fade its right edge to hint that it
+   scrolls. The padding lets the last pill scroll clear of the fade. */
+@container (max-width: 1000px) {
+
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__groups {
+		padding-right: 32px;
+		mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__option {
+		transition: none;
+	}
+}
+
 /* Themes often set a font on these elements directly; inherit ours. */
 .wp-block-wmpgf-posts-filter .wmpgf-filter__heading,
 .wp-block-wmpgf-posts-filter .wmpgf-filter__form :is(p, a, legend, label, input, select, button) {
 	font-family: inherit;
+}
+
+/* Some themes widen .alignwide with fixed negative margins at every
+   screen size, which overflows narrow screens. Below the width where
+   wide alignment has room, fall back to the content width. */
+@media (max-width: 1000px) {
+
+	.wp-block-wmpgf-posts-filter.alignwide {
+		width: auto;
+		max-width: 100%;
+		margin-inline: 0;
+	}
 }

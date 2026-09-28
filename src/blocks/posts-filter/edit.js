@@ -1,5 +1,5 @@
 import './style.css';
-import { __ } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, TextControl, Spinner } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
@@ -7,6 +7,7 @@ import { store as coreStore } from '@wordpress/core-data';
 
 // Same terms render.php lists: every non-empty term, ordered by name.
 const TERMS_QUERY = { per_page: -1, hide_empty: true, _fields: 'id,name' };
+const COUNT_QUERY = { per_page: 1, _fields: 'id' };
 
 function TermGroup( { legend, terms } ) {
 	if ( ! terms?.length ) {
@@ -32,8 +33,11 @@ export default function Edit( { attributes, setAttributes } ) {
 	const { heading } = attributes;
 	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
 
-	const { categories, tags } = useSelect( ( select ) => {
-		const { getEntityRecords } = select( coreStore );
+	const { categories, tags, total } = useSelect( ( select ) => {
+		const { getEntityRecords, getEntityRecordsTotalItems } =
+			select( coreStore );
+		// The total selector is filled in by this records request.
+		getEntityRecords( 'postType', 'wmpgf_post', COUNT_QUERY );
 		return {
 			categories: getEntityRecords(
 				'taxonomy',
@@ -41,6 +45,11 @@ export default function Edit( { attributes, setAttributes } ) {
 				TERMS_QUERY
 			),
 			tags: getEntityRecords( 'taxonomy', 'wmpgf_tag', TERMS_QUERY ),
+			total: getEntityRecordsTotalItems(
+				'postType',
+				'wmpgf_post',
+				COUNT_QUERY
+			),
 		};
 	}, [] );
 
@@ -55,6 +64,10 @@ export default function Edit( { attributes, setAttributes } ) {
 				>
 					<TextControl
 						label={ __( 'Heading', 'wm-posts-grid-filter' ) }
+						help={ __(
+							'Optional. Leave empty for no heading.',
+							'wm-posts-grid-filter'
+						) }
 						value={ heading }
 						onChange={ ( value ) =>
 							setAttributes( { heading: value } )
@@ -63,26 +76,49 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				<div className="wmpgf-filter__head">
+				{ heading && (
 					<h3 className="wmpgf-filter__heading">{ heading }</h3>
-				</div>
-				{ isLoading && <Spinner /> }
-				{ isEmpty && (
-					<p>
-						{ __(
-							'No Grid Categories or Grid Tags with posts yet.',
-							'wm-posts-grid-filter'
-						) }
-					</p>
 				) }
-				<TermGroup
-					legend={ __( 'Categories', 'wm-posts-grid-filter' ) }
-					terms={ categories }
-				/>
-				<TermGroup
-					legend={ __( 'Tags', 'wm-posts-grid-filter' ) }
-					terms={ tags }
-				/>
+				<div className="wmpgf-filter__form">
+					<div className="wmpgf-filter__bar">
+						{ total !== null && (
+							<p className="wmpgf-filter__count">
+								{ sprintf(
+									/* translators: %s: number of posts. */
+									_n(
+										'%s post',
+										'%s posts',
+										total,
+										'wm-posts-grid-filter'
+									),
+									total
+								) }
+							</p>
+						) }
+					</div>
+					{ isLoading && <Spinner /> }
+					{ isEmpty && (
+						<p>
+							{ __(
+								'No Grid Categories or Grid Tags with posts yet.',
+								'wm-posts-grid-filter'
+							) }
+						</p>
+					) }
+					<div className="wmpgf-filter__groups">
+						<TermGroup
+							legend={ __(
+								'Categories',
+								'wm-posts-grid-filter'
+							) }
+							terms={ categories }
+						/>
+						<TermGroup
+							legend={ __( 'Tags', 'wm-posts-grid-filter' ) }
+							terms={ tags }
+						/>
+					</div>
+				</div>
 			</div>
 		</>
 	);

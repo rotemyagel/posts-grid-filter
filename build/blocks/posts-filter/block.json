@@ -15,7 +15,7 @@
   "attributes": {
     "heading": {
       "type": "string",
-      "default": "Filter posts"
+      "default": ""
     }
   },
   "supports": {

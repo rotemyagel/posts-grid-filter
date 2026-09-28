@@ -90,6 +90,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 			><?php esc_html_e( 'Clear filters', 'wm-posts-grid-filter' ); ?></a>
 		</div>
 
+		<div class="wmpgf-filter__groups">
 		<?php foreach ( $groups as $group ) : ?>
 			<?php
 			$group_terms = get_terms(
@@ -124,6 +125,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 				</div>
 			</fieldset>
 		<?php endforeach; ?>
+		</div>
 
 		<noscript>
 			<button type="submit" class="wmpgf-filter__submit"><?php esc_html_e( 'Apply filters', 'wm-posts-grid-filter' ); ?></button>

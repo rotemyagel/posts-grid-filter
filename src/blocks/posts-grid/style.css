@@ -99,3 +99,15 @@
 .wp-block-wmpgf-posts-grid .wmpgf-grid :is(h3, p, a) {
 	font-family: inherit;
 }
+
+/* Some themes widen .alignwide with fixed negative margins at every
+   screen size, which overflows narrow screens. Below the width where
+   wide alignment has room, fall back to the content width. */
+@media (max-width: 1000px) {
+
+	.wp-block-wmpgf-posts-grid.alignwide {
+		width: auto;
+		max-width: 100%;
+		margin-inline: 0;
+	}
+}
