@@ -27,7 +27,6 @@ Built for the WordPress Web Development Technical Assessment.
 - **Pagination as a true inner block** — locked into the grid's template, registered as its own block rather than markup the grid just happens to render.
 - **Zero-JS-in-the-click-path pagination** — Prev/Next are plain, crawlable `<a href>` links with a full page reload; filtering stays instant via AJAX. See [why](#pagination-is-real-full-reload-navigation) below.
 - **Shared Interactivity API store, not nesting** — both blocks call `store('posts-grid-filter', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
-- **Category-prefixed permalinks** — `/product-news/some-post/`, via the same `%category%`-style mechanism WordPress core uses for the built-in `post` type (and WooCommerce uses for `%product_cat%`).
 - **Idempotent, ownership-aware activation** — seeds 12 posts across 4 categories and 6 tags (each with a featured image and excerpt) plus a demo page. Reactivation never duplicates content, and `uninstall.php` only ever removes what the plugin itself created — never a site owner's own content, even if it shares a title or slug with seeded content.
 
 ---
@@ -142,9 +141,9 @@ With JavaScript, each change filters instantly over REST and `history.replaceSta
 
 URLs are kept readable. Page URLs use term slugs, e.g. `/posts-grid-filter-demo/?pgf_category=design,culture&pgf_tag=trends&pgf-page=2`. The REST request uses term IDs, since that's what the REST API's taxonomy filter takes: `…/wp/v2/pgf_post?per_page=6&page=1&pgf_category=151,153&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,_links,_embedded`. Both are written by hand (`src/shared/filter-url.js`, mirrored by `PGF_Blocks::page_url()` for server-rendered links) rather than through `URLSearchParams`, which would encode every `,` `:` `[` `]`. An ID→slug map (`PGF_Blocks::term_slug_map()`) is passed to the browser so the store can keep working with IDs. The server also accepts `pgf_category[]=design&pgf_category[]=culture`, which is what the no-JS form submits, since a form can't produce a comma list. Slugs are kept in the order given, and unknown slugs are ignored.
 
-### Category-prefixed permalinks
+### Single-post permalinks use a fixed base
 
-`register_post_type()` has no built-in equivalent of the `%category%` tag core gives the built-in `post` type. Replicated the same mechanism core uses internally — a custom `add_rewrite_tag('%pgf_category%', ...)` plus a `post_type_link` filter that fills in the post's actual category slug — the same technique WooCommerce uses for its own `%product_cat%/%postname%/` option.
+Single posts live at `/grid-post/{slug}/`. An earlier version put the category first (`/{category}/{slug}/`), but a rewrite rule with no fixed text in front matches every two-segment URL on the site, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief never asked for category URLs, so I removed the feature instead of keeping a custom rewrite tag, permalink filter and canonical redirect for it.
 
 ### Ownership-aware seeding and uninstall
 
@@ -176,7 +175,7 @@ wm-posts-grid-filter/
 │
 ├── includes/
 │   ├── class-pgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
-│   ├── class-pgf-post-type.php    pgf_post CPT + taxonomies, category-prefixed permalinks
+│   ├── class-pgf-post-type.php    pgf_post CPT + taxonomies
 │   ├── class-pgf-blocks.php       Block registration + shared query/param helpers
 │   ├── class-pgf-seeder.php       Idempotent, ownership-tracked demo content seeding
 │   └── class-pgf-single-template.php  Single-post template fallback for themes with none
@@ -237,9 +236,10 @@ A smoke test you can run after activation:
 6. **Clear filters** — appears once a filter is active, resets both instantly.
 7. **Pagination** — click Next with filters active; a real page navigation occurs, filters are preserved in the URL, and the checkboxes on the new page are pre-checked to match. Pick a filter that fits on one page; pagination disappears.
    - **Without JavaScript** — disable JavaScript and reload; an "Apply filters" button appears under the checkboxes and submits the selection as a normal page load.
-8. **Single post** — click a card's title; the single-post page renders title, image, categories/tags, and content, at a `/category-slug/post-slug/` URL.
-9. **Reactivation is idempotent** — deactivate, reactivate; no duplicate posts appear.
-10. **Uninstall is ownership-safe** — create a Grid Post by hand, then delete the plugin via the Plugins screen: the 12 seeded posts/images/terms and the demo page are removed; your hand-created post survives.
+8. **Single post** — click a card's title; the single-post page renders title, image, categories/tags, and content, at a `/grid-post/post-slug/` URL.
+9. **Core URLs still work** — with the plugin active, an author archive (`/author/{name}/`), a date archive (`/2026/09/`), `/feed/atom/`, `/page/2/` and a nested page all load normally.
+10. **Reactivation is idempotent** — deactivate, reactivate; no duplicate posts appear.
+11. **Uninstall is ownership-safe** — create a Grid Post by hand, then delete the plugin via the Plugins screen: the 12 seeded posts/images/terms and the demo page are removed; your hand-created post survives.
 
 ### Programmatic checks
 

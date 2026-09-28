@@ -55,7 +55,6 @@ class PGF_Plugin {
 	 */
 	public static function activate() {
 		$post_type = new PGF_Post_Type();
-		$post_type->register_rewrite_tag();
 		$post_type->register_taxonomies();
 		$post_type->register_post_type();
 
