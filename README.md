@@ -1,33 +1,71 @@
+<div align="center">
+
 # Posts Grid + Filter
 
-A WordPress plugin providing two Gutenberg blocks — **Posts Grid** and **Posts Filter** — with demo content seeded automatically on activation. Built for the WordPress Web Development Technical Assessment.
+### Two Gutenberg blocks, synced without nesting, with demo content seeded on activation.
 
-## Requirements
+A dynamic **Posts Grid** and a companion **Posts Filter** — kept in sync via a shared Interactivity API store, with pagination as a real inner block and zero manual setup after activation.
 
-- WordPress 6.5+ (uses the Interactivity API and Script Modules)
-- PHP 7.4+
-- Node.js (only if rebuilding from source — see below)
+[![WordPress 6.5+](https://img.shields.io/badge/WordPress-6.5%2B-21759b?logo=wordpress&logoColor=white)](https://wordpress.org)
+[![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net)
+[![Block API v3](https://img.shields.io/badge/Block%20API-v3-0073aa)](https://developer.wordpress.org/block-editor/reference-guides/block-api/)
+[![Built with @wordpress/scripts](https://img.shields.io/badge/built%20with-%40wordpress%2Fscripts-21759b)](https://www.npmjs.com/package/@wordpress/scripts)
+[![License: GPL v2+](https://img.shields.io/badge/License-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
-## Setup
+Built for the WordPress Web Development Technical Assessment.
 
-**From the packaged zip / a checked-out repo with `build/` already present:**
+[**Rotem Yagel**](https://github.com/rotemyagel) &nbsp;·&nbsp; [GitHub](https://github.com/rotemyagel/wm-posts-grid-filter)
 
-1. Copy the `wm-posts-grid-filter` folder into `wp-content/plugins/`.
-2. Activate **Posts Grid + Filter** from the Plugins screen (or `wp plugin activate wm-posts-grid-filter`).
-3. That's it. Activation seeds 12 demo posts across 4 categories and 6 tags (each with a featured image and excerpt), and publishes a **Posts Grid + Filter Demo** page with both blocks already placed. Visit that page to see it working.
+</div>
 
-No manual content creation, no configuration screen, no environment variables.
+---
 
-**Building from source** (only needed if `build/` isn't present, or after editing anything in `src/`):
+## ✨ Highlights
+
+- **Dynamic Posts Grid** — server-rendered via `WP_Query`. Configurable columns (2 / 3 / 4) and posts-per-page via Inspector Controls.
+- **Posts Filter** — category and tag checkboxes rendered as pill toggles, with a "Clear filters" link. Can be placed anywhere on the page, not nested inside the grid.
+- **Pagination as a true inner block** — locked into the grid's template, registered as its own block rather than markup the grid just happens to render.
+- **Zero-JS-in-the-click-path pagination** — Prev/Next are plain, crawlable `<a href>` links with a full page reload; filtering stays instant via AJAX. See [why](#pagination-is-real-full-reload-navigation) below.
+- **Shared Interactivity API store, not nesting** — both blocks call `store('posts-grid-filter', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
+- **Category-prefixed permalinks** — `/product-news/some-post/`, via the same `%category%`-style mechanism WordPress core uses for the built-in `post` type (and WooCommerce uses for `%product_cat%`).
+- **Idempotent, ownership-aware activation** — seeds 12 posts across 4 categories and 6 tags (each with a featured image and excerpt) plus a demo page. Reactivation never duplicates content, and `uninstall.php` only ever removes what the plugin itself created — never a site owner's own content, even if it shares a title or slug with seeded content.
+
+---
+
+## 🚀 Quick start
+
+### Requirements
+
+| Tool | Version | Notes |
+|---|---|---|
+| WordPress | 6.5+ | Uses the Interactivity API and Script Modules |
+| PHP | 7.4+ | GD extension needed for demo images (optional — see [Known limitations](#-known-limitations--tradeoffs)) |
+| Node.js | any current LTS | Only needed if rebuilding from source |
+
+### From the packaged zip / a checked-out repo with `build/` present
+
+```bash
+# 1. Copy the wm-posts-grid-filter folder into wp-content/plugins/
+# 2. Activate it
+wp plugin activate wm-posts-grid-filter
+```
+
+That's it — no configuration screen, no environment variables. Activation seeds 12 demo posts, 4 categories, 6 tags, and publishes a **Posts Grid + Filter Demo** page with both blocks already placed.
+
+### Building from source
+
+Only needed if `build/` isn't present, or after editing anything in `src/`:
 
 ```bash
 npm install
 npm run build
 ```
 
-The build step needs `WP_EXPERIMENTAL_MODULES=1` to make `@wordpress/scripts` compile the blocks' `viewScriptModule` (Interactivity API) files — this is already wired into the `build`/`start` npm scripts via `cross-env`, so a plain `npm run build` is enough.
+`WP_EXPERIMENTAL_MODULES=1` (needed for `@wordpress/scripts` to compile the Interactivity API `viewScriptModule` files) is already wired into the `build`/`start` scripts via `cross-env` — a plain `npm run build` is enough.
 
-**Don't have a WordPress install to drop this into?** `npm run env` (via `@wordpress/env`) spins up a complete, disposable WordPress + this plugin in Docker — no existing site needed:
+### Disposable environment via wp-env
+
+No existing WordPress install needed:
 
 ```bash
 npm install
@@ -35,199 +73,174 @@ npm run build
 npm run env start
 ```
 
-Tested end to end on a fresh Docker environment: WordPress installs, the plugin activates, and all 12 posts / 4 categories / 6 tags seed correctly, visually confirmed in a browser. Two environment-specific snags came up while verifying this and are worth knowing about if you hit the same thing (neither is a plugin bug):
+`@wordpress/env` spins up a complete WordPress + MySQL stack in Docker with this plugin already active. The first start takes a few minutes (Docker pulls images); subsequent starts are seconds.
 
-- **"Could not find the current WordPress version in the cache and the network is not available"** — `@wordpress/env` checks for network access via a raw DNS lookup (Node's `dns.resolve()`), which fails on some Windows setups even when normal HTTPS traffic (what the actual WordPress download uses) works fine. If you hit this on a brand-new `wp-env` install, running any other `wp-env` command that reaches WordPress.org successfully once (or simply retrying) is usually enough to populate its local cache and unblock this specific check permanently.
-- **Blank homepage after a fresh install** — only occurs if you're reusing an existing `wp-env` database from a previous, unrelated attempt (rare in normal use). If this happens, `wp-env run cli wp theme activate twentytwentyfive` fixes it immediately, since it means no theme ended up active.
+```bash
+npm run start        # Webpack watch — auto-rebuild on src/ changes
+npm run lint:js      # ESLint via @wordpress/scripts
+npm run env stop     # Stop containers (preserves DB)
+npm run env destroy  # Wipe containers + DB
+```
 
-## What gets built
+---
 
-| Block | Purpose |
-|---|---|
-| `pgf/posts-grid` | Dynamic block rendering Grid Posts in a 2/3/4-column grid. Editable columns and posts-per-page via Inspector Controls. |
-| `pgf/pagination` | Inner block of Posts Grid (locked in place via `templateLock: "all"` and `parent`). Prev/Next controls. |
-| `pgf/posts-filter` | Category and tag checkboxes (multi-select). Can be placed anywhere on the page — not nested inside the grid. |
+## 📦 What's in the box
 
-## Architecture decisions
+### Three blocks
 
-### A dedicated post type and taxonomies, not core post/category/tag
+| Block | Type | Responsibility |
+|---|---|---|
+| `pgf/posts-grid` | Dynamic | Grid of posts, configurable columns/posts-per-page. Server-rendered; refreshes in place via REST when filters change. |
+| `pgf/pagination` | Dynamic, inner block | Prev / "Page X of Y" / Next. Locked into `pgf/posts-grid`'s template via `parent` + `templateLock: "all"`. |
+| `pgf/posts-filter` | Dynamic | Category/tag pill toggles + Clear filters. Independent of the grid — no nesting required. |
 
-The plugin registers `pgf_post` (custom post type) with `pgf_category` and `pgf_tag` (custom taxonomies), rather than reusing WordPress's built-in `post`/`category`/`post_tag`. This keeps all demo content fully isolated and identifiable — reactivating or uninstalling never touches real site content — and satisfies the brief's requirement that the plugin slug, post type, and taxonomy names all carry a unique prefix (`pgf_`).
+### Seeded demo content
 
-### Inter-block communication: the Interactivity API, with a REST API doing the actual filtering
+Created automatically on first activation, idempotently (reactivating never duplicates it):
 
-The brief asks for the grid and filter blocks to stay in sync without being nested inside each other. Three approaches were considered:
+- **4 categories** — Technology · Design · Business · Culture
+- **6 tags** — Guide · Opinion · News · Interview · Deep Dive · Trends
+- **12 posts** — deterministic but overlapping category/tag assignments (4 posts carry two categories, several carry three tags), so filter combinations produce meaningfully different result sets rather than every post matching everything
+- **12 featured images** — generated locally with PHP's GD extension (a solid color per category), so activation needs no network access
+- **1 demo page** — `/posts-grid-filter-demo/`, with both blocks already placed
 
-- **Custom DOM events / a hand-rolled global JS object.** Works, but reinvents state management and directive binding that WordPress already ships as a supported API.
-- **URL query parameters + full page reloads.** Simplest to reason about, but a poor UX (loses scroll position, flashes the whole page) for what's fundamentally a client-side filter interaction.
-- **The Interactivity API with a shared store namespace (chosen).** Both blocks call `store( 'posts-grid-filter', { state, actions } )` from their own `view.js`. WordPress **merges every caller's partial state/actions into one shared store by namespace** — this is the documented, intended pattern for exactly this situation. Neither block needs to know the other exists; they just agree on a namespace and a small state shape (`selectedCategories`, `selectedTags`, `page`, `totalPages`). This is why the two blocks can be placed anywhere on the page, on their own, and still work together.
+---
 
-Filtering itself is **not** reimplemented in JS or in a custom REST controller. Any taxonomy registered with `show_in_rest => true` automatically gets a REST collection parameter (named after its `rest_base`) on `/wp/v2/pgf_post`, and WordPress's own `tax_query` behavior is: `IN` (OR) for multiple terms within one taxonomy parameter, `AND` between different taxonomy parameters. That is *exactly* the "OR within a filter type, AND across filter types" logic the brief asks for — so `pgf/posts-grid`'s `view.js` just calls `fetch('${restUrl}?pgf_category[]=..&pgf_tag[]=..')` and WordPress does the rest. This was verified directly against the REST API during development: filtering by one category returned that category's post count; filtering by two categories returned their *union*; adding a tag on top returned the *intersection* — confirmed against `wp term list` counts before shipping.
+## 🏛️ Architecture decisions
 
-### Declarative directives for simple UI, one imperative patch for the post list
+A short account of the calls made and why. The full round-by-round history — including two independent code-review passes and every bug they surfaced — is in [CHANGELOG.md](CHANGELOG.md).
 
-Checkbox checked-state (`data-wp-bind--checked`) and pagination's prev/next/label (`data-wp-bind--disabled`, `data-wp-text`) are driven entirely by declarative Interactivity API directives bound to derived state getters — when `state.page` or `state.totalPages` change, those controls update themselves with no extra code.
+### A dedicated post type and taxonomies
 
-The post grid itself is the one exception: after a `fetch()`, `pgf/posts-grid`'s `refresh()` action replaces `[data-pgf-grid-list]`'s `innerHTML` directly, rather than using the Interactivity API's `data-wp-each` list-rendering directive. This was a deliberate scope call — `data-wp-each` is the more "pure" declarative approach, but the imperative patch is simpler to get right and verify within the assessment's timeframe, and produces identical markup to the server-rendered first paint. Documented here as the one place the implementation trades a small amount of idiomatic purity for straightforwardness.
+`pgf_post` with `pgf_category`/`pgf_tag`, not core `post`/`category`/`post_tag`. Keeps demo content fully isolated and identifiable — activation, reactivation, and uninstall never touch a site's real content — and satisfies the brief's requirement that the post type and taxonomy names carry a unique prefix.
+
+### Inter-block sync: the Interactivity API, with REST doing the actual filtering
+
+Both blocks call `store('posts-grid-filter', { state, actions })` from their own `view.js`. WordPress merges every caller's partial state/actions into one shared store by namespace — the documented pattern for exactly this situation, and why the blocks can sit anywhere on the page without either needing to know the other exists.
+
+Filtering itself isn't reimplemented: any taxonomy registered with `show_in_rest => true` gets an automatic REST collection parameter, and WordPress's own `tax_query` behavior (`IN`/OR within one taxonomy, `AND` across taxonomies) is exactly the "OR within a filter type, AND across filter types" logic the brief asks for.
+
+### Pagination is real, full-reload navigation
+
+Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`.
+
+### Category-prefixed permalinks
+
+`register_post_type()` has no built-in equivalent of the `%category%` tag core gives the built-in `post` type. Replicated the same mechanism core uses internally — a custom `add_rewrite_tag('%pgf_category%', ...)` plus a `post_type_link` filter that fills in the post's actual category slug — the same technique WooCommerce uses for its own `%product_cat%/%postname%/` option.
+
+### Ownership-aware seeding and uninstall
+
+`pgf_post` is a public, registered post type — once seeded, a site owner creating one by hand is normal use, not a leftover. The seeder records exactly which posts, attachments, and taxonomy terms it *creates* (as opposed to *adopts*, when idempotency finds a pre-existing match), and `uninstall.php` deletes only those, never anything it can't prove it created — including the demo page itself, which is adopted rather than deleted if something already occupies that slug.
 
 ### Scope: one grid + one filter per page
 
-State lives in one shared store, not namespaced per block instance. This matches the brief (grid and filter, placed anywhere on one page) and the demo page it seeds. Supporting multiple independent grid/filter pairs on the same page would need per-instance context propagation and wasn't built, since nothing in the brief calls for it.
+State lives in one shared store, not namespaced per block instance — matching the brief (grid and filter, placed anywhere on one page) and the demo page it seeds. Multiple independent grid/filter pairs would need per-instance context propagation, and nothing in the brief calls for it.
 
-### Featured images generated with GD, not bundled files
+### GD-generated demo images, not bundled files
 
-Demo images are generated on activation with PHP's GD extension (a solid color per category, similar to a placeholder-image service) rather than shipped as binary files in the plugin or fetched from a remote placeholder API. This keeps activation fully offline and the plugin's zip free of binary assets, at the cost of the images being flat colors rather than real photography — acceptable for demo content whose only job is to prove the "featured image" requirement end-to-end.
+Solid-color placeholders generated on activation with PHP's GD extension, rather than shipped as binary files or fetched from a remote API. Keeps activation fully offline and the plugin's zip free of binary assets.
 
-### Pagination scope
+---
 
-Pagination is Prev / "Page X of Y" / Next, not a numbered page list with ellipses. This satisfies "pagination must be implemented as an inner block" without the extra complexity of rebuilding a variable-length button list on every filter change (which would still need to happen declaratively or imperatively regardless of style).
+## 🗂️ Project layout
 
-### Pagination is real, full-reload navigation — not AJAX, not infinite scroll
+```
+wm-posts-grid-filter/
+├── wm-posts-grid-filter.php       Plugin bootstrap, constants, hook registration
+├── uninstall.php                  Ownership-aware demo cleanup on plugin delete
+├── .wp-env.json                   wp-env (Docker) config
+├── package.json                   Dev dependencies, npm scripts
+├── README.md                      This file
+├── CHANGELOG.md                   Full development history, both review passes
+│
+├── includes/
+│   ├── class-pgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
+│   ├── class-pgf-post-type.php    pgf_post CPT + taxonomies, category-prefixed permalinks
+│   ├── class-pgf-blocks.php       Block registration + shared query/param helpers
+│   ├── class-pgf-seeder.php       Idempotent, ownership-tracked demo content seeding
+│   └── class-pgf-single-template.php  Single-post template fallback for themes with none
+│
+├── templates/
+│   └── single-pgf_post.php        Title/image/terms/content template for a single grid post
+│
+├── assets/css/
+│   └── single.css                 Styling for the single-post template
+│
+├── src/
+│   ├── posts-grid/
+│   │   ├── block.json             Metadata, attributes, asset wiring
+│   │   ├── edit.js                InspectorControls (columns, posts per page)
+│   │   ├── render.php             Server render: query, pagination clamp, i18n config
+│   │   ├── view.js                Frontend: REST refresh, request sequencing, card rendering
+│   │   └── style.css
+│   │
+│   ├── pagination/
+│   │   ├── block.json             parent: ["pgf/posts-grid"]
+│   │   ├── render.php             Prev/Next hrefs, total-page count
+│   │   ├── view.js                Reactive href/label getters
+│   │   └── style.css
+│   │
+│   └── posts-filter/
+│       ├── block.json
+│       ├── render.php             Checkbox groups, Clear filters link
+│       ├── view.js                Toggle/clear actions on the shared store
+│       └── style.css
+│
+└── build/                         Generated by @wordpress/scripts (gitignored source, shipped in the zip)
+```
 
-Pagination started as a pure client-side interaction — clicking "Next" fetched new posts via the REST API with no URL change at all. That's the same pattern SEO guidance on infinite scroll / "load more" widgets specifically warns against: with JavaScript disabled (the test a crawler effectively runs), page 2+ never existed as a reachable URL, so it could never be indexed. An intermediate version added `history.pushState()` on top so the address bar stayed correct without a reload — better, but still not what "real pagination" means, and it added real complexity (see the hydration bug below, which that pushState layer directly caused).
+---
 
-The final design has no JavaScript in the pagination click path at all. Prev/Next (`pagination/render.php`) are plain `<a href="?pgf-page=2">` links with `rel="next"`/`rel="prev"`. Clicking one is a normal browser navigation — a full page reload — and `pgf/posts-grid`'s `render.php` reads that same `?pgf-page=` parameter (`PGF_Blocks::get_requested_page()`) to server-render the matching page directly. A crawler, a JS-disabled visitor, or someone who just bookmarks the link all get identical, correct content.
+## ✅ Coding standards
 
-Category/tag filtering is a separate concern and keeps its instant, no-reload AJAX behavior through the Interactivity API (see the section above) — that part of the brief's requirement (blocks stay in sync without nesting) is unrelated to how pagination navigates. The one thing connecting them: if a visitor has filters selected via the AJAX filter UI and then clicks Next, that full-page reload needs to carry the current filter selection forward, or it would silently reset to the unfiltered grid. `pagination/view.js` handles only this — reactive `prevHref`/`nextHref` getters that rebuild the link's `href` (via `data-wp-bind--href`) to include `state.selectedCategories`/`selectedTags` whenever they change, so the *link itself* always points somewhere correct, without intercepting the click or touching the visible URL during filtering. `posts-grid/render.php`, `pagination/render.php` (its count query), and `posts-filter/render.php` (to pre-check the right boxes) all independently read the same `?pgf_category[]=`/`?pgf_tag[]=` parameters server-side, so a shared/bookmarked filtered-and-paginated link reconstructs the exact right posts and the exact right checkbox state on a fresh, no-JS load.
+- **PHP** — WordPress Coding Standards conventions: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout.
+- **JavaScript** — `@wordpress/scripts` ESLint config. Only `@wordpress/*` packages; no external React libraries.
+- **i18n** — every user-facing string wrapped with `__()`/`_e()`/`esc_html__()`/`esc_html_e()` under the `wm-posts-grid-filter` text domain, including strings rendered client-side (passed through from PHP via `wp_interactivity_state()`, not hardcoded in JS).
+- **Security** — output escaping on every dynamic value; client-rendered cards build real DOM nodes with element properties rather than string-interpolated HTML, so a title can't break out of an attribute.
 
-Verified end to end: `curl` (no JS, no cookies) against `?pgf-page=1`, a single-category filter, and a two-category filter spanning two pages each return correct, independently server-rendered content, with the rendered Next link correctly carrying the active filters forward and the correct checkboxes pre-checked. In a real browser: filtering two categories via AJAX (no URL change), then clicking Next, produces a genuine navigation to `?pgf-page=2&pgf_category[]=8&pgf_category[]=10` — confirmed by reading the post-navigation `document.readyState` and the fresh page's own checkbox state, not assumed from the click alone.
+---
 
-One thing intentionally *not* built: `<link rel="next"/"prev">` tags in `<head>` and per-page self-referential canonical tags. Google itself deprecated using `rel=next`/`prev` as a crawling/indexing signal in 2019, and computing an accurate canonical/total-page-count from `<head>` (rendered before any block's `render.php` runs) would mean parsing arbitrary post content for the block's attributes — real complexity for a signal with diminishing value. The anchors still carry `rel="next"/"prev"` directly, which is enough for the tools that still read it, without that extra machinery.
+## 🧪 Verification checklist
 
-### A hydration bug worth documenting: don't re-declare server-seeded state on the client
+A smoke test you can run after activation:
 
-While building the pushState-based version of pagination (since superseded by the full-reload design above, but the lesson still applies to `selectedCategories`/`selectedTags`, which are server-seeded the same way), `pgf/posts-grid`'s `view.js` originally declared `page: 1, totalPages: 1` as part of its client-side `store()` call's "initial" state — alongside genuinely client-only defaults like `isLoading: false`. Both were also always seeded server-side via `wp_interactivity_state()`, and depending on script-module evaluation timing, the client's literal `1` could win over the already-correct server-hydrated value, silently resetting a direct `?pgf-page=2` load's live pagination state back to page 1 after hydration (server-rendered HTML was always correct; only the post-hydration DOM was wrong, and only intermittently, which made it easy to miss). Caught by comparing the raw hydration JSON (`{"page":2,"totalPages":2,...}`, correct) against the live DOM after JS ran (showing page 1, wrong) in the same request. Fixed by simply not declaring server-seeded keys on the client at all — `posts-grid/view.js`'s only client-declared state today is `isLoading`; `page`, `totalPages`, `selectedCategories`, and `selectedTags` are only ever meant to come from the server, so there's nothing for the client to clobber them with.
+1. **Plugin is active** — Plugins screen shows "Posts Grid + Filter" enabled.
+2. **Seeding ran** — Posts screen (Grid Posts) lists 12 demo posts, each with a featured image, excerpt, at least one category, and at least one tag.
+3. **Demo page exists** — Pages screen lists "Posts Grid + Filter Demo"; opening it shows the filter above the grid, both populated.
+4. **Inspector controls work** — select the grid block, change Columns and Posts per page; the editor preview updates live.
+5. **Frontend filtering** — check a category; the grid refreshes in place (no reload). Add a tag; results narrow further (AND). Uncheck everything; the full set returns.
+6. **Clear filters** — appears once a filter is active, resets both instantly.
+7. **Pagination** — click Next with filters active; a real page navigation occurs, filters are preserved in the URL, and the checkboxes on the new page are pre-checked to match.
+8. **Single post** — click a card's title; the single-post page renders title, image, categories/tags, and content, at a `/category-slug/post-slug/` URL.
+9. **Reactivation is idempotent** — deactivate, reactivate; no duplicate posts appear.
+10. **Uninstall is ownership-safe** — create a Grid Post by hand, then delete the plugin via the Plugins screen: the 12 seeded posts/images/terms and the demo page are removed; your hand-created post survives.
 
-### Performance and Core Web Vitals
+### Programmatic checks
 
-- **Layout shift (CLS):** the server-rendered first paint already gets `width`/`height`, `loading`, and `decoding` attributes on images for free from `the_post_thumbnail()`. The client-side re-render path (after a filter/page change) didn't — a real regression on every filtered update, fixed by reading the REST response's `media_details.sizes.medium` (the same size the SSR path uses) and carrying its width/height, `loading="lazy"`, and `decoding="async"` through to the client-rendered markup, plus a CSS `aspect-ratio` backstop.
-- **Payload size:** the filtered fetch scopes `_embed` to `wp:featuredmedia` only (not author/terms/replies) and trims response fields via `_fields` to just what the card template reads — measured roughly a 52% reduction (46.8KB → 22.5KB for 6 posts) versus the unscoped defaults.
-- **Accessibility/SEO:** seeded images now get real alt text (`_wp_attachment_image_alt`, set to the post title) — previously unset, so even the server-rendered path had empty `alt=""` on every image.
+```bash
+# OR within a taxonomy: two categories should return their union
+curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category[]=8&pgf_category[]=10" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
-### Responsive layout
+# AND across taxonomies: adding a tag should narrow the same request
+curl -s "http://your-site.test/wp-json/wp/v2/pgf_post?pgf_category[]=8&pgf_category[]=10&pgf_tag[]=3" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))"
 
-The grid steps down from 3/4 columns to 2 at tablet widths before collapsing to a single column on phones, rather than jumping straight from N columns to 1. Filter checkboxes and pagination buttons have a 44px-minimum tap target for touch devices.
+# No-JS pagination + filtering, server-rendered
+curl -s "http://your-site.test/posts-grid-filter-demo/?pgf-page=2&pgf_category[]=8" | grep -o 'Page [0-9]* of [0-9]*'
+```
 
-### Validation and audit logging
+---
 
-`columns` was already validated against a `[2, 3, 4]` allow-list, but `postsPerPage` was only cast to `(int)` with no range check, in both `posts-grid/render.php` (the main query) and `pagination/render.php` (its own count query). Block attributes live in the post's `post_content` and can be edited directly — via the REST API, a hand-edited import, anything with `edit_posts` — without ever touching the editor's RangeControl, and an untrusted value flows straight into `WP_Query`'s `posts_per_page`, where `-1` means "return every post." Added `PGF_Blocks::sanitize_posts_per_page()`, clamped to `[1, 24]` (matching the RangeControl's own bounds) and used by both render.php files so they can't disagree; verified directly by setting a tampered post's `postsPerPage` to `-1` and to `999999` and confirming the rendered page count stayed correctly bounded both times.
+## ⚖️ Known limitations & tradeoffs
 
-Every failure path in the seeder (a term, post, image, or the demo page that couldn't be created) previously failed via a silent `continue`, with no way to tell afterward why an install ended up with, say, 8 posts instead of 12. Added `PGF_Blocks::log()`, which writes via `error_log()` only when `WP_DEBUG_LOG` is enabled — the standard WordPress convention, silent by default on any site that hasn't opted into debug logging — called from every failure branch, plus a one-line summary at the end of `seed()` if the final counts came up short.
+- **One grid + one filter per page** is the supported scope, not multiple independent pairs on the same page — nothing in the brief calls for it, and it would need per-instance context propagation the shared store doesn't do today.
+- **GD is required** for demo image generation on activation; without it, posts still seed correctly, just without featured images.
+- **Pagination is a full page reload, not instant** — a deliberate tradeoff for real, crawlable, no-JS-required navigation. Filtering itself is unaffected and stays instant.
+- **No `data-wp-each` for the post list** — the client-rendered card list is patched imperatively (`replaceChildren()`) rather than via the Interactivity API's declarative list directive, a deliberate scope call documented in [CHANGELOG.md](CHANGELOG.md).
+- **Filtered *and* paginated views are both crawlable** (`?pgf_category[]=` combined with `?pgf-page=`) — a deliberate choice; nothing here adds `noindex` to any specific filter combination, which would be the next thing to consider for a much larger real-world catalog where faceted navigation can create thin-content pages at scale.
+- **`npm run lint:js` currently fails**, independent of this plugin's own code, due to a version conflict in the installed `@wordpress/eslint-plugin` dependency tree.
 
-### An accessibility gap in the pagination controls, and a note on `supports.interactivity`
+---
 
-Every directive that affects *initial* markup elsewhere in this plugin has a matching manually-computed PHP value: `href` is present or absent based on `$current_page`, filter checkboxes get `checked()` based on the URL. Pagination's `data-wp-bind--aria-disabled` and `data-wp-class--is-disabled`, though, were left to resolve purely client-side — meaning on page 1, before JavaScript hydrates (or with JS disabled entirely), the Prev control was a link with no `href` but no `aria-disabled` and no disabled styling either: functionally inert, but with nothing telling a screen reader or a sighted no-JS visitor why. Fixed by computing `$is_first_page`/`$is_last_page` once in PHP and echoing `aria-disabled="true"` and the `is-disabled` class directly, the same pattern already used everywhere else. Verified via `curl` (no JS): page 1's Prev link now renders `class="...is-disabled"` and `aria-disabled="true"` with no `href`, entirely server-side.
+## 📄 License
 
-This plugin doesn't set `"supports": { "interactivity": true }` in any block.json, which is what triggers WordPress's own automatic server-side directive resolution (`wp_interactivity_process_directives()`) using closures registered via `wp_interactivity_state()`. That's a legitimate, framework-supported way to get correct initial HTML without hand-computing it — but it would mean defining `isFirstPage`/`isLastPage`/`prevHref`/`nextHref`/etc. as PHP closures *in addition to* the JS getters that already exist, which duplicates the same logic in two languages rather than avoiding duplication. Manually computing the handful of values that affect initial markup, as done throughout this plugin, reaches the same "correct on first paint, no layout shift" goal the flag exists for, without that second copy. Worth revisiting if the number of derived values grows enough that keeping the two in sync by hand becomes error-prone.
-
-### A senior-level code review pass, and a real bug it found
-
-Late in development, this plugin was reviewed as if by a second engineer: re-reading every file with fresh eyes, cross-checking against a competing public implementation of the same brief, and — critically — actually *running* the parts of the code that hadn't been exercised yet, rather than trusting that reading them was enough.
-
-That last part caught a real, previously-undetected bug: **`uninstall.php` never actually deleted taxonomy terms.** It correctly deleted seeded posts and the demo page, but `get_terms()` and `wp_delete_term()` — unlike `WP_Query`'s post-type matching, which works against raw database strings regardless of registration — both require the taxonomy to be *registered* to function, and return a silent `WP_Error` otherwise. `uninstall.php` never registered the taxonomies (its normal `init`-hooked bootstrap doesn't run in the deactivated-plugin context uninstall executes in, and unlike `PGF_Plugin::activate()`, it never registered them explicitly either), so every deletion attempt silently failed. Verified by actually deactivating the plugin, invoking `uninstall.php` exactly as WordPress core would, and inspecting the database directly: 0 posts deleted correctly, but all 10 category/tag terms left behind. Fixed by registering the post type and taxonomies explicitly at the top of `uninstall.php`, mirroring `activate()`'s own reasoning; re-verified end to end afterward with a completely clean result (0 posts, 0 terms, 0 attachments, demo page gone).
-
-Two smaller, editor-only findings from the same pass: the block editor's live grid preview rendered images with `alt=""` (inconsistent with the real alt text added to every other image in the plugin), and the column-count control used a plain `ButtonGroup` of individual buttons instead of `ToggleGroupControl` — the component `@wordpress/components` actually provides for a "choose exactly one of N" pattern, with correct `radiogroup`/`radio` ARIA semantics built in. Both fixed; the `ToggleGroupControl` swap also surfaced a genuine cross-version compatibility issue (the component is still exported under its `__experimental` name on the WordPress version this was tested against, not its now-stable name), fixed by importing both names and using whichever one the running core version actually provides.
-
-One thing flagged but *not* fixed: `npm run lint:js` currently fails outright, independent of anything in this plugin's own code, due to a version conflict between `@typescript-eslint` and `ts-api-utils` in the installed `@wordpress/eslint-plugin` dependency tree. Given the very similar `@wordpress/scripts` v30→v36 upgrade attempt earlier in this project hit its own unrelated peer-dependency conflict, forcing a fix here felt like the same kind of gamble on an unfamiliar, currently-broken dependency graph rather than a contained change — recorded here as a known toolchain issue for a maintainer to address deliberately, rather than patched over.
-
-### A single-post template for `pgf_post`, because the active theme had none
-
-The brief only asked for the grid and filter blocks, but clicking through from a grid card is an obvious part of the golden path, and it wasn't working: on the install this was built against (Hello Elementor + Elementor Theme Builder), a single `pgf_post` request rendered an essentially empty `<main>` — `the_content()` and nothing else, no title, no featured image, no categories/tags — because the theme's Elementor Theme Builder has no template assigned to this post type and its own `single.php` fallback assumes one always will be. Confirmed by `curl`-ing a real seeded post's permalink before writing any code, not assumed from reading the theme.
-
-Fixed with a `single_template` filter (`PGF_Single_Template`) that serves a plugin-bundled `templates/single-pgf_post.php` — title, featured image, linked category/tag terms, full content, and a link back to the seeded demo page — but only when the active theme doesn't already provide its own `single-pgf_post.php` (checked via `locate_template()` first), so a theme that *does* handle the post type properly is never overridden. The template calls `get_header()`/`get_footer()` like any theme template, so it inherits whatever header, nav, and footer the active theme (Elementor Theme Builder's, on this install) already renders — verified in a real browser, not just via `curl`, since Elementor's header/footer only render fully in an actual browser context.
-
-### A UI/UX pass against a competing implementation's live demo
-
-Compared this plugin's filter UI directly against a screenshot of `wm-pi`'s own live demo page, rather than just its source. Two gaps were worth closing: there was no way to reset an active filter selection short of manually unchecking every box, and the filter itself was a bare, unstyled list of browser checkboxes with no visual sense of what was currently active.
-
-Fixed both in `posts-filter`'s `render.php`/`view.js`/`style.css`, keeping the existing dual-rendering pattern used everywhere else in this plugin rather than making either one JS-only:
-
-- **Pill-style toggles.** The native `<input type="checkbox">` stays in the DOM — still keyboard-focusable, still a real checkbox for assistive tech, `checked()` still set server-side exactly as before — but is visually hidden off-screen, with its wrapping `<label>` (already the full click target) styled as the visible pill via `.pgf-filter__option:has( input:checked )`. No new markup, no JS-driven class toggling; the browser's own `:checked` state drives the visual.
-- **A real "Clear filters" link, not just a JS action.** Built as a plain `<a href>` to the current URL with every `pgf_category`/`pgf_tag`/`pgf-page` param stripped (`remove_query_arg()`), the same way pagination's Prev/Next hrefs are built, so it's a genuine, crawlable reset link that works with no JS at all. Progressively enhanced with `data-wp-on--click` to reset the shared store and refresh via AJAX instead of a full reload when JS is available — matching how filter checkboxes already behave. Its visibility follows the same "PHP decides the first-paint state, a client-side getter (`state.hideClearFilters`) keeps it correct afterward" pattern already used for pagination's disabled state, so a no-JS visitor arriving via a shared filtered link sees a working Clear link immediately, and a JS-enabled visitor sees it appear/disappear correctly as they toggle checkboxes without a reload.
-
-Verified via `curl` for both the unfiltered case (`hidden` present on the Clear link, no checkbox `checked`) and a filtered one (`hidden` absent, the correct checkbox `checked='checked'`) — the no-JS path was actually exercised, not just assumed from reading the PHP — and in a real browser: clicking a pill fills it and reveals Clear, clicking Clear resets both instantly with no page reload.
-
-The `:has()` selector this relies on has been baseline-supported across all major browsers since late 2023; not worth a JS fallback for a single visual state on a plugin that already leans on comparably modern CSS elsewhere (`aspect-ratio`) without one.
-
-Left alone deliberately: a live "posts per page" selector and a search box, both of which wm-pi's demo also has. Both are real new features rather than UI polish — the first needs to become an interactive, revisitor-adjustable control instead of a fixed block attribute, the second needs its own query wiring — and neither was asked for in the brief.
-
-### Category-prefixed post permalinks: `/product-news/some-post/` instead of `/grid-posts/some-post/`
-
-Changed on request, to match the URL shape a competing implementation (`wm-pi`) uses. WordPress has no built-in equivalent of the `%category%` permalink tag it gives the *built-in* `post` type for a *custom* post type — `register_post_type()`'s `rewrite.slug` has to be a fixed string. Replicated the same mechanism core uses internally instead:
-
-- `add_rewrite_tag( '%pgf_category%', '([^/]+)', 'pgf_category=' )`, registered every request (WordPress's rewrite tag registry isn't persisted) before `register_post_type()`'s own rewrite rules are generated.
-- `register_post_type()`'s `rewrite.slug` is now `%pgf_category%` instead of the literal `grid-posts`.
-- A `post_type_link` filter fills the placeholder in with the post's actual category slug -- the lowest term ID among however many are assigned, exactly mirroring which one WordPress core picks for a regular post's own `%category%` tag, with a hardcoded `'uncategorized'` fallback for the edge case of a post saved with no category at all (never an empty segment, which would collapse into a malformed double slash).
-
-This exact tag-plus-filter technique is the same one WooCommerce uses for its own `%product_cat%/%postname%/` permalink option -- not a novel approach, but not something `register_post_type()` gives you off the shelf either, which is worth being explicit about.
-
-**Two real, previously-unknown bugs surfaced while building and verifying this, not while just reading the code:**
-
-1. **A bare `%pgf_category%` placeholder made WordPress silently break every other top-level page on the site.** WordPress's rewrite generator doesn't just compile the full `%pgf_category%/%pgf_post%` pattern -- it also emits progressively shorter *prefix-only* variants of any permastruct (the same general mechanism that lets `/2020/06/` work as a standalone archive alongside the full `/2020/06/15/post-name/` date structure). With nothing but a bare tag in front, that shorter variant came out as a completely unprefixed `([^/]+)/?$` rule, positioned ahead of WordPress's own page-matching rule -- confirmed by dumping the actual generated `rewrite_rules` option, where this plugin's own demo page (and, by the same mechanism, *any* top-level page on *any* site this plugin is installed on) started 404ing. Fixed with `'walk_dirs' => false` in the rewrite args, which suppresses that shorter variant and leaves only the intended two-segment pattern.
-2. **Registration order decided which of two valid rule matches won, and it was wrong.** `pgf_category`'s own taxonomy archive rule (`pgf_category/([^/]+)/?$`) and the new bare-prefixed CPT pattern (`([^/]+)/([^/]+)/?$`) can *both* match a URL like `/pgf_category/business/` -- and WordPress uses whichever was compiled first. With `register_post_type()` hooked before `register_taxonomies()` (their original order), the CPT's generic pattern won, and the taxonomy's own archive page 404'd. Fixed by swapping the hook order; re-verified by dumping the compiled rules and confirming the taxonomy's rule now compiles first.
-
-**One gap accepted, then also closed rather than left as a known limitation:** because the category segment is just one of several public query vars WordPress resolves for a `is_singular()` request, a *wrong* category segment didn't 404 or self-correct -- `/anything-at-all/real-post-slug/` resolved the correct post with a plain 200, no redirect. Core's own `redirect_canonical()` does this self-correction for the built-in `post` type's `%category%` tag, but doesn't generalize it to a custom rewrite tag on a custom post type. The page's `<link rel="canonical">` was always correct regardless (WordPress's default `rel_canonical()` already runs through `get_permalink()`, which already runs through this plugin's own filter), so this wasn't broken content -- but it was an unbounded number of duplicate URLs for the same post. Closed with a `template_redirect` hook that 301s to `get_permalink()` whenever the requested path doesn't match it, mirroring exactly what core does for its own post type.
-
-Verified end to end via `curl`: the new URL resolves (200), the old `/grid-posts/...` URL 301s to the new one, a URL with a made-up category segment also 301s to the correct one, the correct URL itself does *not* redirect, the taxonomy archive and the demo page's filter/pagination all still 200, an unrelated core post (`/hello-world/`) still resolves, and the REST API's `link` field reflects the new URL -- plus a real-browser check that the page still renders correctly at its new address. A version-gated auto-flush (`PGF_Plugin::maybe_flush_rewrite_rules()`, keyed off a bumped `PGF_VERSION`) means an already-active install picks up this structural rewrite change on its very next request, rather than 404ing every `pgf_post` permalink until someone happens to re-save Settings -> Permalinks by hand.
-
-### Permalink structure independence: no `add_rewrite_rule()` needed
-
-Checked the plugin against `/%category%/%postname%/` — a common real-world permalink structure that adds a taxonomy segment to core `post` URLs — since it's a meaningfully different structure from the plain `%postname%` one everything had been tested against so far. `register_post_type()`'s own `rewrite => array( 'slug' => 'grid-posts' )` and `register_taxonomy()`'s automatic rewrite generation both produce their rules independently of the site's core permalink structure, so `pgf_post` permalinks, the `pgf_category`/`pgf_tag` archive links the single-post template now surfaces, the demo page, and the `?pgf-page=`/`?pgf_category[]=` query-string-based filtering/pagination all kept working with no code changes — confirmed with the structure actually switched on the test site and every one of those URLs re-checked with `curl`, not inferred from reading `register_post_type()`'s docs. No custom `add_rewrite_rule()` call is needed anywhere in the plugin: the CPT/taxonomy URLs are a fixed, self-contained slug rather than one built from the site's permastruct, and the filter/pagination state deliberately lives in plain query args (see `PGF_Blocks::PAGE_PARAM` above) specifically so it never has to participate in rewrite rules at all.
-
-One real bug surfaced during this check, but it wasn't in the plugin: switching the site to that structure 404'd `/hello-world/` (an unrelated core post), traced to `default_category` pointing at term ID 1 in the `category` taxonomy while no such term actually exists on this install (`wp term list category` returns zero rows) — `%category%` has nothing to resolve to for a post with no real category assigned. Left unfixed deliberately: it's a pre-existing gap in this install's own data, entirely unrelated to and untouched by this plugin, which by design (see above) keeps all of its content in its own post type and taxonomies specifically so it never has to touch a site's existing content. The site's permalink structure was switched back to `/%postname%/` afterward, matching how this environment was found.
-
-### An independent assessment review, and which of its findings actually held up
-
-Had this plugin reviewed a second time by an independent process against the brief, the code, and the packaged ZIP. Rather than applying its findings on trust, each one was verified directly first -- against the real, running site, not just by re-reading the code -- which mattered: one of its "high priority" findings turned out not to be an actual bug once tested, while several others were real and are now fixed.
-
-**Confirmed and fixed:**
-
-- **A REST URL malformed under "plain" permalinks.** `posts-grid/view.js`'s AJAX fetch built its URL as `` `${restUrl}?${params}` ``. Under the plain `?rest_route=` permalink fallback, `rest_url()` already returns a string containing its own `?`, so appending a second one put every filter parameter *inside* the value of `rest_route` itself -- a request for a route that doesn't exist. This was flagged as a plausible risk in an earlier pass (see "Known limitations" below, now resolved) but never actually confirmed until this review pushed on it. Fixed by building the URL with `new URL()` and `searchParams`, which merges correctly onto whatever query string is already present either way.
-- **A race condition between overlapping filter requests.** `refresh()` had no guard against a newer request resolving before an older one -- rapid category/tag toggles could let a stale response overwrite the correct, newer one, silently reverting the grid to a previous selection's results while the checkboxes still showed the current one checked. Fixed with a request-sequence counter: a response only applies if it's still the most recent request when it resolves.
-- **Pagination links could accumulate stale filter values instead of replacing them.** `add_query_arg()`/`remove_query_arg()` round-trip an existing `pgf_category[]=`-style value through PHP's own array parsing and back out as `pgf_category[0]=`, `pgf_category[1]=`, ... (confirmed directly: fed `pgf_category[]=8&pgf_category[]=10` through `add_query_arg()` and got `pgf_category[0]=8&pgf_category[1]=10` back). The pagination link's own client-side URL builder only ever deleted the plain `pgf_category[]` key before appending fresh values, so it never cleared the indexed variant a server-rendered link had actually used -- appending a new selection on top of a stale one, which PHP's query parser then silently merges into one combined array rather than replacing it. Reproduced end to end in a real browser (loaded a URL using the indexed style, changed the filter selection, clicked Next, confirmed the old indexed keys were gone and only the new selection remained) and fixed by clearing every bracketed variant of the key, not just the empty-bracket one.
-- **Uninstall deleted every `pgf_post` and its current featured image, not just seeded ones.** Once activated, creating a `pgf_post` by hand through wp-admin is normal use of a registered public post type, not a leftover -- but the previous `uninstall.php` queried and deleted *all* posts of that type unconditionally, and would delete whatever attachment each one currently had as a thumbnail, including an existing media library image a site owner picked for their own post. Fixed by having the seeder record exactly which post/attachment IDs it creates (`pgf_seeded_post_ids` / `pgf_seeded_attachment_ids`), and having uninstall delete only those. Verified directly: seeded a fresh install, created an extra post by hand pointing at a pre-existing, unrelated media library image as its thumbnail, ran `uninstall.php` exactly as WordPress core's deletion flow would, and confirmed the 12 seeded posts/images and the demo page were gone while the hand-created post and the pre-existing image both survived untouched.
-- **A total term-creation failure would have crashed post seeding.** `create_posts()` uses `$index % count( $category_names )` to round-robin categories/tags across posts; if `create_terms()`/`create_tags()` failed completely (both arrays empty), that becomes a modulo by zero. `seed()` now checks for this and aborts cleanly with a logged reason before attempting to create any posts, and -- unlike before -- does *not* mark seeding complete in that case, so a later activation gets a genuine retry instead of being permanently skipped.
-- **`wp_set_object_terms()` failures were silently ignored.** Now logged the same way every other seeding failure already was, for the same reason: a partially-seeded post (fewer categories/tags than intended) should be diagnosable from the log, not just discoverable by counting.
-- **`include_children` inconsistency between the two filtering paths.** The REST API defaults `include_children` to `false` for a plain array-of-term-IDs taxonomy query (confirmed directly against WordPress core source), but this plugin's own server-side `tax_query` builder didn't set it at all, defaulting instead to `WP_Tax_Query`'s own default of `true`. The seeded categories are flat, so this had no visible effect on the demo content, but a real site that later nests `pgf_category` terms would get different filtered results from a page-2 reload than from the AJAX-filtered path for the exact same selection. Now set explicitly to `false` on both.
-- **An out-of-range `?pgf-page=` produced an inconsistent result.** A page number beyond the last real one rendered an empty grid while pagination's own independent count query still reported the *real* total (e.g. "Page 999 of 2") -- confusing for a hand-edited URL or a stale bookmark. The first fix attempt clamped using the main content query's own `max_num_pages` *after* running it with the out-of-range `paged` value already applied -- which doesn't work: verified directly that `WP_Query` comes back with `found_posts`/`max_num_pages` both `0` in that case, not the true total, so there was nothing reliable to clamp against. Fixed properly by extracting the total-page count into a shared `PGF_Blocks::get_total_pages()` (a dedicated, unpaged, `fields => ids` query -- the same query shape pagination's render.php already ran on its own) plus `PGF_Blocks::clamp_page()`, called from *both* posts-grid's and pagination's render.php before either one uses the page number for anything. The two blocks now share the exact same total-pages calculation instead of each computing their own, so they cannot disagree about it even in the edge case that exposed the first attempt's bug.
-- **A latent HTML-attribute-injection risk in client-rendered cards.** `posts-grid/view.js` built each filtered-in card via string interpolation, including a title into an `alt="..."` attribute with only its tags stripped, not its quotes escaped -- a title containing a literal `"` could break out of the attribute. Post titles are admin/editor-controlled, not visitor input, so this was never demonstrated as exploitable, but titles have never been the trust boundary this plugin otherwise cares about (see the validation/security work above), so it wasn't worth leaving. Rewritten to build cards as real DOM nodes with element properties (`.href`, `.src`, `.alt`) instead of string concatenation, which are escaped by the browser the same way `esc_attr()` is server-side; also fixed a display regression that would have shipped from an early version of this same fix, where switching to `textContent` stopped HTML entities in titles (an em dash as `&#8211;`, say) from decoding correctly.
-- **Hardcoded English strings in client-rendered text.** "No posts found." and the "Could not load posts" error are now passed through from PHP (`__()`) via the existing `wp_interactivity_state()` config object instead of being literal English in the JS, and pagination's "Page X of Y" label now uses a translated placeholder template instead of a hardcoded JS template string.
-- **Failed and empty results looked identical.** A non-OK HTTP response or a network exception both silently rendered as "No posts found." -- the same message a legitimate empty filter combination shows. These now render a distinct error message instead, and the grid gets an `aria-busy` attribute while a request is in flight for assistive tech.
-- **Dead and missing option cleanup in `uninstall.php`.** It deleted `pgf_db_version`, an option nothing in this plugin has ever actually set (a leftover, evidently, from before `PGF_Plugin::REWRITE_VERSION_OPTION`/`pgf_rewrite_version` existed), while never cleaning up the option that's actually used. Fixed, and also added deletion of the two new ownership-tracking options above.
-- **`package.json` said `1.0.0` while the plugin header said `1.1.0`.** Both now match the plugin's actual version.
-
-**Checked and found not to be a real bug, with evidence:** the review's top-priority finding was that using `pgf_category`/`pgf_tag` as this plugin's own filter query-string parameter names -- the same names `register_taxonomy()` defaults their public query vars to -- would let WordPress's main query consume them as taxonomy constraints, breaking the pages they're used on. This is a reasonable-sounding mechanism, and was taken seriously enough to actually test rather than dismiss. It doesn't hold up: replaying the exact real request dispatch (`$wp->main()`, not a query built and inspected in isolation) with `?pgf_category[]=8` present against the demo page, an unrelated core post, and a raw `WP_Query`, in every case `is_page()`/`is_404()` resolved correctly and `$wp_query->tax_query` was empty -- no unwanted constraint was ever attached. `is_tax( 'pgf_category' )` also correctly returned `false`. This plugin's filter parameters are always array-shaped (`pgf_category[]=8`) with numeric term IDs, which doesn't match the scalar term-*slug* shape WordPress's own taxonomy query-var handling expects, and in practice that mismatch is exactly why the two never collide here. Reusing a taxonomy's default query-var name for an unrelated purpose is still not a pattern worth defending as a best practice, but renaming these parameters now (touching every render.php, every view.js, and the README) is not a justified change for a problem that doesn't reproduce.
-
-**Flagged for a decision, then done:** the review's other direct-brief-wording finding was that the plugin *folder*/slug (`posts-grid-filter`) doesn't itself carry a distinguishing prefix the way `pgf_post`/`pgf_category`/`pgf_tag`/`pgf/*` blocks do. That's accurate, and the brief does ask for a unique prefix "for the plugin slug." Given the disruption involved -- the folder name, the text domain, every translatable-string call site, `package.json`, and the GitHub repository all needed to change together, not just a code fix -- this was raised as an explicit choice rather than done unilaterally. Renamed to `rotem-posts-grid-filter` first, then to `wm-posts-grid-filter` on request (matching the assessment's own submission context) -- both passes touched the same surface: folder, main plugin file, `Text Domain` header, every `block.json`'s `textdomain`, every `__()`/`_e()`/`esc_html__()`/`esc_html_e()` call site, `package.json`'s `name` (and `package-lock.json`, regenerated to match each time), `.gitignore`'s zip pattern, and the GitHub repository itself. Deliberately left untouched both times: the *internal* `pgf_`/`PGF_` prefix on the post type, taxonomies, and classes, and the Interactivity API store namespace/block context keys that happen to reuse the string `posts-grid-filter` -- those already satisfy the requirement and aren't what "plugin slug" refers to, and renaming them adds risk without addressing the brief's actual wording. Verified end to end after each rename: a fresh `wp plugin list` recognizes the new slug, activation (with existing seeded content already in place) neither reseeds nor duplicates anything, and every URL surface -- the demo page, a fresh single-post permalink, the REST API, an unrelated core post -- returns 200 with a clean `debug.log`, plus a real-browser check that filtering still works with zero console errors.
-
-## Known limitations
-
-- **REST URL construction is now permalink-structure-agnostic.** Previously listed here as an untested risk; this review's process confirmed it as a real bug under the "plain" `?rest_route=` fallback and it's now fixed (see above) and covered by the verification list below.
-- **No `data-wp-each` for the post list** (see above) — the tradeoff is documented, not hidden.
-- **One grid + one filter per page** is the supported scope, not multiple independent pairs.
-- **GD is required** for demo image generation on activation; on a PHP build without GD, posts still seed correctly but without featured images.
-- **Pagination is a full page reload, not instant.** A deliberate tradeoff for the previous section's reasons — real, crawlable, no-JS-required navigation, at the cost of losing the AJAX version's instant feel and scroll position on page change. Filtering itself is unaffected and stays instant.
-- **Filtered *and* paginated views are now both crawlable** (`?pgf_category[]=`/`?pgf_tag[]=` combined with `?pgf-page=`), which is a deliberate change from an earlier version of this plugin that only made the unfiltered grid crawlable. Whether every filter combination *should* be indexable is a separate, genuinely debatable SEO question (faceted navigation can create thin/duplicate-content pages at scale) — nothing here adds `noindex` or excludes any combination from indexing, which would be the next thing to consider for a larger, real-world catalog.
-- **No `<link rel="next"/"prev">` or per-page canonical tags in `<head>`** — see the pagination section above for why.
-
-## Verification performed
-
-- Fresh activation on a real WordPress 7.1 / PHP 8.3 install: 12 posts, 4 categories, 6 tags, all with images/excerpts, demo page created — zero manual steps.
-- Reactivation is idempotent (no duplicate content).
-- REST API filtering tested directly (`curl`) confirming OR-within/AND-across taxonomy semantics against known term counts.
-- Live browser testing: checking a category filters the grid in place (no reload); adding a tag narrows results further (AND); unchecking restores the full set; pagination recalculates and disables Prev/Next correctly at the boundaries; the filter and grid stay in sync from their independent positions on the page.
-- Pagination crawlability: `curl` (no JS, no cookies) against `?pgf-page=1`, a single-category filter, and a two-category filter spanning two pages each return correct, independently server-rendered content — including the rendered Next link correctly carrying the active filters forward and the right checkboxes pre-checked.
-- Filter-then-paginate in a real browser: selecting two categories via AJAX (confirmed no URL change while filtering), then clicking Next, produces a genuine full-page navigation to `?pgf-page=2&pgf_category[]=8&pgf_category[]=10` — confirmed via `document.readyState` and the fresh page's own checkbox state after reload, not assumed from the click alone.
-- A real hydration bug (client-declared initial state clobbering server-seeded state — see above) was caught by comparing the raw hydrated JSON against the live post-JS DOM, not just eyeballing the page, and fixed before shipping.
-- Client-rendered images (post-filter-fetch) confirmed via DOM inspection to carry the same `width`/`height`/`loading`/`decoding`/`alt` attributes as the server-rendered first paint.
-- Responsive layout checked at 375px (phone) and standard desktop widths.
-- Block editor: Inspector Controls (columns, posts per page) update the editor preview live; the grid's editor preview renders real data via `core-data`.
-- Cross-checked against WordPress's own official Interactivity API guidance ([github.com/WordPress/agent-skills](https://github.com/WordPress/agent-skills)), which caught the `aria-disabled`/`is-disabled` gap above — confirmed via `curl` (no JS) that pagination's disabled state now renders correctly server-side, not just client-side.
-- Every seeded post checked individually (not sampled) for the brief's exact seeding requirements: all 12 have a featured image, an excerpt, at least one category and one tag, and 4 of the 12 carry two categories / three tags specifically so filter combinations produce different result sets rather than every post matching every filter.
-- Single-post rendering: checked before and after adding `PGF_Single_Template` via `curl` against a real seeded permalink (empty `<main>` before, full title/image/terms/content after), a single-category post checked separately from a two-category one, taxonomy archive links it now surfaces (`/pgf_category/...`, `/pgf_tag/...`) confirmed to return 200, `debug.log` checked for warnings, and the final rendering confirmed visually in a real browser (image and Elementor header/footer only render fully outside a sandboxed preview pane).
-- `uninstall.php` actually executed end to end (deactivate the plugin, invoke it exactly as WordPress core's plugin-deletion flow would, inspect the database directly) rather than only read — this is what caught the taxonomy-term deletion bug documented above. Re-verified clean afterward: 0 posts, 0 terms, 0 attachments, demo page gone.
-- The `ToggleGroupControl` editor fix confirmed via the block editor's own `wp.data` store (selecting the block programmatically and reading its rendered Inspector Controls panel), not just a screenshot — verified the Columns control renders its three options with no console error, after first catching and fixing a real cross-version export-name mismatch.
-- The pill-filter/Clear-filters addition checked via `curl` for both the unfiltered state (`hidden` on the Clear link, no checkbox `checked`) and a filtered one (`hidden` absent, the right checkbox `checked='checked'`), and in a real browser: clicking a category pill fills it and reveals Clear instantly (no reload), clicking Clear resets both instantly (no reload).
-- The category-prefixed permalink change checked via `curl` end to end: new-structure URL resolves (200); the old `/grid-posts/...` URL and a made-up-category URL both 301 to the correct canonical one; the correct URL itself doesn't redirect; a single- and a two-category post both get the right (lowest-term-ID) slug; the taxonomy archive, the demo page, and its filter/pagination query args all still 200; an unrelated core post still resolves; the REST API's `link` field reflects the new URL; `debug.log` stayed clean throughout -- and the two real bugs this surfaced (documented above) were each caught by dumping the actual compiled `rewrite_rules` option and watching a real request fail, not by reasoning about the change in the abstract.
-- A genuine fresh-install cycle immediately before packaging the production zip: deactivated, ran `uninstall.php` exactly as WordPress core's plugin-deletion flow would (confirmed 0 posts, both taxonomies unregistered, `pgf_seeded` gone), then reactivated from nothing. Re-seeded correctly (12 posts / 4 categories / 6 tags / demo page, all under new IDs), `debug.log` stayed clean, and every URL surface -- a fresh post's category-prefixed permalink, the demo page, filtering/pagination, the taxonomy archive, the REST API, and an unrelated core post -- returned 200, confirmed both via `curl` and a real-browser screenshot of the freshly-seeded grid.
-- The independent review's confirmed findings, each verified against a real request/response, not just the diff: the plain-permalink REST URL fix confirmed by actually switching the site to plain permalinks, loading the demo page in a real browser, and clicking a category filter -- the AJAX request succeeded and re-rendered the correct filtered results with zero console errors, not just inspected as a constructed URL string; the stale-pagination-parameter fix reproduced end to end in a real browser (an indexed-style `pgf_category[0]=`/`[1]=` URL, a filter change, a Next click, confirming no leftover indexed keys and no duplicates in the result); the `add_query_arg()` bracket round-tripping behavior it depends on confirmed directly via `wp eval`; the out-of-range-page fix re-verified via `curl` after catching and fixing a bug in the fix's own first attempt (see above) -- both the grid content and pagination's "Page X of Y" label now agree on the real last page; the ownership-safe uninstall verified by seeding fresh, hand-creating an extra post pointed at a pre-existing, unrelated media library image, running `uninstall.php`, and confirming the seeded content was gone while the hand-created post and existing image both survived; the disproven query-var-collision claim checked by replaying the real `$wp->main()` request dispatch against the demo page, an unrelated core post, and inspecting `$wp_query->tax_query` and `is_tax()` directly, not by reasoning about `WP_Query` in the abstract.
+GPL-2.0-or-later, matching WordPress core.

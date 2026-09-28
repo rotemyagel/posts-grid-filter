@@ -35,6 +35,8 @@ class PGF_Seeder {
 	 */
 	const SEEDED_POST_IDS_OPTION       = 'pgf_seeded_post_ids';
 	const SEEDED_ATTACHMENT_IDS_OPTION = 'pgf_seeded_attachment_ids';
+	const SEEDED_TERM_IDS_OPTION       = 'pgf_seeded_term_ids';
+	const DEMO_PAGE_OWNED_OPTION       = 'pgf_demo_page_owned';
 
 	/**
 	 * Category => color map used both as term data and as the seeded
@@ -65,8 +67,10 @@ class PGF_Seeder {
 			return;
 		}
 
-		$category_ids = $this->create_terms();
-		$tag_ids      = $this->create_tags();
+		$categories = $this->create_terms();
+		$tags       = $this->create_tags();
+		$category_ids = $categories['ids'];
+		$tag_ids      = $tags['ids'];
 
 		/*
 		 * create_posts() picks a category/tag for each post via `$index %
@@ -88,8 +92,19 @@ class PGF_Seeder {
 		$this->create_demo_page();
 
 		update_option( self::SEEDED_OPTION, true );
-		update_option( self::SEEDED_POST_IDS_OPTION, $post_ids );
+		/*
+		 * Only genuinely-created IDs are persisted here, not every ID these
+		 * calls returned -- an adopted pre-existing post/term (matched by
+		 * title/name, kept for idempotency) is not something this plugin
+		 * created, so uninstall.php must not delete it. See create_terms()
+		 * and create_posts() for the created-vs-adopted distinction.
+		 */
+		update_option( self::SEEDED_POST_IDS_OPTION, $result['created_post_ids'] );
 		update_option( self::SEEDED_ATTACHMENT_IDS_OPTION, $attachment_ids );
+		update_option(
+			self::SEEDED_TERM_IDS_OPTION,
+			array_merge( $categories['created_ids'], $tags['created_ids'] )
+		);
 
 		if ( count( $category_ids ) < count( $this->categories )
 			|| count( $tag_ids ) < count( $this->tags )
@@ -111,13 +126,28 @@ class PGF_Seeder {
 	/**
 	 * Creates the pgf_category terms, keyed by name.
 	 *
-	 * @return array<string, int> Category name => term_id.
+	 * `term_exists()` reuses a term that already has this name rather than
+	 * erroring or duplicating it -- necessary for idempotency, but a term
+	 * that already existed before this run was not created by the plugin
+	 * and is deliberately excluded from `created_ids`, the same ownership
+	 * distinction create_posts() below makes for adopted-vs-created posts.
+	 * A term this plugin didn't create might belong to a site owner's own
+	 * taxonomy usage (e.g. after an uninstall that cleared its own tracking
+	 * options but, for whatever reason, left the term rows behind), and
+	 * uninstall.php should never delete a term it didn't create.
+	 *
+	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` is
+	 *              name => term_id for every usable term (needed to build
+	 *              posts below); `created_ids` is only the ones actually
+	 *              inserted this call, for uninstall.php's ownership check.
 	 */
 	private function create_terms() {
-		$ids = array();
+		$ids         = array();
+		$created_ids = array();
 
 		foreach ( array_keys( $this->categories ) as $name ) {
-			$term = term_exists( $name, PGF_Post_Type::TAX_CATEGORY );
+			$existing = term_exists( $name, PGF_Post_Type::TAX_CATEGORY );
+			$term     = $existing;
 			if ( ! $term ) {
 				$term = wp_insert_term( $name, PGF_Post_Type::TAX_CATEGORY );
 			}
@@ -126,21 +156,31 @@ class PGF_Seeder {
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
+			if ( ! $existing ) {
+				$created_ids[] = (int) $term['term_id'];
+			}
 		}
 
-		return $ids;
+		return array(
+			'ids'         => $ids,
+			'created_ids' => $created_ids,
+		);
 	}
 
 	/**
-	 * Creates the pgf_tag terms.
+	 * Creates the pgf_tag terms. See create_terms() above for why
+	 * pre-existing (adopted, not created) terms are excluded from
+	 * `created_ids`.
 	 *
-	 * @return array<string, int> Tag name => term_id.
+	 * @return array{ids: array<string, int>, created_ids: int[]}
 	 */
 	private function create_tags() {
-		$ids = array();
+		$ids         = array();
+		$created_ids = array();
 
 		foreach ( $this->tags as $name ) {
-			$term = term_exists( $name, PGF_Post_Type::TAX_TAG );
+			$existing = term_exists( $name, PGF_Post_Type::TAX_TAG );
+			$term     = $existing;
 			if ( ! $term ) {
 				$term = wp_insert_term( $name, PGF_Post_Type::TAX_TAG );
 			}
@@ -149,9 +189,15 @@ class PGF_Seeder {
 				continue;
 			}
 			$ids[ $name ] = (int) $term['term_id'];
+			if ( ! $existing ) {
+				$created_ids[] = (int) $term['term_id'];
+			}
 		}
 
-		return $ids;
+		return array(
+			'ids'         => $ids,
+			'created_ids' => $created_ids,
+		);
 	}
 
 	/**
@@ -161,8 +207,15 @@ class PGF_Seeder {
 	 *
 	 * @param array $category_ids Category name => term_id.
 	 * @param array $tag_ids      Tag name => term_id.
-	 * @return array{post_ids: int[], attachment_ids: int[]} Everything this
-	 *              call created, for uninstall.php's ownership-based cleanup.
+	 * @return array{post_ids: int[], created_post_ids: int[], attachment_ids: int[]}
+	 *              `post_ids` is every matched post (adopted or created),
+	 *              used for the completeness count in seed(); `created_post_ids`
+	 *              is only the ones actually inserted this call, for
+	 *              uninstall.php's ownership-based cleanup (see create_terms()
+	 *              for why an adopted pre-existing post is excluded);
+	 *              `attachment_ids` only ever contains generated-this-call
+	 *              images already, since create_placeholder_image() is only
+	 *              reached for a post this call itself just inserted.
 	 */
 	private function create_posts( $category_ids, $tag_ids ) {
 		$category_names = array_keys( $category_ids );
@@ -183,8 +236,9 @@ class PGF_Seeder {
 			'Reading the Room: Culture Shifts in Remote Teams',
 		);
 
-		$post_ids       = array();
-		$attachment_ids = array();
+		$post_ids         = array();
+		$created_post_ids = array();
+		$attachment_ids   = array();
 
 		foreach ( $titles as $index => $title ) {
 			$existing = get_page_by_title( $title, OBJECT, PGF_Post_Type::POST_TYPE );
@@ -243,11 +297,13 @@ class PGF_Seeder {
 				PGF_Blocks::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
 			}
 
-			$post_ids[] = $post_id;
+			$post_ids[]         = $post_id;
+			$created_post_ids[] = $post_id;
 		}
 
 		return array(
-			'post_ids'       => $post_ids,
+			'post_ids'         => $post_ids,
+			'created_post_ids' => $created_post_ids,
 			'attachment_ids' => $attachment_ids,
 		);
 	}
@@ -342,6 +398,14 @@ class PGF_Seeder {
 	/**
 	 * Creates the demo page with both blocks already placed, so the
 	 * assessment environment is ready to use immediately after activation.
+	 *
+	 * DEMO_PAGE_OPTION is set either way (adopted or created) so the
+	 * single-post template's "back to grid" link always has somewhere to
+	 * point, regardless of who the page belongs to. DEMO_PAGE_OWNED_OPTION
+	 * is the separate, narrower flag uninstall.php actually checks before
+	 * deleting it -- only true when this call is the one that created the
+	 * page, never when it adopted a pre-existing one at that slug that this
+	 * plugin didn't make.
 	 */
 	private function create_demo_page() {
 		if ( get_option( self::DEMO_PAGE_OPTION ) ) {
@@ -372,6 +436,7 @@ class PGF_Seeder {
 
 		if ( ! is_wp_error( $page_id ) && $page_id ) {
 			update_option( self::DEMO_PAGE_OPTION, $page_id );
+			update_option( self::DEMO_PAGE_OWNED_OPTION, true );
 		} else {
 			$reason = is_wp_error( $page_id ) ? $page_id->get_error_message() : 'wp_insert_post() returned no ID';
 			PGF_Blocks::log( 'Failed to create the demo page: ' . $reason );

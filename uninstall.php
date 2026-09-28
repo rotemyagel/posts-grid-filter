@@ -4,8 +4,14 @@
  *
  * Runs only when the plugin is deleted from the Plugins screen (not on a
  * plain deactivate), so it is the right place to remove everything the
- * seeder created: the demo page, all seeded pgf_post entries, their
- * featured images, the taxonomy terms, and the plugin's own options.
+ * seeder actually created: the demo page (if this plugin created it, not
+ * merely adopted an existing one at that slug), the pgf_post entries and
+ * featured images the seeder itself inserted, the taxonomy terms it itself
+ * inserted, and the plugin's own options. Ownership -- not "matches this
+ * post type/taxonomy" -- is what decides what gets deleted throughout this
+ * file, so content a site owner created or already had in place is never
+ * touched just because it happens to share a post type, taxonomy, or slug
+ * with something the seeder made.
  *
  * @package PostsGridFilter
  */
@@ -37,8 +43,17 @@ $post_type = new PGF_Post_Type();
 $post_type->register_post_type();
 $post_type->register_taxonomies();
 
+/*
+ * Deleted only if this plugin actually created it (pgf_demo_page_owned).
+ * create_demo_page() adopts an already-existing page at the demo slug
+ * rather than creating a duplicate, for idempotency -- but a page it
+ * merely adopted is not one it owns, and deleting someone else's existing
+ * page just because it happened to occupy that slug would be exactly the
+ * kind of non-owned deletion this file's post/attachment cleanup below was
+ * already fixed to avoid.
+ */
 $demo_page_id = (int) get_option( 'pgf_demo_page_id' );
-if ( $demo_page_id ) {
+if ( $demo_page_id && get_option( 'pgf_demo_page_owned' ) ) {
 	wp_delete_post( $demo_page_id, true );
 }
 
@@ -75,29 +90,38 @@ if ( is_array( $seeded_attachment_ids ) ) {
 }
 
 /*
- * Terms are still removed wholesale, unlike posts/attachments: pgf_category
- * and pgf_tag are dedicated taxonomies this plugin registers for its own
- * post type alone (not a shared one like core's post_tag), so there is no
- * equivalent "a site owner made their own term and it would be wrongly
- * deleted" risk the way there is for posts and media.
+ * Only terms this plugin actually inserted are deleted -- not every term
+ * in these taxonomies. pgf_category/pgf_tag are dedicated to this plugin's
+ * own post type, but create_terms()/create_tags() reuse (via term_exists())
+ * rather than duplicate a term that already has the same name, for the
+ * same idempotency reason posts and the demo page are adopted rather than
+ * recreated -- a reused term was not created by this plugin. Beyond that,
+ * deleting a term wholesale also strips its relationship from any
+ * *surviving* post (a hand-created pgf_post kept because it wasn't in
+ * pgf_seeded_post_ids, say) that happens to use it, silently losing that
+ * post's category/tag even though the post itself is left alone.
  */
-foreach ( array( PGF_Post_Type::TAX_CATEGORY, PGF_Post_Type::TAX_TAG ) as $taxonomy ) {
-	$terms = get_terms(
-		array(
-			'taxonomy'   => $taxonomy,
-			'hide_empty' => false,
-			'fields'     => 'ids',
-		)
-	);
-	if ( ! is_wp_error( $terms ) ) {
-		foreach ( $terms as $term_id ) {
-			wp_delete_term( $term_id, $taxonomy );
+$seeded_term_ids = get_option( 'pgf_seeded_term_ids' );
+if ( is_array( $seeded_term_ids ) ) {
+	foreach ( $seeded_term_ids as $term_id ) {
+		$term_id = (int) $term_id;
+		// A given ID only ever belongs to whichever one of these two
+		// taxonomies it was actually inserted into; checking both is just
+		// how that's found back out, not a sign it could be ambiguous.
+		foreach ( array( PGF_Post_Type::TAX_CATEGORY, PGF_Post_Type::TAX_TAG ) as $taxonomy ) {
+			$term = get_term( $term_id, $taxonomy );
+			if ( $term && ! is_wp_error( $term ) ) {
+				wp_delete_term( $term_id, $taxonomy );
+				break;
+			}
 		}
 	}
 }
 
 delete_option( 'pgf_seeded' );
 delete_option( 'pgf_demo_page_id' );
+delete_option( 'pgf_demo_page_owned' );
 delete_option( 'pgf_seeded_post_ids' );
 delete_option( 'pgf_seeded_attachment_ids' );
+delete_option( 'pgf_seeded_term_ids' );
 delete_option( 'pgf_rewrite_version' );

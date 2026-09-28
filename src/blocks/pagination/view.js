@@ -31,13 +31,23 @@ import { store } from '@wordpress/interactivity';
  * could silently combine with, rather than replace, whatever the
  * server-rendered link had encoded the previous selection as.
  *
+ * `key.slice( name.length )` only looks at what follows position
+ * `name.length` in `key` -- it never actually confirms `key` starts with
+ * `name` first. An unrelated param whose name happens to be the same
+ * length as `name` (e.g. some other `[N]`-suffixed key exactly as long as
+ * "pgf_tag") would slice to the same `[N]`-shaped remainder and get
+ * wrongly deleted. `key.startsWith( name )` closes that gap.
+ *
  * @param {URLSearchParams} searchParams Mutated in place.
  * @param {string}          name         Base param name, e.g. "pgf_category".
  */
 const clearArrayParam = ( searchParams, name ) => {
 	const toDelete = [];
 	for ( const key of searchParams.keys() ) {
-		if ( key === `${ name }[]` || /^\[\d+\]$/.test( key.slice( name.length ) ) ) {
+		if (
+			key === `${ name }[]` ||
+			( key.startsWith( name ) && /^\[\d+\]$/.test( key.slice( name.length ) ) )
+		) {
 			toDelete.push( key );
 		}
 	}
