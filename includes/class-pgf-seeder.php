@@ -4,10 +4,14 @@
  * manual setup: posts, terms, featured images, and a demo page carrying
  * both blocks.
  *
- * Featured images are generated on the fly with GD rather than bundled as
- * binary assets, so seeding needs no network access and no extra files to
- * ship with the plugin.
+ * Featured images are generated on the fly as SVGs -- a solid rect plus a
+ * text label, written directly with file_put_contents() -- rather than
+ * bundled as binary assets or generated with an image library. This needs
+ * no network access, no extra files to ship with the plugin, and (unlike
+ * an earlier GD-based version of this file) no PHP image extension either:
+ * SVG is plain XML text, so there is nothing to fall back to or skip.
  *
+
  * @package PostsGridFilter
  */
 
@@ -334,9 +338,12 @@ class PGF_Seeder {
 	}
 
 	/**
-	 * Generates a solid-color placeholder JPEG via GD, uploads it through
-	 * the normal media pipeline, and returns the attachment ID. Using GD
-	 * instead of bundled image files keeps activation fully offline.
+	 * Generates a solid-color placeholder SVG, uploads it through the normal
+	 * attachment pipeline, and returns the attachment ID. SVG needs no PHP
+	 * image extension at all -- it's XML text written with
+	 * file_put_contents() -- unlike the GD-based JPEG this replaced, which
+	 * silently produced no featured images at all on a PHP build without
+	 * the GD extension.
 	 *
 	 * @param int    $post_id  Parent post ID.
 	 * @param string $category Category name, used to pick a color.
@@ -344,53 +351,92 @@ class PGF_Seeder {
 	 * @return int Attachment ID, or 0 on failure.
 	 */
 	private function create_placeholder_image( $post_id, $category, $index ) {
-		if ( ! function_exists( 'imagecreatetruecolor' ) ) {
-			PGF_Blocks::log( 'GD extension is not available; skipping featured image generation.' );
-			return 0;
-		}
-
-		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/media.php';
 
 		list( $r, $g, $b ) = isset( $this->categories[ $category ] ) ? $this->categories[ $category ] : array( 100, 100, 100 );
 
 		$width  = 1200;
 		$height = 800;
-		$image  = imagecreatetruecolor( $width, $height );
-		$bg     = imagecolorallocate( $image, $r, $g, $b );
-		imagefilledrectangle( $image, 0, 0, $width, $height, $bg );
+		$label  = esc_html( $category . ' #' . ( $index + 1 ) );
 
-		$text       = $category . ' #' . ( $index + 1 );
-		$text_color = imagecolorallocate( $image, 255, 255, 255 );
-		imagestring( $image, 5, 24, $height - 40, $text, $text_color );
+		$svg = sprintf(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%2$d" viewBox="0 0 %1$d %2$d" role="img" aria-hidden="true"><rect width="100%%" height="100%%" fill="rgb(%3$d,%4$d,%5$d)"/><text x="24" y="%6$d" font-family="sans-serif" font-size="36" fill="#ffffff">%7$s</text></svg>',
+			$width,
+			$height,
+			$r,
+			$g,
+			$b,
+			$height - 32,
+			$label
+		);
 
 		$upload_dir = wp_upload_dir();
-		$filename   = 'pgf-cover-' . $post_id . '.jpg';
+		$filename   = 'pgf-cover-' . $post_id . '.svg';
 		$file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
 
-		imagejpeg( $image, $file_path, 82 );
-		imagedestroy( $image );
-
-		if ( ! file_exists( $file_path ) ) {
-			PGF_Blocks::log( sprintf( 'imagejpeg() did not produce a file at "%s".', $file_path ) );
+		if ( false === file_put_contents( $file_path, $svg ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			PGF_Blocks::log( sprintf( 'Could not write placeholder SVG to "%s".', $file_path ) );
 			return 0;
 		}
 
 		$attachment = array(
-			'post_mime_type' => 'image/jpeg',
+			'post_mime_type' => 'image/svg+xml',
 			'post_title'     => $category . ' cover image',
 			'post_status'    => 'inherit',
 		);
 
+		/*
+		 * WordPress blocks SVG uploads by default -- a real XSS risk for
+		 * user-supplied files, since an SVG can embed <script>. Allowed only
+		 * for this one insert, for a file this method just wrote itself
+		 * (a rect and a text label, nothing else), then immediately removed
+		 * again: the site's own upload restrictions for real user uploads
+		 * are never weakened.
+		 */
+		$allow_svg_mime = static function ( $mimes ) {
+			$mimes['svg'] = 'image/svg+xml';
+			return $mimes;
+		};
+		add_filter( 'upload_mimes', $allow_svg_mime );
 		$attachment_id = wp_insert_attachment( $attachment, $file_path, $post_id );
+		remove_filter( 'upload_mimes', $allow_svg_mime );
+
 		if ( is_wp_error( $attachment_id ) ) {
 			PGF_Blocks::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
 			return 0;
 		}
 
-		$metadata = wp_generate_attachment_metadata( $attachment_id, $file_path );
-		wp_update_attachment_metadata( $attachment_id, $metadata );
+		/*
+		 * wp_generate_attachment_metadata() runs the file through
+		 * wp_get_image_editor() (GD/Imagick), which doesn't know how to
+		 * introspect an SVG's dimensions -- the true width/height are set
+		 * directly instead, for the REST API and for is/has-thumbnail checks.
+		 *
+		 * No 'sizes' entries: tried adding an explicit 'medium' entry
+		 * pointing at this same file (there's no separate crop to generate;
+		 * this SVG scales losslessly), expecting the_post_thumbnail('medium')
+		 * to then report this file's real 1200x800 the same way the REST API
+		 * does -- but core's image_downsize() always re-constrains a *named*
+		 * size's reported width/height to that size's registered bounding
+		 * box (image_constrain_size_for_editor()) regardless of what's
+		 * stored in metadata, so the_post_thumbnail('medium') reports
+		 * 300x200 (medium's configured box) either way. This is harmless:
+		 * a 1200x800 source is 3:2, medium's box-constrained 300x200 is
+		 * also 3:2, so the two render paths report different absolute
+		 * numbers for the same image but an identical aspect ratio -- and
+		 * aspect ratio, not the absolute pixel values, is what a browser
+		 * actually needs from width/height to reserve correct layout space
+		 * and avoid a shift.
+		 */
+		wp_update_attachment_metadata(
+			$attachment_id,
+			array(
+				'width'  => $width,
+				'height' => $height,
+				'file'   => _wp_relative_upload_path( $file_path ),
+				'sizes'  => array(),
+			)
+		);
 
 		return $attachment_id;
 	}

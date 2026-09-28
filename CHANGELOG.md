@@ -286,3 +286,69 @@ seeded content was correctly removed. Re-verified fresh-creation ownership
 separately (deleted the plants, purged all terms, reactivated) — a
 genuinely new demo page and 10 genuinely new terms were correctly recorded
 as owned.
+
+## Fourth pass: fixing rather than documenting two limitations
+
+Asked directly to fix the items in "Known limitations," rather than leave
+them as accepted tradeoffs. Two were genuinely fixable; two were deliberate
+architecture decisions, explained rather than reverted (see the README's
+"Known limitations" section for those).
+
+**GD requirement removed entirely.** Demo images were generated with GD
+(`imagecreatetruecolor()`, `imagejpeg()`), meaning a PHP build without the
+GD extension seeded posts with no featured images at all. Replaced with
+locally-generated SVG -- a solid-color `<rect>` plus a text `<text>` label,
+written directly via `file_put_contents()` -- which needs no PHP image
+extension whatsoever, since SVG is plain XML text, not a rendered raster
+format. WordPress blocks SVG uploads by default (a real XSS risk for
+user-supplied files, since SVG can embed `<script>`); the fix allows it
+only for the exact insert of a file this method just wrote itself, via
+`add_filter( 'upload_mimes', ... )` immediately followed by
+`remove_filter()` -- the site's own upload restrictions for real user
+uploads are never weakened. `wp_generate_attachment_metadata()` can't
+introspect SVG dimensions the way it does raster images, so width/height
+are set directly on the attachment metadata instead.
+
+One thing tried and reverted during this: an explicit `sizes.medium` metadata
+entry, attempting to make `the_post_thumbnail( 'medium' )` report the SVG's
+real 1200×800 dimensions (matching what the REST API's `media_details`
+already reports) instead of WordPress's registered `medium` size box
+(300×200). Verified this doesn't work the way it looks like it should: core's
+`image_downsize()` always re-constrains a *named* size's reported width/
+height to that size's registered bounding box via
+`image_constrain_size_for_editor()`, regardless of what's stored in
+metadata -- confirmed by reading `wp-includes/media.php` directly, not by
+guessing. Reverted to an empty `sizes` array: the two render paths report
+different absolute numbers for the same image (300×200 vs. 1200×800), but
+an identical 3:2 aspect ratio either way, which is what a browser actually
+needs from width/height to reserve correct layout space -- so the
+inconsistency is cosmetic, not a real Core Web Vitals regression.
+
+**`npm run lint:js` fixed, not just documented as broken.** Reproduced the
+crash directly: `ts-api-utils@1.4.3` (a transitive dependency of
+`@wordpress/eslint-plugin@22.22.0` via `@typescript-eslint@6.21.0`) failed
+to read a property from the `typescript` module at runtime. `npm ls`
+showed why -- nothing in the dependency tree pins an upper bound on
+`typescript`, so npm had resolved it to `7.0.2`, a version far newer than
+what `ts-api-utils@1.4.3`'s internal code (written for the TS 4.x/5.x era)
+expects, even though its declared peer range (`>=4.2.0`, no upper bound)
+didn't catch the incompatibility. Fixed with an `overrides` entry in
+`package.json` pinning `typescript` to `5.4.5` -- a targeted fix that
+doesn't require upgrading any of the ESLint or `@wordpress/*` packages
+themselves, unlike the earlier `@wordpress/scripts` v30→v36 upgrade
+attempt that hit its own unrelated conflict.
+
+With the crash resolved, the linter then ran for real and reported actual
+issues that had accumulated since it was last usable: mostly Prettier
+formatting (fixed automatically via `--fix`), plus two real ones fixed by
+hand -- a missing JSDoc `@param` type, and a destructured `actions` binding
+in `posts-grid/view.js` that was never actually used locally (the
+`refresh` action it's part of is still called correctly by the other
+blocks, which get their own `actions` reference from their own separate
+`store()` call into the same shared namespace).
+
+Verified via a full fresh reseed after the SVG change (fresh-install
+counts, `debug.log` clean, real-browser check that both the server-rendered
+first paint and a client-side filtered re-render display the images
+correctly with zero console errors) and by re-running `npm run lint:js`
+to a clean, zero-error exit after the JS fixes.

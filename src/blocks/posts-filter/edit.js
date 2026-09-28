@@ -10,11 +10,15 @@ export default function Edit( { attributes, setAttributes } ) {
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Filter settings', 'wm-posts-grid-filter' ) }>
+				<PanelBody
+					title={ __( 'Filter settings', 'wm-posts-grid-filter' ) }
+				>
 					<TextControl
 						label={ __( 'Heading', 'wm-posts-grid-filter' ) }
 						value={ heading }
-						onChange={ ( value ) => setAttributes( { heading: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { heading: value } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>

@@ -46,7 +46,8 @@ const clearArrayParam = ( searchParams, name ) => {
 	for ( const key of searchParams.keys() ) {
 		if (
 			key === `${ name }[]` ||
-			( key.startsWith( name ) && /^\[\d+\]$/.test( key.slice( name.length ) ) )
+			( key.startsWith( name ) &&
+				/^\[\d+\]$/.test( key.slice( name.length ) ) )
 		) {
 			toDelete.push( key );
 		}
@@ -84,7 +85,8 @@ const { state } = store( 'posts-grid-filter', {
 			return state.page >= state.totalPages;
 		},
 		get paginationLabel() {
-			const format = state.paginationLabelFormat || 'Page {current} of {total}';
+			const format =
+				state.paginationLabelFormat || 'Page {current} of {total}';
 			return format
 				.replace( '{current}', state.page )
 				.replace( '{total}', state.totalPages );

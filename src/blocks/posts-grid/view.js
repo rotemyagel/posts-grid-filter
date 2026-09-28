@@ -14,6 +14,9 @@ import { store } from '@wordpress/interactivity';
  * layout space before it loads — without this, every filtered re-render
  * would cause a layout shift (a Core Web Vitals CLS regression) as each
  * image's true aspect ratio is discovered.
+ *
+ * @param {Object} post REST API post resource.
+ * @return {?{url: string, width?: number, height?: number}} Thumbnail info, or null.
  */
 const getThumbnail = ( post ) => {
 	const media = post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ];
@@ -22,7 +25,11 @@ const getThumbnail = ( post ) => {
 	}
 	const medium = media.media_details?.sizes?.medium;
 	if ( medium ) {
-		return { url: medium.source_url, width: medium.width, height: medium.height };
+		return {
+			url: medium.source_url,
+			width: medium.width,
+			height: medium.height,
+		};
 	}
 	if ( media.source_url ) {
 		return {
@@ -72,7 +79,9 @@ const decodeEntities = ( html ) => {
  */
 const renderPostCard = ( post ) => {
 	const thumb = getThumbnail( post );
-	const title = decodeEntities( ( post.title?.rendered || '' ).replace( /<[^>]+>/g, '' ) );
+	const title = decodeEntities(
+		( post.title?.rendered || '' ).replace( /<[^>]+>/g, '' )
+	);
 	const excerpt = post.excerpt?.rendered || '';
 
 	const article = document.createElement( 'article' );
@@ -121,7 +130,7 @@ const renderPostCard = ( post ) => {
 // itself already shows the new (correct) one checked.
 let latestRequestId = 0;
 
-const { state, actions } = store( 'posts-grid-filter', {
+const { state } = store( 'posts-grid-filter', {
 	// `page`, `totalPages`, `selectedCategories`, and `selectedTags` are
 	// deliberately NOT declared here with a literal default (e.g. `page: 1`):
 	// all four are always server-seeded via wp_interactivity_state() (grid's
@@ -177,7 +186,10 @@ const { state, actions } = store( 'posts-grid-filter', {
 			url.searchParams.set( '_embed', 'wp:featuredmedia' );
 			// Only the fields the card template actually reads — cuts out
 			// guid, modified, template, class_list, meta, etc.
-			url.searchParams.set( '_fields', 'id,link,title,excerpt,_links,_embedded' );
+			url.searchParams.set(
+				'_fields',
+				'id,link,title,excerpt,_links,_embedded'
+			);
 			state.selectedCategories.forEach( ( id ) =>
 				url.searchParams.append( 'pgf_category[]', id )
 			);
@@ -193,7 +205,10 @@ const { state, actions } = store( 'posts-grid-filter', {
 					posts: response.ok ? await response.json() : null,
 					totalPages: Math.max(
 						1,
-						parseInt( response.headers.get( 'X-WP-TotalPages' ) || '1', 10 )
+						parseInt(
+							response.headers.get( 'X-WP-TotalPages' ) || '1',
+							10
+						)
 					),
 				};
 			} catch ( error ) {
@@ -223,7 +238,9 @@ const { state, actions } = store( 'posts-grid-filter', {
 					const notice = document.createElement( 'p' );
 					notice.className = 'pgf-grid__error';
 					notice.setAttribute( 'role', 'alert' );
-					notice.textContent = state.config?.i18n?.loadError || 'Could not load posts. Please try again.';
+					notice.textContent =
+						state.config?.i18n?.loadError ||
+						'Could not load posts. Please try again.';
 					list.appendChild( notice );
 				}
 				return;
@@ -233,11 +250,14 @@ const { state, actions } = store( 'posts-grid-filter', {
 
 			if ( list ) {
 				if ( result.posts.length ) {
-					list.replaceChildren( ...result.posts.map( renderPostCard ) );
+					list.replaceChildren(
+						...result.posts.map( renderPostCard )
+					);
 				} else {
 					const empty = document.createElement( 'p' );
 					empty.className = 'pgf-grid__empty';
-					empty.textContent = state.config?.i18n?.noResults || 'No posts found.';
+					empty.textContent =
+						state.config?.i18n?.noResults || 'No posts found.';
 					list.replaceChildren( empty );
 				}
 			}

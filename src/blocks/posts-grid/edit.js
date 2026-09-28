@@ -15,7 +15,8 @@ import { store as coreStore } from '@wordpress/core-data';
 // falling back keeps this working whichever one the running core version
 // actually exports, rather than assuming a specific WP version's naming.
 const ToggleGroupControl =
-	wpComponents.ToggleGroupControl || wpComponents.__experimentalToggleGroupControl;
+	wpComponents.ToggleGroupControl ||
+	wpComponents.__experimentalToggleGroupControl;
 const ToggleGroupControlOption =
 	wpComponents.ToggleGroupControlOption ||
 	wpComponents.__experimentalToggleGroupControlOption;
@@ -43,15 +44,23 @@ export default function Edit( { attributes, setAttributes } ) {
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Grid settings', 'wm-posts-grid-filter' ) }>
+				<PanelBody
+					title={ __( 'Grid settings', 'wm-posts-grid-filter' ) }
+				>
 					<ToggleGroupControl
 						label={ __( 'Columns', 'wm-posts-grid-filter' ) }
 						value={ columns }
-						onChange={ ( value ) => setAttributes( { columns: Number( value ) } ) }
+						onChange={ ( value ) =>
+							setAttributes( { columns: Number( value ) } )
+						}
 						isBlock
 					>
 						{ [ 2, 3, 4 ].map( ( n ) => (
-							<ToggleGroupControlOption key={ n } value={ n } label={ String( n ) } />
+							<ToggleGroupControlOption
+								key={ n }
+								value={ n }
+								label={ String( n ) }
+							/>
 						) ) }
 					</ToggleGroupControl>
 					<RangeControl
@@ -59,27 +68,38 @@ export default function Edit( { attributes, setAttributes } ) {
 						min={ 1 }
 						max={ 24 }
 						value={ postsPerPage }
-						onChange={ ( value ) => setAttributes( { postsPerPage: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { postsPerPage: value } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
 				<div className={ `pgf-grid pgf-grid--cols-${ columns }` }>
-					{ ! posts && <p>{ __( 'Loading…', 'wm-posts-grid-filter' ) }</p> }
+					{ ! posts && (
+						<p>{ __( 'Loading…', 'wm-posts-grid-filter' ) }</p>
+					) }
 					{ posts && posts.length === 0 && (
-						<p>{ __( 'No grid posts yet.', 'wm-posts-grid-filter' ) }</p>
+						<p>
+							{ __(
+								'No grid posts yet.',
+								'wm-posts-grid-filter'
+							) }
+						</p>
 					) }
 					{ posts &&
 						posts.map( ( post ) => {
 							const image =
-								post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ]?.source_url;
-							const altText = ( post.title?.rendered || '' ).replace(
-								/<[^>]+>/g,
-								''
-							);
+								post._embedded?.[ 'wp:featuredmedia' ]?.[ 0 ]
+									?.source_url;
+							const altText = (
+								post.title?.rendered || ''
+							).replace( /<[^>]+>/g, '' );
 							return (
 								<div className="pgf-grid__card" key={ post.id }>
-									{ image && <img src={ image } alt={ altText } /> }
+									{ image && (
+										<img src={ image } alt={ altText } />
+									) }
 									<h3
 										dangerouslySetInnerHTML={ {
 											__html: post.title?.rendered,

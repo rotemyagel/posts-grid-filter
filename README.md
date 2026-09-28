@@ -39,7 +39,7 @@ Built for the WordPress Web Development Technical Assessment.
 | Tool | Version | Notes |
 |---|---|---|
 | WordPress | 6.5+ | Uses the Interactivity API and Script Modules |
-| PHP | 7.4+ | GD extension needed for demo images (optional — see [Known limitations](#-known-limitations--tradeoffs)) |
+| PHP | 7.4+ | No image library (GD/Imagick) needed — demo images are generated as SVG |
 | Node.js | any current LTS | Only needed if rebuilding from source |
 
 ### From the packaged zip / a checked-out repo with `build/` present
@@ -101,7 +101,7 @@ Created automatically on first activation, idempotently (reactivating never dupl
 - **4 categories** — Technology · Design · Business · Culture
 - **6 tags** — Guide · Opinion · News · Interview · Deep Dive · Trends
 - **12 posts** — deterministic but overlapping category/tag assignments (4 posts carry two categories, several carry three tags), so filter combinations produce meaningfully different result sets rather than every post matching everything
-- **12 featured images** — generated locally with PHP's GD extension (a solid color per category), so activation needs no network access
+- **12 featured images** — generated locally as SVG (a solid color per category plus a text label), so activation needs no network access and no PHP image extension
 - **1 demo page** — `/posts-grid-filter-demo/`, with both blocks already placed
 
 ---
@@ -136,9 +136,9 @@ Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — 
 
 State lives in one shared store, not namespaced per block instance — matching the brief (grid and filter, placed anywhere on one page) and the demo page it seeds. Multiple independent grid/filter pairs would need per-instance context propagation, and nothing in the brief calls for it.
 
-### GD-generated demo images, not bundled files
+### SVG-generated demo images, not bundled files or a GD dependency
 
-Solid-color placeholders generated on activation with PHP's GD extension, rather than shipped as binary files or fetched from a remote API. Keeps activation fully offline and the plugin's zip free of binary assets.
+Solid-color placeholders with a text label, written directly as SVG (plain XML text via `file_put_contents()`) rather than shipped as binary files, fetched from a remote API, or generated with an image library. Keeps activation fully offline, the plugin's zip free of binary assets, and needs no PHP image extension at all — an earlier GD-based version of this file produced no featured images whatsoever on a PHP build without GD; SVG has nothing to fall back to or skip.
 
 ---
 
@@ -233,11 +233,14 @@ curl -s "http://your-site.test/posts-grid-filter-demo/?pgf-page=2&pgf_category[]
 ## ⚖️ Known limitations & tradeoffs
 
 - **One grid + one filter per page** is the supported scope, not multiple independent pairs on the same page — nothing in the brief calls for it, and it would need per-instance context propagation the shared store doesn't do today.
-- **GD is required** for demo image generation on activation; without it, posts still seed correctly, just without featured images.
-- **Pagination is a full page reload, not instant** — a deliberate tradeoff for real, crawlable, no-JS-required navigation. Filtering itself is unaffected and stays instant.
 - **No `data-wp-each` for the post list** — the client-rendered card list is patched imperatively (`replaceChildren()`) rather than via the Interactivity API's declarative list directive, a deliberate scope call documented in [CHANGELOG.md](CHANGELOG.md).
-- **Filtered *and* paginated views are both crawlable** (`?pgf_category[]=` combined with `?pgf-page=`) — a deliberate choice; nothing here adds `noindex` to any specific filter combination, which would be the next thing to consider for a much larger real-world catalog where faceted navigation can create thin-content pages at scale.
-- **`npm run lint:js` currently fails**, independent of this plugin's own code, due to a version conflict in the installed `@wordpress/eslint-plugin` dependency tree.
+
+Two items previously listed here were fixed rather than left as limitations — see [CHANGELOG.md](CHANGELOG.md#fourth-pass-fixing-rather-than-documenting-two-limitations): demo images no longer need GD at all (generated as SVG instead), and `npm run lint:js` runs clean (a `typescript` version override, plus real formatting/unused-variable fixes it then caught).
+
+Two more are deliberate design decisions, not bugs to fix:
+
+- **Pagination is a full page reload, not instant.** This was built this way on purpose, specifically *instead of* an earlier AJAX version — full-reload navigation is what makes page 2+ a real, crawlable URL that works with JavaScript disabled, which instant pagination structurally cannot do. Reverting this would reintroduce the exact problem it was built to solve. Filtering is a separate concern and stays instant.
+- **Filtered *and* paginated views are both crawlable** (`?pgf_category[]=` combined with `?pgf-page=`), with no `noindex` on any specific filter combination. At this plugin's demo scale (4 categories, 6 tags, 12 posts) every combination is a legitimate, meaningfully different page, so there's nothing to exclude. Faceted-navigation index control (excluding some combinations to avoid thin-content pages) is a real concern *at scale* — thousands of terms, not a handful — and would need real content/traffic data to decide sensibly, which a demo plugin doesn't have. Adding a speculative rule now, with nothing to base it on, would be guessing.
 
 ---
 
