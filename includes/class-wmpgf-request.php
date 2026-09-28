@@ -82,11 +82,12 @@ class WMPGF_Request {
 	 * @return int
 	 */
 	public static function page() {
-		if ( ! isset( $_GET[ self::PAGE_PARAM ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_GET[ self::PAGE_PARAM ] ) || ! is_string( $_GET[ self::PAGE_PARAM ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return 1;
 		}
 
-		return max( 1, absint( wp_unslash( $_GET[ self::PAGE_PARAM ] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// (int), not absint(): absint() would turn -3 into page 3.
+		return max( 1, (int) $_GET[ self::PAGE_PARAM ] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**
