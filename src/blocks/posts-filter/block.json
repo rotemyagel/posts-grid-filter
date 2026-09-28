@@ -11,7 +11,12 @@
 	"attributes": {
 		"heading": { "type": "string", "default": "Filter posts" }
 	},
-	"supports": { "html": false },
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"example": {},
 	"editorScript": "file:./index.js",
 	"viewScriptModule": "file:./view.js",
 	"style": "file:./style-index.css",

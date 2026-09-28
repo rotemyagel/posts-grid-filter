@@ -26,7 +26,21 @@
     "wmpgf/postsPerPage": "postsPerPage"
   },
   "supports": {
-    "html": false
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ],
+    "spacing": {
+      "margin": true,
+      "padding": true
+    }
+  },
+  "example": {
+    "attributes": {
+      "columns": 3,
+      "postsPerPage": 3
+    }
   },
   "editorScript": "file:./index.js",
   "viewScriptModule": "file:./view.js",

@@ -5,17 +5,17 @@ import {
 	useInnerBlocksProps,
 	InspectorControls,
 } from '@wordpress/block-editor';
-import { Disabled, PanelBody, RangeControl } from '@wordpress/components';
-import * as wpComponents from '@wordpress/components';
+import {
+	Disabled,
+	PanelBody,
+	RangeControl,
+	// Still only exported under the experimental name, up to WordPress 7.1.
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
+	__experimentalToggleGroupControl as ToggleGroupControl,
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
+	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
+} from '@wordpress/components';
 import ServerSideRender from '@wordpress/server-side-render';
-
-// Stable name in newer WordPress, __experimental prefix in older versions.
-const ToggleGroupControl =
-	wpComponents.ToggleGroupControl ||
-	wpComponents.__experimentalToggleGroupControl;
-const ToggleGroupControlOption =
-	wpComponents.ToggleGroupControlOption ||
-	wpComponents.__experimentalToggleGroupControlOption;
 
 const TEMPLATE = [ [ 'wmpgf/pagination', {} ] ];
 
