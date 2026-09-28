@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  js:
+    name: JS and CSS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:js
+      - run: npm run lint:css
+      - run: npm run build
+      # build/ is committed so the plugin installs without a build step.
+      # Fail if it doesn't match the source.
+      - name: Committed build is up to date
+        run: git diff --exit-code -- build
+      - run: npm run test:js
+
+  php:
+    name: PHP, tests and demo page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          # The plugin's minimum, so Composer resolves what it will run on.
+          php-version: '7.4'
+          tools: composer
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpcs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start wp-env
+        run: npx wp-env start
+      # A fresh environment must reach a working demo page with no manual
+      # steps: activation seeds it, afterStart sets pretty permalinks.
+      - name: Demo page renders the grid
+        run: |
+          curl -sf http://localhost:8888/posts-grid-filter-demo/ -o demo.html
+          grep -q 'wmpgf-grid__card' demo.html
+          grep -q 'wp-block-wmpgf-posts-filter' demo.html
+      - run: npm run test:php
