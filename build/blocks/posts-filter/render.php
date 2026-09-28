@@ -15,6 +15,12 @@
  * pagination/render.php) shows the correct selection immediately, before
  * any JavaScript has run.
  *
+ * The checkboxes sit in a GET form named with those same params, so with
+ * JavaScript disabled an "Apply filters" button (inside <noscript>)
+ * submits the selection as a normal page load -- the same no-JS path
+ * pagination already has. With JavaScript, each change filters instantly
+ * instead and there is no button.
+ *
  * The "Clear filters" link is shown/hidden the same dual way: PHP decides
  * whether to render it visible on first paint (based on whether the current
  * URL has any filter selected), and a matching client-side getter
@@ -51,6 +57,17 @@ $has_active_filters  = $selected_categories || $selected_tags;
  */
 $clear_url = remove_query_arg( array( PGF_Blocks::CATEGORY_PARAM, PGF_Blocks::TAG_PARAM, PGF_Blocks::PAGE_PARAM ) );
 
+/*
+ * Without JavaScript, the checkboxes submit as a plain GET form to the same
+ * URL params the grid already reads. A GET form replaces the whole query
+ * string, so any other params on the current URL (e.g. ?page_id= under
+ * plain permalinks) are carried over as hidden inputs, or the submit would
+ * land on a different page.
+ */
+$form_action     = strtok( $clear_url, '?' );
+$preserved_query = array();
+wp_parse_str( (string) wp_parse_url( $clear_url, PHP_URL_QUERY ), $preserved_query );
+
 $categories = get_terms(
 	array(
 		'taxonomy'   => PGF_Post_Type::TAX_CATEGORY,
@@ -81,47 +98,63 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-filte
 		</a>
 	</div>
 
-	<?php if ( ! is_wp_error( $categories ) && $categories ) : ?>
-		<fieldset class="pgf-filter__group">
-			<legend><?php esc_html_e( 'Categories', 'wm-posts-grid-filter' ); ?></legend>
-			<div class="pgf-filter__options">
-				<?php foreach ( $categories as $category_term ) : ?>
-					<label
-						class="pgf-filter__option"
-						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $category_term->term_id ) ) ); ?>'
-					>
-						<input
-							type="checkbox"
-							<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
-							data-wp-on--change="actions.toggleCategory"
-							data-wp-bind--checked="state.isCategoryChecked"
-						/>
-						<?php echo esc_html( $category_term->name ); ?>
-					</label>
-				<?php endforeach; ?>
-			</div>
-		</fieldset>
-	<?php endif; ?>
+	<form class="pgf-filter__form" method="get" action="<?php echo esc_url( $form_action ); ?>">
+		<?php foreach ( $preserved_query as $query_key => $query_value ) : ?>
+			<?php if ( is_scalar( $query_value ) ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $query_key ); ?>" value="<?php echo esc_attr( $query_value ); ?>" />
+			<?php endif; ?>
+		<?php endforeach; ?>
 
-	<?php if ( ! is_wp_error( $tags ) && $tags ) : ?>
-		<fieldset class="pgf-filter__group">
-			<legend><?php esc_html_e( 'Tags', 'wm-posts-grid-filter' ); ?></legend>
-			<div class="pgf-filter__options">
-				<?php foreach ( $tags as $tag_term ) : ?>
-					<label
-						class="pgf-filter__option"
-						data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $tag_term->term_id ) ) ); ?>'
-					>
-						<input
-							type="checkbox"
-							<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
-							data-wp-on--change="actions.toggleTag"
-							data-wp-bind--checked="state.isTagChecked"
-						/>
-						<?php echo esc_html( $tag_term->name ); ?>
-					</label>
-				<?php endforeach; ?>
-			</div>
-		</fieldset>
-	<?php endif; ?>
+		<?php if ( ! is_wp_error( $categories ) && $categories ) : ?>
+			<fieldset class="pgf-filter__group">
+				<legend><?php esc_html_e( 'Categories', 'wm-posts-grid-filter' ); ?></legend>
+				<div class="pgf-filter__options">
+					<?php foreach ( $categories as $category_term ) : ?>
+						<label
+							class="pgf-filter__option"
+							data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $category_term->term_id ) ) ); ?>'
+						>
+							<input
+								type="checkbox"
+								name="<?php echo esc_attr( PGF_Blocks::CATEGORY_PARAM ); ?>[]"
+								value="<?php echo (int) $category_term->term_id; ?>"
+								<?php checked( in_array( (int) $category_term->term_id, $selected_categories, true ) ); ?>
+								data-wp-on--change="actions.toggleCategory"
+								data-wp-bind--checked="state.isCategoryChecked"
+							/>
+							<?php echo esc_html( $category_term->name ); ?>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</fieldset>
+		<?php endif; ?>
+
+		<?php if ( ! is_wp_error( $tags ) && $tags ) : ?>
+			<fieldset class="pgf-filter__group">
+				<legend><?php esc_html_e( 'Tags', 'wm-posts-grid-filter' ); ?></legend>
+				<div class="pgf-filter__options">
+					<?php foreach ( $tags as $tag_term ) : ?>
+						<label
+							class="pgf-filter__option"
+							data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'termId' => (int) $tag_term->term_id ) ) ); ?>'
+						>
+							<input
+								type="checkbox"
+								name="<?php echo esc_attr( PGF_Blocks::TAG_PARAM ); ?>[]"
+								value="<?php echo (int) $tag_term->term_id; ?>"
+								<?php checked( in_array( (int) $tag_term->term_id, $selected_tags, true ) ); ?>
+								data-wp-on--change="actions.toggleTag"
+								data-wp-bind--checked="state.isTagChecked"
+							/>
+							<?php echo esc_html( $tag_term->name ); ?>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</fieldset>
+		<?php endif; ?>
+
+		<noscript>
+			<button type="submit" class="pgf-filter__submit"><?php esc_html_e( 'Apply filters', 'wm-posts-grid-filter' ); ?></button>
+		</noscript>
+	</form>
 </div>

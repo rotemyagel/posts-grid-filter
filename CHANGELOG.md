@@ -443,3 +443,51 @@ never listed standalone in the inserter to begin with, category or not).
 with a `grid-view` icon, then renamed to `wm-widgets` / "WM Widgets" with
 the icon dropped, per a naming/style review against the rest of the
 inserter's category headings.)
+
+## Brief re-check against the assessment PDF (1.3.0)
+
+A fresh pass comparing the plugin to the brief, testing on the live site,
+not re-reading earlier summaries. Every requirement was already met; these
+are the gaps a reviewer would likely notice, now fixed:
+
+- **Filter works without JavaScript.** The checkboxes had no `name` and no
+  form, so with JavaScript off they did nothing -- inconsistent with
+  pagination, which was built specifically to work without it. They are
+  now `pgf_category[]`/`pgf_tag[]` inputs in a GET form, with an "Apply
+  filters" button inside `<noscript>`. Other params on the current URL are
+  carried over as hidden inputs, since a GET form replaces the whole query
+  string (verified with an extra `?utm_source=` param). Verified by
+  requesting the submitted URL directly: Design + Trends returned the 2
+  expected posts with both checkboxes pre-checked.
+- **Selection is kept in the address bar.** `history.replaceState()` after
+  every change, so refreshing or sharing reopens the same view. Verified:
+  Design + Culture, reload, same 2 checkboxes checked, "Page 1 of 2", and
+  Next/Prev still carry the selection.
+- **Screen-reader announcement.** An `aria-live` region reads "Posts found:
+  N" (or "No posts found.") after each filter change. N is `X-WP-Total`, so
+  it is the full count (8), not just the cards on the first page (6).
+- **Pagination hidden on a single page**, including zero results, where it
+  previously sat under "No posts found." as "Page 1 of 1". Server-rendered
+  `hidden` for first paint, plus `data-wp-bind--hidden` for changes after.
+  Needed a `.pgf-pagination[hidden]` rule, since the block's `display: flex`
+  overrides the browser's own `hidden` style. Prev from page 2 now links to
+  the plain URL instead of `?pgf-page=1`.
+- **Real editor previews.** Posts Filter showed a line of placeholder text;
+  it now renders the actual category/tag pills via `getEntityRecords()`.
+  Pagination always showed "Page 1 of 1"; it now uses
+  `getEntityRecordsTotalPages()` with the grid's posts-per-page (from block
+  context), with a note when it will be hidden on the site. Verified in
+  the editor at 6 per page ("Page 1 of 2") and 24 ("Page 1 of 1" + note),
+  without saving the demo page.
+- **One URL builder.** Pagination's href logic moved to
+  `src/shared/filter-url.js`, now also used for the address-bar sync, so
+  both produce identical URLs.
+- **README fixes.** The project layout listed `src/posts-grid/` (actually
+  `src/blocks/posts-grid/`), omitted `edit.js`/`index.js`/`save.js`, and
+  called `build/` gitignored when it is committed.
+- **License.** `License`/`License URI` plugin header lines, a `LICENSE`
+  file (GPLv2 text copied from WordPress's own `license.txt`), and
+  `"license"` in `package.json`.
+- **CSS lint clean.** `npm run lint:css` reported 20 existing errors
+  (whitespace inside parentheses, `currentColor` casing, blank lines); all
+  fixed, formatting only.

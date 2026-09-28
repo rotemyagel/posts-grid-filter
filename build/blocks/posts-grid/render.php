@@ -76,6 +76,8 @@ wp_interactivity_state(
 			'tagParam'      => PGF_Blocks::TAG_PARAM,
 			'i18n'          => array(
 				'noResults' => __( 'No posts found.', 'wm-posts-grid-filter' ),
+				/* translators: {count} is replaced in the browser with the number of matching posts. */
+				'results'   => __( 'Posts found: {count}', 'wm-posts-grid-filter' ),
 				'loadError' => __( 'Could not load posts. Please try again.', 'wm-posts-grid-filter' ),
 			),
 		),
@@ -117,5 +119,6 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-grid-
 			<p class="pgf-grid__empty"><?php esc_html_e( 'No posts found.', 'wm-posts-grid-filter' ); ?></p>
 		<?php endif; ?>
 	</div>
+	<p class="pgf-sr-only" aria-live="polite" data-wp-text="state.announcement"></p>
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 </div>

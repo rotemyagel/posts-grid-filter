@@ -9,28 +9,30 @@
 }
 
 .pgf-grid--cols-2 {
-	grid-template-columns: repeat( 2, 1fr );
+	grid-template-columns: repeat(2, 1fr);
 }
 
 .pgf-grid--cols-3 {
-	grid-template-columns: repeat( 3, 1fr );
+	grid-template-columns: repeat(3, 1fr);
 }
 
 .pgf-grid--cols-4 {
-	grid-template-columns: repeat( 4, 1fr );
+	grid-template-columns: repeat(4, 1fr);
 }
 
 /* Tablet: step 3/4-column grids down to 2 rather than jumping straight
    to a single column — keeps the grid feeling like a grid down to ~600px. */
 @media ( max-width: 782px ) {
+
 	.pgf-grid--cols-3,
 	.pgf-grid--cols-4 {
-		grid-template-columns: repeat( 2, 1fr );
+		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
 /* Phone: everything collapses to a single column. */
 @media ( max-width: 480px ) {
+
 	.pgf-grid--cols-2,
 	.pgf-grid--cols-3,
 	.pgf-grid--cols-4 {
@@ -53,6 +55,7 @@
 	height: auto;
 	display: block;
 	border-radius: 4px;
+
 	/* Backstops the width/height attributes on the <img> itself: reserves
 	   layout space immediately, before the image (or its dimensions) has
 	   loaded, so filtered re-renders don't cause a layout shift. */
@@ -73,6 +76,18 @@
 .pgf-grid__excerpt {
 	font-size: 0.95rem;
 	opacity: 0.85;
+}
+
+.pgf-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
 }
 
 .pgf-grid__empty {

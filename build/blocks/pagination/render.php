@@ -69,7 +69,14 @@ wp_interactivity_state(
 $is_first_page = $current_page <= 1;
 $is_last_page  = $current_page >= $total_pages;
 
-$prev_href = $is_first_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) );
+// Page 1 is the plain URL with no page param, matching the client-side hrefs.
+if ( $is_first_page ) {
+	$prev_href = '';
+} elseif ( 2 === $current_page ) {
+	$prev_href = esc_url( remove_query_arg( PGF_Blocks::PAGE_PARAM ) );
+} else {
+	$prev_href = esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page - 1 ) );
+}
 $next_href = $is_last_page ? '' : esc_url( add_query_arg( PGF_Blocks::PAGE_PARAM, $current_page + 1 ) );
 
 /*
@@ -86,7 +93,12 @@ $next_class = 'pgf-pagination__next' . ( $is_last_page ? ' is-disabled' : '' );
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pgf-pagination' ) );
 ?>
-<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="posts-grid-filter">
+<div
+	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	<?php echo $total_pages <= 1 ? 'hidden' : ''; ?>
+	data-wp-interactive="posts-grid-filter"
+	data-wp-bind--hidden="state.isSinglePage"
+>
 	<a
 		class="<?php echo esc_attr( $prev_class ); ?>"
 		rel="prev"

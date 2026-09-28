@@ -7,6 +7,19 @@
 	margin-top: 2rem;
 }
 
+/* display:flex above would otherwise override the hidden attribute. */
+.pgf-pagination[hidden] {
+	display: none;
+}
+
+.pgf-pagination__note {
+	flex-basis: 100%;
+	margin: 0;
+	text-align: center;
+	font-size: 0.8rem;
+	opacity: 0.7;
+}
+
 /* Prev/Next are real <a> elements (see render.php) so page 2+ has a
    crawlable URL even with JS disabled -- anchors have no native
    :disabled state, so the disabled look is driven by the .is-disabled
@@ -18,7 +31,7 @@
 	cursor: pointer;
 	padding: 0.4rem 0.9rem;
 	min-height: 44px;
-	border: 1px solid currentColor;
+	border: 1px solid currentcolor;
 	border-radius: 4px;
 	background: transparent;
 	text-decoration: none;

@@ -23,7 +23,7 @@ Built for the WordPress Web Development Technical Assessment.
 ## ✨ Highlights
 
 - **Dynamic Posts Grid** — server-rendered via `WP_Query`. Configurable columns (2 / 3 / 4) and posts-per-page via Inspector Controls.
-- **Posts Filter** — category and tag checkboxes rendered as pill toggles, with a "Clear filters" link. Can be placed anywhere on the page, not nested inside the grid.
+- **Posts Filter** — category and tag checkboxes rendered as pill toggles, with a "Clear filters" link. Can be placed anywhere on the page, not nested inside the grid. The selection is mirrored into the address bar, so a refresh or a shared link reopens the same filtered view, and it still works with JavaScript disabled (a plain GET form).
 - **Pagination as a true inner block** — locked into the grid's template, registered as its own block rather than markup the grid just happens to render.
 - **Zero-JS-in-the-click-path pagination** — Prev/Next are plain, crawlable `<a href>` links with a full page reload; filtering stays instant via AJAX. See [why](#pagination-is-real-full-reload-navigation) below.
 - **Shared Interactivity API store, not nesting** — both blocks call `store('posts-grid-filter', {...})` from their own `view.js`; WordPress merges every caller's state into one store by namespace.
@@ -133,7 +133,11 @@ Filtering itself isn't reimplemented: any taxonomy registered with `show_in_rest
 
 ### Pagination is real, full-reload navigation
 
-Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`.
+Prev/Next are plain `<a href="?pgf-page=2">` links with `rel="next"/"prev"` — a normal browser navigation, not AJAX or infinite scroll. A crawler, a JS-disabled visitor, or someone who bookmarks the link all reach identical, correctly server-rendered content. Filtering is a separate concern and keeps its instant AJAX behavior; the only connection is that a Next/Prev link's `href` needs to carry the current filter selection forward, handled by reactive getters in `pagination/view.js`. Pagination is hidden when every result fits on one page (including zero results).
+
+### Filtering: instant with JavaScript, a plain form without it
+
+The checkboxes are real `name="pgf_category[]"` / `name="pgf_tag[]"` inputs inside a `<form method="get">`, i.e. the same URL params the grid already reads server-side. With JavaScript, each change filters instantly over REST and `history.replaceState()` mirrors the selection into the address bar, so a refresh or a copied link reopens the same view. Without JavaScript, an "Apply filters" button (inside `<noscript>`) submits the form as a normal page load. Both paths build URLs through one shared helper (`src/shared/filter-url.js`), also used by pagination. Result-count changes are announced to screen readers through an `aria-live` region.
 
 ### Category-prefixed permalinks
 
@@ -165,6 +169,7 @@ wm-posts-grid-filter/
 ├── phpcs.xml.dist                 PHPCS ruleset for this plugin
 ├── README.md                      This file
 ├── CHANGELOG.md                   Full development history, both review passes
+├── LICENSE                        GPL-2.0 text
 │
 ├── includes/
 │   ├── class-pgf-plugin.php       Bootstrap: init/activate/deactivate, rewrite-flush guard
@@ -180,26 +185,29 @@ wm-posts-grid-filter/
 │   └── single.css                 Styling for the single-post template
 │
 ├── src/
-│   ├── posts-grid/
-│   │   ├── block.json             Metadata, attributes, asset wiring
-│   │   ├── edit.js                InspectorControls (columns, posts per page)
-│   │   ├── render.php             Server render: query, pagination clamp, i18n config
-│   │   ├── view.js                Frontend: REST refresh, request sequencing, card rendering
-│   │   └── style.css
+│   ├── shared/
+│   │   └── filter-url.js          Builds ?pgf-page=/pgf_category[]=/pgf_tag[]= URLs (filter + pagination)
 │   │
-│   ├── pagination/
-│   │   ├── block.json             parent: ["pgf/posts-grid"]
-│   │   ├── render.php             Prev/Next hrefs, total-page count
-│   │   ├── view.js                Reactive href/label getters
-│   │   └── style.css
-│   │
-│   └── posts-filter/
-│       ├── block.json
-│       ├── render.php             Checkbox groups, Clear filters link
-│       ├── view.js                Toggle/clear actions on the shared store
-│       └── style.css
+│   └── blocks/                    Each block: block.json, index.js (registration), edit.js,
+│       │                          save.js, render.php, view.js, style.css
+│       ├── posts-grid/
+│       │   ├── edit.js            InspectorControls (columns, posts per page), live post preview
+│       │   ├── save.js            Saves only the inner pagination block; the grid itself is dynamic
+│       │   ├── render.php         Server render: query, pagination clamp, i18n config, aria-live region
+│       │   └── view.js            Frontend: REST refresh, request sequencing, card rendering
+│       │
+│       ├── pagination/
+│       │   ├── block.json         parent: ["pgf/posts-grid"]
+│       │   ├── edit.js            Editor preview with the real page count
+│       │   ├── render.php         Prev/Next hrefs, total-page count, hidden on a single page
+│       │   └── view.js            Reactive href/label/visibility getters
+│       │
+│       └── posts-filter/
+│           ├── edit.js            Editor preview with the real category/tag pills
+│           ├── render.php         GET form with checkbox groups, no-JS submit, Clear filters link
+│           └── view.js            Toggle/clear actions, address-bar sync
 │
-└── build/                         Generated by @wordpress/scripts (gitignored source, shipped in the zip)
+└── build/                         Generated by @wordpress/scripts from src/; committed so the zip installs without a build step
 ```
 
 ---
@@ -207,7 +215,8 @@ wm-posts-grid-filter/
 ## ✅ Coding standards
 
 - **PHP** — checked with the actual [WordPress Coding Standards](https://github.com/WordPress/WordPress-Coding-Standards) ruleset via PHPCS (`phpcs.xml.dist`, `npm run lint:php`), not just followed by convention: tab indentation, `esc_*` on every output, prepared queries, `WP_Query`/`get_terms()` used over raw SQL throughout. One rule is disabled with a documented reason in `phpcs.xml.dist` — the naming check for `templates/single-pgf_post.php`, whose underscore is required by WordPress's own template-hierarchy convention (`single-{$post_type}.php`), not a style inconsistency.
-- **JavaScript** — `@wordpress/scripts` ESLint config. Only `@wordpress/*` packages; no external React libraries.
+- **JavaScript** — `@wordpress/scripts` ESLint config (`npm run lint:js`, clean). Only `@wordpress/*` packages; no external React libraries.
+- **CSS** — `@wordpress/scripts` Stylelint config (`npm run lint:css`, clean).
 - **i18n** — every user-facing string wrapped with `__()`/`_e()`/`esc_html__()`/`esc_html_e()` under the `wm-posts-grid-filter` text domain, including strings rendered client-side (passed through from PHP via `wp_interactivity_state()`, not hardcoded in JS).
 - **Security** — output escaping on every dynamic value; client-rendered cards build real DOM nodes with element properties rather than string-interpolated HTML, so a title can't break out of an attribute.
 
@@ -220,10 +229,11 @@ A smoke test you can run after activation:
 1. **Plugin is active** — Plugins screen shows "Posts Grid + Filter" enabled.
 2. **Seeding ran** — Posts screen (Grid Posts) lists 12 demo posts, each with a featured image, excerpt, at least one category, and at least one tag.
 3. **Demo page exists** — Pages screen lists "Posts Grid + Filter Demo"; opening it shows the filter above the grid, both populated.
-4. **Inspector controls work** — select the grid block, change Columns and Posts per page; the editor preview updates live.
-5. **Frontend filtering** — check a category; the grid refreshes in place (no reload). Add a tag; results narrow further (AND). Uncheck everything; the full set returns.
+4. **Inspector controls work** — select the grid block, change Columns and Posts per page; the editor preview updates live, including the pagination preview's page count. The filter block shows the real category/tag pills in the editor.
+5. **Frontend filtering** — check a category; the grid refreshes in place (no reload) and the address bar updates. Add a tag; results narrow further (AND). Refresh the page; the same selection and results come back. Uncheck everything; the full set returns.
 6. **Clear filters** — appears once a filter is active, resets both instantly.
-7. **Pagination** — click Next with filters active; a real page navigation occurs, filters are preserved in the URL, and the checkboxes on the new page are pre-checked to match.
+7. **Pagination** — click Next with filters active; a real page navigation occurs, filters are preserved in the URL, and the checkboxes on the new page are pre-checked to match. Pick a filter that fits on one page; pagination disappears.
+   - **Without JavaScript** — disable JavaScript and reload; an "Apply filters" button appears under the checkboxes and submits the selection as a normal page load.
 8. **Single post** — click a card's title; the single-post page renders title, image, categories/tags, and content, at a `/category-slug/post-slug/` URL.
 9. **Reactivation is idempotent** — deactivate, reactivate; no duplicate posts appear.
 10. **Uninstall is ownership-safe** — create a Grid Post by hand, then delete the plugin via the Plugins screen: the 12 seeded posts/images/terms and the demo page are removed; your hand-created post survives.
@@ -247,6 +257,7 @@ curl -s "http://your-site.test/posts-grid-filter-demo/?pgf-page=2&pgf_category[]
 
 - **One grid + one filter per page** is the supported scope, not multiple independent pairs on the same page — nothing in the brief calls for it, and it would need per-instance context propagation the shared store doesn't do today.
 - **No `data-wp-each` for the post list** — the client-rendered card list is patched imperatively (`replaceChildren()`) rather than via the Interactivity API's declarative list directive, a deliberate scope call documented in [CHANGELOG.md](CHANGELOG.md).
+- **Back doesn't step through filter changes** — the address bar is updated with `replaceState()`, not `pushState()`, so each checkbox click doesn't add a history entry. Back leaves the page, as it would after any other in-page control.
 
 Two items previously listed here were fixed rather than left as limitations — see [CHANGELOG.md](CHANGELOG.md#fourth-pass-fixing-rather-than-documenting-two-limitations): demo images no longer need GD at all (generated as SVG instead), and `npm run lint:js` runs clean (a `typescript` version override, plus real formatting/unused-variable fixes it then caught).
 
@@ -259,4 +270,4 @@ Two more are deliberate design decisions, not bugs to fix:
 
 ## 📄 License
 
-GPL-2.0-or-later, matching WordPress core.
+GPL-2.0-or-later, matching WordPress core. Full text in [LICENSE](LICENSE).

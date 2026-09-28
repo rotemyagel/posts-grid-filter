@@ -141,6 +141,9 @@ const { state } = store( 'posts-grid-filter', {
 	// genuinely client-only (never server-seeded) belongs here.
 	state: {
 		isLoading: false,
+		// Text of the aria-live region, so screen readers hear the new
+		// result count after a filter change (the grid itself is silent).
+		announcement: '',
 	},
 	actions: {
 		/**
@@ -203,6 +206,10 @@ const { state } = store( 'posts-grid-filter', {
 				result = {
 					ok: response.ok,
 					posts: response.ok ? await response.json() : null,
+					total: parseInt(
+						response.headers.get( 'X-WP-Total' ) || '0',
+						10
+					),
 					totalPages: Math.max(
 						1,
 						parseInt(
@@ -247,6 +254,13 @@ const { state } = store( 'posts-grid-filter', {
 			}
 
 			state.totalPages = result.totalPages;
+			const i18n = state.config?.i18n || {};
+			state.announcement = result.posts.length
+				? ( i18n.results || 'Posts found: {count}' ).replace(
+						'{count}',
+						result.total
+				  )
+				: i18n.noResults || 'No posts found.';
 
 			if ( list ) {
 				if ( result.posts.length ) {

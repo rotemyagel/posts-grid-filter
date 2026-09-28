@@ -8,6 +8,33 @@
  * resets both arrays at once, for the "Clear filters" link in render.php.
  */
 import { store, getContext } from '@wordpress/interactivity';
+import { buildFilterUrl } from '../../shared/filter-url';
+
+/**
+ * Mirrors the selection into the address bar, so a refresh or a copied
+ * link reopens the same filtered view (render.php reads these params on
+ * the server). replaceState rather than pushState: one history entry per
+ * checkbox click would make Back step through every individual toggle.
+ */
+const syncUrl = () => {
+	window.history.replaceState(
+		window.history.state,
+		'',
+		buildFilterUrl( {
+			page: 1,
+			categories: state.selectedCategories,
+			tags: state.selectedTags,
+			config: state.config,
+		} )
+	);
+};
+
+// A new selection always starts from page one.
+const applySelection = () => {
+	state.page = 1;
+	syncUrl();
+	actions.refresh();
+};
 
 const { state, actions } = store( 'posts-grid-filter', {
 	state: {
@@ -29,28 +56,23 @@ const { state, actions } = store( 'posts-grid-filter', {
 	actions: {
 		toggleCategory( event ) {
 			const { termId } = getContext();
-			const checked = event.target.checked;
-			state.selectedCategories = checked
+			state.selectedCategories = event.target.checked
 				? [ ...state.selectedCategories, termId ]
 				: state.selectedCategories.filter( ( id ) => id !== termId );
-			state.page = 1;
-			actions.refresh();
+			applySelection();
 		},
 		toggleTag( event ) {
 			const { termId } = getContext();
-			const checked = event.target.checked;
-			state.selectedTags = checked
+			state.selectedTags = event.target.checked
 				? [ ...state.selectedTags, termId ]
 				: state.selectedTags.filter( ( id ) => id !== termId );
-			state.page = 1;
-			actions.refresh();
+			applySelection();
 		},
 		clearFilters( event ) {
 			event.preventDefault();
 			state.selectedCategories = [];
 			state.selectedTags = [];
-			state.page = 1;
-			actions.refresh();
+			applySelection();
 		},
 	},
 } );

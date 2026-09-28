@@ -17,64 +17,15 @@
  * initial page load, before the filter selection existed.
  */
 import { store } from '@wordpress/interactivity';
+import { buildFilterUrl } from '../../shared/filter-url';
 
-/**
- * Removes every representation of a bracketed array param -- both the
- * plain `name[]` this plugin's own links always use, and the indexed
- * `name[0]`, `name[1]`, ... form that `add_query_arg()`/`remove_query_arg()`
- * produce when they round-trip an existing `name[]=`-style value through
- * PHP's own array parsing (confirmed directly: an incoming `pgf_category[]=8`
- * comes back out of add_query_arg() as `pgf_category[0]=8`). Without
- * clearing the indexed form too, appending fresh `name[]=` values here left
- * both forms on the URL at once, and PHP's query-string parser merges
- * mismatched-style keys into one array -- so a changed filter selection
- * could silently combine with, rather than replace, whatever the
- * server-rendered link had encoded the previous selection as.
- *
- * `key.slice( name.length )` only looks at what follows position
- * `name.length` in `key` -- it never actually confirms `key` starts with
- * `name` first. An unrelated param whose name happens to be the same
- * length as `name` (e.g. some other `[N]`-suffixed key exactly as long as
- * "pgf_tag") would slice to the same `[N]`-shaped remainder and get
- * wrongly deleted. `key.startsWith( name )` closes that gap.
- *
- * @param {URLSearchParams} searchParams Mutated in place.
- * @param {string}          name         Base param name, e.g. "pgf_category".
- */
-const clearArrayParam = ( searchParams, name ) => {
-	const toDelete = [];
-	for ( const key of searchParams.keys() ) {
-		if (
-			key === `${ name }[]` ||
-			( key.startsWith( name ) &&
-				/^\[\d+\]$/.test( key.slice( name.length ) ) )
-		) {
-			toDelete.push( key );
-		}
-	}
-	toDelete.forEach( ( key ) => searchParams.delete( key ) );
-};
-
-const urlForPage = ( pageNumber ) => {
-	const url = new URL( window.location.href );
-	const pageParam = state.config?.pageParam || 'pgf-page';
-	const categoryParam = state.config?.categoryParam || 'pgf_category';
-	const tagParam = state.config?.tagParam || 'pgf_tag';
-
-	url.searchParams.set( pageParam, pageNumber );
-
-	clearArrayParam( url.searchParams, categoryParam );
-	( state.selectedCategories || [] ).forEach( ( id ) =>
-		url.searchParams.append( `${ categoryParam }[]`, id )
-	);
-
-	clearArrayParam( url.searchParams, tagParam );
-	( state.selectedTags || [] ).forEach( ( id ) =>
-		url.searchParams.append( `${ tagParam }[]`, id )
-	);
-
-	return url.toString();
-};
+const urlForPage = ( page ) =>
+	buildFilterUrl( {
+		page,
+		categories: state.selectedCategories,
+		tags: state.selectedTags,
+		config: state.config,
+	} );
 
 const { state } = store( 'posts-grid-filter', {
 	state: {
@@ -83,6 +34,9 @@ const { state } = store( 'posts-grid-filter', {
 		},
 		get isLastPage() {
 			return state.page >= state.totalPages;
+		},
+		get isSinglePage() {
+			return state.totalPages <= 1;
 		},
 		get paginationLabel() {
 			const format =

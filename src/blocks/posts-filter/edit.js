@@ -1,11 +1,51 @@
 import './style.css';
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, TextControl } from '@wordpress/components';
+import { PanelBody, TextControl, Spinner } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
+import { store as coreStore } from '@wordpress/core-data';
+
+// Same terms render.php lists: every non-empty term, ordered by name.
+const TERMS_QUERY = { per_page: -1, hide_empty: true, _fields: 'id,name' };
+
+function TermGroup( { legend, terms } ) {
+	if ( ! terms?.length ) {
+		return null;
+	}
+
+	return (
+		<fieldset className="pgf-filter__group">
+			<legend>{ legend }</legend>
+			<div className="pgf-filter__options">
+				{ /* Display-only pills: selecting happens on the published page. */ }
+				{ terms.map( ( term ) => (
+					<span className="pgf-filter__option" key={ term.id }>
+						{ term.name }
+					</span>
+				) ) }
+			</div>
+		</fieldset>
+	);
+}
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { heading } = attributes;
-	const blockProps = useBlockProps();
+	const blockProps = useBlockProps( { className: 'pgf-filter' } );
+
+	const { categories, tags } = useSelect( ( select ) => {
+		const { getEntityRecords } = select( coreStore );
+		return {
+			categories: getEntityRecords(
+				'taxonomy',
+				'pgf_category',
+				TERMS_QUERY
+			),
+			tags: getEntityRecords( 'taxonomy', 'pgf_tag', TERMS_QUERY ),
+		};
+	}, [] );
+
+	const isLoading = categories === null || tags === null;
+	const isEmpty = ! isLoading && ! categories?.length && ! tags?.length;
 
 	return (
 		<>
@@ -23,15 +63,26 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				<h3>{ heading }</h3>
-				<p>
-					<em>
+				<div className="pgf-filter__head">
+					<h3 className="pgf-filter__heading">{ heading }</h3>
+				</div>
+				{ isLoading && <Spinner /> }
+				{ isEmpty && (
+					<p>
 						{ __(
-							'Category and tag checkboxes render on the frontend, populated from your Grid Categories / Grid Tags.',
+							'No Grid Categories or Grid Tags with posts yet.',
 							'wm-posts-grid-filter'
 						) }
-					</em>
-				</p>
+					</p>
+				) }
+				<TermGroup
+					legend={ __( 'Categories', 'wm-posts-grid-filter' ) }
+					terms={ categories }
+				/>
+				<TermGroup
+					legend={ __( 'Tags', 'wm-posts-grid-filter' ) }
+					terms={ tags }
+				/>
 			</div>
 		</>
 	);
