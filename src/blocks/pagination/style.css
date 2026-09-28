@@ -1,48 +1,65 @@
 .wp-block-wmpgf-pagination {
-	font-size: var(--wmpgf-text-s);
-	line-height: var(--wmpgf-leading-s);
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	justify-content: center;
-	gap: 0.75rem 1rem;
-	margin-top: 2rem;
+	gap: 12px 24px;
+	margin-top: 32px;
+	font-size: var(--wmpgf-text-s);
+	line-height: var(--wmpgf-leading-s);
 }
 
-/* display:flex above would otherwise override the hidden attribute. */
-.wp-block-wmpgf-pagination[hidden] {
-	display: none;
+.wp-block-wmpgf-pagination .wmpgf-pagination__nav {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.wp-block-wmpgf-pagination .wmpgf-pagination__link {
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 40px;
+	padding: 0 16px;
+	border: 1px solid currentcolor;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font-size: inherit;
+	text-decoration: none;
+}
+
+.wp-block-wmpgf-pagination .wmpgf-pagination__link.is-disabled {
+	opacity: 0.4;
+}
+
+.wp-block-wmpgf-pagination .wmpgf-pagination__per-page {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 0 auto;
+}
+
+.wp-block-wmpgf-pagination .wmpgf-pagination__per-page label {
+	margin: 0;
+	font-size: inherit;
+	white-space: nowrap;
+}
+
+.wp-block-wmpgf-pagination .wmpgf-pagination__per-page select {
+	height: 40px;
+	margin: 0;
+	padding: 0 12px;
+	border: 1px solid currentcolor;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font-size: inherit;
 }
 
 .wp-block-wmpgf-pagination .wmpgf-pagination__note {
 	flex-basis: 100%;
 	margin: 0;
-	text-align: center;
-	font-size: var(--wmpgf-text-s);
 	opacity: 0.7;
-}
-
-/* Links have no :disabled state, so .is-disabled drives the disabled look. */
-.wp-block-wmpgf-pagination .wmpgf-pagination__prev,
-.wp-block-wmpgf-pagination .wmpgf-pagination__next {
-	font-size: inherit;
-	display: inline-flex;
-	align-items: center;
-	cursor: pointer;
-	padding: 0.4rem 0.9rem;
-	min-height: 44px;
-	border: 1px solid currentcolor;
-	border-radius: 4px;
-	background: transparent;
-	text-decoration: none;
-	color: inherit;
-}
-
-.wp-block-wmpgf-pagination .wmpgf-pagination__prev.is-disabled,
-.wp-block-wmpgf-pagination .wmpgf-pagination__next.is-disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-	pointer-events: none;
 }
 
 /* Themes often set a font on these elements directly; inherit ours. */

@@ -24,6 +24,12 @@ class WMPGF_Request {
 	const CATEGORY_PARAM = 'wmpgf-category';
 	const TAG_PARAM      = 'wmpgf-tag';
 	const SEARCH_PARAM   = 'wmpgf-search';
+	const PER_PAGE_PARAM = 'wmpgf-per-page';
+
+	/**
+	 * Page sizes offered to visitors (the block's own default is added too).
+	 */
+	const PER_PAGE_OPTIONS = array( 6, 12, 24 );
 
 	/**
 	 * Longest search term kept; anything longer is cut.
@@ -48,7 +54,26 @@ class WMPGF_Request {
 			'categories' => self::CATEGORY_PARAM,
 			'tags'       => self::TAG_PARAM,
 			'search'     => self::SEARCH_PARAM,
+			'perPage'    => self::PER_PAGE_PARAM,
 		);
+	}
+
+	/**
+	 * Posts per page: the visitor's choice from ?wmpgf-per-page= if present,
+	 * otherwise the block's attribute, clamped to the allowed range either
+	 * way. The grid and the pagination block both call this, so they always
+	 * agree on the page size.
+	 *
+	 * @param mixed $block_default The block's postsPerPage attribute.
+	 * @return int
+	 */
+	public static function per_page( $block_default ) {
+		$requested = isset( $_GET[ self::PER_PAGE_PARAM ] ) && is_string( $_GET[ self::PER_PAGE_PARAM ] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			? (int) $_GET[ self::PER_PAGE_PARAM ] // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			: 0;
+
+		// Missing, zero, negative or not a number: use the block's setting.
+		return WMPGF_Query::sanitize_posts_per_page( $requested >= 1 ? $requested : $block_default );
 	}
 
 	/**
@@ -133,7 +158,8 @@ class WMPGF_Request {
 	 * Mirrors urlWith() in src/shared/url.js.
 	 *
 	 * @param array $changes Keys of params(): 'categories' and 'tags' take
-	 *                       slug arrays, 'search' a string, 'page' an int.
+	 *                       slug arrays, 'search' a string, 'perPage' and
+	 *                       'page' ints.
 	 * @return string Unescaped URL.
 	 */
 	public static function url( array $changes ) {
@@ -165,6 +191,9 @@ class WMPGF_Request {
 		// Free text, so it is the one value that must be encoded.
 		if ( isset( $changes['search'] ) && '' !== $changes['search'] ) {
 			$query[] = self::SEARCH_PARAM . '=' . rawurlencode( $changes['search'] );
+		}
+		if ( ! empty( $changes['perPage'] ) ) {
+			$query[] = self::PER_PAGE_PARAM . '=' . (int) $changes['perPage'];
 		}
 		if ( isset( $changes['page'] ) && $changes['page'] > 1 ) {
 			$query[] = self::PAGE_PARAM . '=' . (int) $changes['page'];

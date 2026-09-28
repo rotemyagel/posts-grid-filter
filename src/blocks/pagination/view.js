@@ -3,11 +3,22 @@
  * click loads the page through the router instead of a full reload; the
  * link's href stays the source of truth.
  */
-import { store, getElement } from '@wordpress/interactivity';
+import { store, getElement, getConfig } from '@wordpress/interactivity';
+import { urlWith } from '../../shared/url';
 import { navigateTo } from '../../shared/navigate';
 
 const { state } = store( 'wmpgf', {
 	actions: {
+		// Keeps the current filters and search, starts again from page 1.
+		*changePerPage( event ) {
+			yield* navigateTo(
+				state,
+				urlWith(
+					{ perPage: Number( event.target.value ) },
+					getConfig().params
+				)
+			);
+		},
 		*goToPage( event ) {
 			// Let the browser handle new-tab and new-window clicks.
 			if (

@@ -5,11 +5,17 @@
   "title": "Posts Grid Pagination",
   "category": "wmpgf",
   "icon": "controls-forward",
-  "description": "Prev/next pagination for the Posts Grid block. Only usable inside a Posts Grid block.",
+  "description": "Prev/next pagination and a page-size select for the Posts Grid block. Only usable inside a Posts Grid block.",
   "textdomain": "wm-posts-grid-filter",
   "parent": [
     "wmpgf/posts-grid"
   ],
+  "attributes": {
+    "showPerPage": {
+      "type": "boolean",
+      "default": true
+    }
+  },
   "usesContext": [
     "wmpgf/postsPerPage"
   ],

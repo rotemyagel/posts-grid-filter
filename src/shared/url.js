@@ -26,6 +26,7 @@ const isParam = ( rawKey, name ) => {
  * @param {string[]} [changes.categories] Category slugs.
  * @param {string[]} [changes.tags]       Tag slugs.
  * @param {string}   [changes.search]     Search term.
+ * @param {number}   [changes.perPage]    Posts per page.
  * @param {number}   [changes.page]       Page number; 1 omits the param.
  * @param {Object}   params               Param names, from getConfig().params.
  * @return {string} Path and query.
@@ -57,6 +58,9 @@ export const urlWith = ( changes, params ) => {
 		parts.push(
 			`${ params.search }=${ encodeURIComponent( changes.search ) }`
 		);
+	}
+	if ( changes.perPage ) {
+		parts.push( `${ params.perPage }=${ Number( changes.perPage ) }` );
 	}
 	if ( changes.page > 1 ) {
 		parts.push( `${ params.page }=${ changes.page }` );

@@ -27,7 +27,7 @@ if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 $filters = WMPGF_Request::filters();
 $result  = WMPGF_Query::page(
 	$filters,
-	$attributes['postsPerPage'] ?? 6,
+	WMPGF_Request::per_page( $attributes['postsPerPage'] ?? 6 ),
 	WMPGF_Request::page()
 );
 $query   = $result['query'];
