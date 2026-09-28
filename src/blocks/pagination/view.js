@@ -11,6 +11,9 @@ const { state } = store( 'wmpgf', {
 	actions: {
 		// Keeps the current filters and search, starts again from page 1.
 		*changePerPage( event ) {
+			const region = getElement().ref.closest(
+				'[data-wp-router-region]'
+			);
 			yield* navigateTo(
 				state,
 				urlWith(
@@ -18,6 +21,11 @@ const { state } = store( 'wmpgf', {
 					getConfig().params
 				)
 			);
+
+			// The re-render drops focus to the page body; put it back on the select.
+			region
+				?.querySelector( '.wmpgf-pagination__per-page select' )
+				?.focus();
 		},
 		*goToPage( event ) {
 			// Let the browser handle new-tab and new-window clicks.
@@ -35,9 +43,18 @@ const { state } = store( 'wmpgf', {
 			const { ref } = getElement();
 			const region = ref.closest( '[data-wp-router-region]' );
 			yield* navigateTo( state, ref.href );
+			if ( ! region ) {
+				return;
+			}
+
+			// The re-render drops focus to the page body. Move it to the new
+			// page's first post, where a full page load would leave a reader.
+			region
+				.querySelector( '.wmpgf-grid__title a' )
+				?.focus( { preventScroll: true } );
 
 			// Bring the new page's first posts into view if we scrolled past them.
-			if ( region && region.getBoundingClientRect().top < 0 ) {
+			if ( region.getBoundingClientRect().top < 0 ) {
 				region.scrollIntoView( { block: 'start' } );
 			}
 		},
