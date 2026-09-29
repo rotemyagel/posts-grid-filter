@@ -86,14 +86,32 @@ describe( 'GridPreview', () => {
 		expect( article.querySelector( '.wmpgf-grid__category' ) ).toBeNull();
 	} );
 
-	it( 'loads images lazily, with a placeholder until they arrive', () => {
+	it( 'loads the first row right away and later rows lazily', () => {
+		const cards = [ 1, 2, 3, 4 ].map( ( id ) => ( {
+			...card,
+			id,
+			imageWidth: 300,
+			imageHeight: 200,
+		} ) );
+		const images = [
+			...render( { cards, columns: 3 } ).querySelectorAll( 'img' ),
+		];
+
+		expect(
+			images.map( ( img ) => img.getAttribute( 'loading' ) )
+		).toEqual( [ 'eager', 'eager', 'eager', 'lazy' ] );
+		images.forEach( ( img ) => {
+			expect( img.getAttribute( 'decoding' ) ).toBe( 'async' );
+			expect( img.getAttribute( 'width' ) ).toBe( '300' );
+			expect( img.getAttribute( 'height' ) ).toBe( '200' );
+		} );
+	} );
+
+	it( 'shows a placeholder until an image has loaded', () => {
 		const thumb = render( { cards: [ card ] } ).querySelector(
 			'.wmpgf-grid__thumb'
 		);
-		const img = thumb.querySelector( 'img' );
 
-		expect( img.getAttribute( 'loading' ) ).toBe( 'lazy' );
-		expect( img.getAttribute( 'decoding' ) ).toBe( 'async' );
 		expect( thumb.classList.contains( 'is-loading' ) ).toBe( true );
 	} );
 

@@ -95,7 +95,12 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 **Loading states: skeletons, Suspense and lazy images.**
 - **Frontend skeleton:** when a filter or page change takes longer than 200 ms, the current cards turn into placeholder shapes (a pill for the category, rounded blocks for the title and excerpt) until the new page arrives. A quicker load only dims the grid, because a skeleton that shows for a split second reads as a flicker.
 - **Image placeholders:** each card image shimmers until it has loaded, then fades in; a broken image stops shimmering too.
-- **Lazy images:** lazy loading is left to WordPress core, which gets it right. The first card image is eager with `fetchpriority="high"` (it is often the page's largest element), the next ones are eager, and the rest are `loading="lazy"`, all with `decoding="async"`.
+- **Lazy images**, following web.dev's guidance on browser-level lazy loading:
+  - Images in the first view load right away, and only those further down use `loading="lazy"`. WordPress core decides per image: the page's first 3 content images are eager (the first with `fetchpriority="high"`, as it's often the largest element), and the rest are lazy. A 4-column first row would be split by that rule, so the rest of the first row follows core's decision for its first image: all eager near the top of the page, all lazy when the grid starts further down. Only core's output is adjusted, through its `wp_get_loading_optimization_attributes` filter, so core's count for the images after the row stays right.
+  - An image is never both lazy and high priority.
+  - Every image has `width` and `height`, and a CSS `aspect-ratio`, so nothing shifts when it arrives.
+  - The editor preview loads its first row eagerly and later rows lazily too.
+  - The loading placeholder hides the image with `opacity`, not `display: none`, so the browser still loads it.
 - **Editor Suspense:** the grid and filter previews read their data with `useSuspenseSelect` inside `<Suspense>`. Until the posts, categories and images have loaded, the fallback is a skeleton in the block's final layout (the chosen columns and page size), so nothing jumps when the content arrives. The filter's count and its pills are separate boundaries, and each appears as soon as its own data arrives.
 - **Reduced motion:** placeholders keep their shape without the moving sweep.
 

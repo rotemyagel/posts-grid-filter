@@ -77,6 +77,8 @@ function PreviewCards( { columns, postsPerPage } ) {
 
 		return posts.map( ( post ) => {
 			const image = find( images, post.featured_media );
+			const size =
+				image?.media_details?.sizes?.medium ?? image?.media_details;
 			return {
 				id: post.id,
 				link: post.link,
@@ -86,6 +88,8 @@ function PreviewCards( { columns, postsPerPage } ) {
 					image?.media_details?.sizes?.medium?.source_url ??
 					image?.source_url ??
 					'',
+				imageWidth: size?.width,
+				imageHeight: size?.height,
 				// Categories come back in the order they were assigned, so
 				// the first is the primary one, as on the frontend.
 				category:
