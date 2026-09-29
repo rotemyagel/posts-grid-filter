@@ -3,6 +3,10 @@
 ## Unreleased
 
 - Fixed: the stated minimum was WordPress 6.6, but the filter's script needs `getServerState()`, added in 6.7; on 6.6 it failed to load and the filter did nothing. The minimum is now 6.7, and CI tests 6.7 and the latest release.
+- The grid's editor preview is a React component using the block editor's data store, instead of `ServerSideRender`. A test keeps its classes identical to the frontend template.
+- The REST API returns a post's categories in the order they were assigned, so the first is the primary category everywhere.
+- The Columns setting uses a stable `RangeControl` instead of an experimental component, and the inspector controls no longer log deprecation warnings.
+- CI loads a filtered demo page under plain permalinks.
 
 ## 2.0.1 (2026-09-29)
 
