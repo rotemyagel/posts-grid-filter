@@ -7,5 +7,9 @@
  */
 import * as interactivity from '@wordpress/interactivity';
 
-export const withSyncEvent =
-	interactivity.withSyncEvent || ( ( action ) => action );
+// Looked up at run time. Written as interactivity.withSyncEvent, the
+// build turns it into a named import, and on 6.7, which doesn't export
+// it, that import stops the whole module from loading.
+const available = Reflect.get( interactivity, 'withSyncEvent' );
+
+export const withSyncEvent = available || ( ( action ) => action );
