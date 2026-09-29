@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.2 (2026-09-29)
 
 - Fixed: the stated minimum was WordPress 6.6, but the filter's script needs `getServerState()`, added in 6.7; on 6.6 it failed to load and the filter did nothing. The minimum is now 6.7, and CI tests 6.7 and the latest release.
 - The grid's editor preview is a React component using the block editor's data store, instead of `ServerSideRender`. A test keeps its classes identical to the frontend template.
