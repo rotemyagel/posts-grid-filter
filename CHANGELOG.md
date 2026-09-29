@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: on a phone, the filter's second row grew when the script showed the light/dark switch, moving the grid down (layout shift 0.018 on the demo page). The row now keeps the switch's height from the start, and the phone tests check that the page's layout shift stays under 0.01.
 - Docs: the README lists what Lighthouse will keep reporting that a plugin can't fix (cache headers, core's navigation stylesheet and list markup, the Interactivity runtime's own cost, the theme's font), with the reason for each.
 - Tests: a Playwright suite at 375 × 812, in light and dark mode, checks the phone layout: no sideways page scroll, cards at least 300 px wide and aligned with the page title, a 250 px+ search field at 16 px+, both pill groups in view, hidden scrollbars, the 16 px gap, centred pagination, a selected pill scrolled into view and 44 px touch targets.
 - Improved: pagination on a phone: Prev, "Page 1 of 2" and Next centred on one row, the page size centred below, and Prev and Next 44 px tall.

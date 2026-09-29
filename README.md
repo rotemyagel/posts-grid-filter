@@ -123,7 +123,7 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 Desktop is unchanged: every change is inside a 600 px media or container query.
 
-**Less work while the page hydrates.** Before a page is interactive, the Interactivity API runtime walks every `data-wp-*` attribute and binds it. The demo page had 80 of ours; now it has under 40.
+**Less work while the page hydrates.** Before a page is interactive, the Interactivity API runtime walks every `data-wp-*` attribute and binds it. The demo page had 80 of ours; now it has 33.
 - The image placeholder is CSS only (see above), which removed five directives per card.
 - The pills carry no `data-wp-context` and no handler of their own. Each group's fieldset has one `data-wp-on-async--change`, which the checkboxes' change events bubble up to. Each checkbox keeps one `data-wp-bind--checked`, whose getter reads the slug from the checkbox's `value`.
 - Handlers that don't call `preventDefault()` (search input, pill changes, page size, the light/dark switch) use `data-wp-on-async`. The runtime yields to the browser before running them, so a keystroke or click never waits for them.
@@ -185,7 +185,7 @@ The PHPUnit suite covers:
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
 The Playwright suite (`tests/e2e`) drives a real browser.
-- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and, at 375 × 812 in light and dark mode (`mobile.spec.js`), the phone layout: no sideways scroll, full-width cards, the filter's four rows with both groups in view, the 16 px gap, pagination on two centred rows, a selected pill scrolled into view and 44 px touch targets. Axe checks the demo page and a single post in both modes.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and, at 375 × 812 in light and dark mode (`mobile.spec.js`), the phone layout: no sideways scroll, full-width cards, the filter's four rows with both groups in view, the 16 px gap, pagination on two centred rows, a selected pill scrolled into view, 44 px touch targets, and a layout shift under 0.01 while the page loads. Axe checks the demo page and a single post in both modes.
 - In the editor: the React preview, the Suspense skeleton while posts load, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
 
 It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.
@@ -210,7 +210,7 @@ These come from the web server, core or the theme, so no change inside the plugi
 
 - **Cache lifetimes on static assets.** How long browsers may keep files is the web server's `Cache-Control` configuration, and wp-env's Apache sends none.
 - **A render-blocking navigation stylesheet.** It belongs to core's navigation block in the theme's header. It shows up on the demo page and not on `/sample-page/` because core inlines stylesheets smallest first, up to 40 KB in total: the plugin's four (16 KB) and core's small ones leave no room for the navigation block's 20.8 KB, so it is printed as a `<link>`. I measured raising that budget so it's inlined as well. The median score didn't change (mobile 96 either way), and first paint came later because the HTML grew by 21 KB, so the plugin leaves core's budget alone.
-- **The Interactivity API runtime's own cost.** Core loads it for the theme's navigation block too, so it runs on pages with none of the plugin's blocks: the review measured about 430 ms of blocking time for it on `/sample-page/` under mobile throttling. The plugin's part is the directives it adds (32 on the demo page) and its own view scripts.
+- **The Interactivity API runtime's own cost.** Core loads it for the theme's navigation block too, so it runs on pages with none of the plugin's blocks: the review measured about 430 ms of blocking time for it on `/sample-page/` under mobile throttling. The plugin's part is the directives it adds (33 on the demo page) and its own view scripts.
 - **The theme's Manrope font** (54 KB) and its `font-display` warning. The theme loads it on every page.
 - **The `list` accessibility audit on desktop.** Core's navigation block, when it falls back to a list of pages, nests a `<ul>` directly inside another `<ul>`. That fails on every page, `/sample-page/` included, so the demo page scores 97 for accessibility on desktop and 100 on mobile, where the menu is collapsed. The axe browser test leaves that block out for the same reason.
 - **A missing meta description** everywhere except single Grid Posts, the demo page included. See "A meta description on single Grid Posts only" above.

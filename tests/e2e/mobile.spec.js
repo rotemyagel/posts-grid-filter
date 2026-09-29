@@ -159,3 +159,27 @@ test( 'pills keep a 44px touch target', async ( { page } ) => {
 		} );
 	expect( target ).toBeGreaterThanOrEqual( 44 );
 } );
+
+test( 'nothing moves while the page loads and the scripts start', async ( {
+	page,
+} ) => {
+	await page.addInitScript( () => {
+		window.wmpgfShift = 0;
+		new window.PerformanceObserver( ( list ) => {
+			for ( const entry of list.getEntries() ) {
+				if ( ! entry.hadRecentInput ) {
+					window.wmpgfShift += entry.value;
+				}
+			}
+		} ).observe( { type: 'layout-shift', buffered: true } );
+	} );
+	await page.goto( link );
+	// The script shows the light/dark switch; the font and images arrive.
+	await expect( page.locator( '.wmpgf-filter__scheme' ) ).toBeVisible();
+	await page.waitForLoadState( 'load' );
+	await page.evaluate( () => document.fonts.ready );
+
+	expect( await page.evaluate( () => window.wmpgfShift ) ).toBeLessThan(
+		0.01
+	);
+} );
