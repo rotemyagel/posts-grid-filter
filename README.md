@@ -59,7 +59,7 @@ The filter and the grid share one Interactivity API store, `wmpgf`. Each block's
 
 I considered three other approaches:
 
-- **Fetching posts over REST and building cards in JavaScript.** The first version did this. The card then existed three times, in PHP, in hand-built JavaScript DOM and in the editor's JSX, and the three drifted apart. With the router, the only card template is `posts-grid/render.php`: the frontend, filter changes, pagination and the editor preview (through `ServerSideRender`) all use it.
+- **Fetching posts over REST and building cards in JavaScript.** The first version did this. The card then existed three times, in PHP, in hand-built JavaScript DOM and in the editor's JSX, and the three drifted apart. With the router, `posts-grid/render.php` is the only frontend template: first load, filter changes and pagination all use it. The editor preview is a React component (`posts-grid/grid-preview.js`) fed by the block editor's data store (`useSelect` with `@wordpress/core-data`), rather than `ServerSideRender`, which WordPress documents as a fallback. That makes two templates for one card, so a Jest test reads `render.php` and fails if the two stop using exactly the same classes.
 - **REST plus `data-wp-each` templates.** This would work, but the card would still be written twice, and pagination and no-JS support would each need their own code path.
 - **Nesting the filter inside the grid**, or custom DOM events between the blocks. Nesting limits where the filter can go, and custom events duplicate what the store already does.
 
@@ -77,7 +77,7 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Server-rendered values instead of server directive processing.** The blocks don't declare `supports.interactivity`, so WordPress doesn't evaluate directives on the server. `render.php` prints the checked boxes, the count and the "Clear filters" visibility directly, from the same `WMPGF_Request::filters()` that drives the query. Three of those values are JavaScript getters (`isCategoryChecked`, `isTagChecked`, `hideClearFilters`). Server processing would need each one rewritten as a PHP closure, so the logic would exist in two languages either way.
 
-**`style`, not `viewStyle`.** The editor preview is the same server-rendered markup as the frontend, so it needs the same CSS, and `viewStyle` only loads on the frontend. On classic themes that don't load block styles separately, this means the plugin's CSS (about 12 KB) loads on every page. The font file does not: browsers only download it where an element uses it.
+**`style`, not `viewStyle`.** The editor preview uses the same markup and classes as the frontend, so it needs the same CSS, and `viewStyle` only loads on the frontend. On classic themes that don't load block styles separately, this means the plugin's CSS (about 12 KB) loads on every page. The font file does not: browsers only download it where an element uses it.
 
 **The blocks bring their own font, and a theme can turn it off.** The font is Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there is no third-party request. Overriding a theme's font is a real tradeoff, so the font is a single token scoped to the plugin's blocks, and a theme that prefers its own sets `--wmpgf-font: inherit`.
 

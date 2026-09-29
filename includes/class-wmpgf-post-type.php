@@ -69,8 +69,11 @@ class WMPGF_Post_Type {
 				'label'             => __( 'Grid Categories', 'wm-posts-grid-filter' ),
 				'hierarchical'      => true,
 				// Keeps the order categories were assigned in; the first is the
-				// post's primary category (shown on its card).
+				// post's primary category (shown on its card). 'args' makes
+				// every lookup return that order, including the REST API's,
+				// which the editor preview reads.
 				'sort'              => true,
+				'args'              => array( 'orderby' => 'term_order' ),
 				'public'            => true,
 				'show_in_rest'      => true,
 				'rest_base'         => self::TAX_CATEGORY,
