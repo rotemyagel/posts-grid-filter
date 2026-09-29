@@ -101,6 +101,7 @@ class Test_WMPGF_Single_Template extends WMPGF_TestCase {
 		unlink( $log ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 
 		$this->assertSame( ABSPATH . WPINC . '/template-canvas.php', $template );
+		$this->assertStringEndsWith( '//' . WMPGF_Single_Template::BLOCK_TEMPLATE_SLUG, $GLOBALS['_wp_current_template_id'] );
 		$this->assertStringStartsWith( '<!DOCTYPE html>', ltrim( $html ) );
 		$this->assertMatchesRegularExpression( '/<meta name="viewport"[^>]*width=device-width/', $html );
 		$this->assertMatchesRegularExpression( '/<header[^>]*wp-block-template-part/', $html );
@@ -111,6 +112,15 @@ class Test_WMPGF_Single_Template extends WMPGF_TestCase {
 		$this->assertStringContainsString( 'The body text.', $html );
 		$this->assertSame( array(), $deprecated_files );
 		$this->assertSame( '', $logged, 'Nothing was written to the debug log.' );
+	}
+
+	public function test_a_themes_own_grid_post_template_comes_first() {
+		$this->use_block_theme();
+		$this->visit_grid_post();
+
+		$hierarchy = apply_filters( 'single_template_hierarchy', array( 'single-wmpgf_post-a-grid-post.php', 'single-wmpgf_post.php', 'single.php' ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's hook.
+
+		$this->assertSame( array( 'single-wmpgf_post-a-grid-post.php', 'single-wmpgf_post.php', 'single-wmpgf-post.php', 'single.php' ), $hierarchy );
 	}
 
 	public function test_a_classic_theme_keeps_the_php_template_and_its_stylesheet() {

@@ -17,16 +17,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WMPGF_Single_Template {
 
 	/**
-	 * The block template's name: the plugin's namespace, then the slug the
-	 * template hierarchy looks for (single-{post_type}).
+	 * The block template's slug and name (the plugin's namespace, then the
+	 * slug). Not single-wmpgf_post, the slug the hierarchy looks for by
+	 * itself: WordPress 6.7 accepts only letters, digits and hyphens in a
+	 * registered template's name, and the post type key has an underscore.
+	 * template_hierarchy() adds this slug to the hierarchy instead.
 	 */
-	const BLOCK_TEMPLATE = 'wm-posts-grid-filter//single-wmpgf_post';
+	const BLOCK_TEMPLATE_SLUG = 'single-wmpgf-post';
+	const BLOCK_TEMPLATE      = 'wm-posts-grid-filter//' . self::BLOCK_TEMPLATE_SLUG;
 
 	/**
 	 * Hooks registration into WordPress.
 	 */
 	public function init() {
 		add_action( 'init', array( $this, 'register_block_template' ) );
+		add_filter( 'single_template_hierarchy', array( $this, 'template_hierarchy' ) );
 		add_filter( 'single_template', array( $this, 'template' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
@@ -34,7 +39,7 @@ class WMPGF_Single_Template {
 	/**
 	 * On a block theme, registers the single Grid Post template. A theme's
 	 * own single-wmpgf_post.html, or a copy edited in the Site Editor, takes
-	 * precedence, as with any plugin template.
+	 * precedence.
 	 */
 	public function register_block_template() {
 		if ( ! wp_is_block_theme() ) {
@@ -71,6 +76,24 @@ class WMPGF_Single_Template {
 <!-- /wp:group -->
 
 <!-- wp:template-part {"slug":"footer"} /-->';
+	}
+
+	/**
+	 * On a block theme, puts the plugin's template in a single Grid Post's
+	 * template hierarchy, right after the theme's own single-wmpgf_post, so
+	 * a theme that has one still wins.
+	 *
+	 * @param string[] $templates Template file names, most specific first.
+	 * @return string[]
+	 */
+	public function template_hierarchy( $templates ) {
+		if ( ! is_singular( WMPGF_Post_Type::POST_TYPE ) || ! wp_is_block_theme() ) {
+			return $templates;
+		}
+
+		$theme_own = array_search( 'single-' . WMPGF_Post_Type::POST_TYPE . '.php', $templates, true );
+		array_splice( $templates, false === $theme_own ? 0 : $theme_own + 1, 0, array( self::BLOCK_TEMPLATE_SLUG . '.php' ) );
+		return $templates;
 	}
 
 	/**
