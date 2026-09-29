@@ -155,7 +155,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 			<?php endif; ?>
 		</div>
 
-		<div class="wmpgf-filter__groups">
+		<div class="wmpgf-filter__groups" data-wp-init="callbacks.revealSelected">
 		<?php foreach ( $groups as $group ) : ?>
 			<?php
 			$group_terms = get_terms(

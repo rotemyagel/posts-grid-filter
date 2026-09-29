@@ -137,6 +137,39 @@ const { state } = store( 'wmpgf', {
 			dark.addEventListener( 'change', follow );
 			return () => dark.removeEventListener( 'change', follow );
 		},
+		// A pill selected in the URL can start out of view in its scrolling
+		// row: each group's row on a phone, the one shared row on a wider
+		// screen. Scroll that row, not the page, to the first selected pill.
+		revealSelected() {
+			const { ref } = getElement();
+			const rows = new Set();
+
+			for ( const input of ref.querySelectorAll( 'input:checked' ) ) {
+				const pill = input.closest( '.wmpgf-filter__option' );
+				const row = [
+					pill.closest( '.wmpgf-filter__options' ),
+					ref,
+				].find( ( box ) => box.scrollWidth > box.clientWidth );
+				if ( ! row || rows.has( row ) ) {
+					continue;
+				}
+				rows.add( row );
+
+				const rowBox = row.getBoundingClientRect();
+				const pillBox = pill.getBoundingClientRect();
+				const start =
+					parseFloat(
+						window.getComputedStyle( row ).scrollPaddingInlineStart
+					) || 0;
+				// The row's last 32px are under its fade.
+				if (
+					pillBox.left < rowBox.left + start ||
+					pillBox.right > rowBox.right - 32
+				) {
+					row.scrollLeft += pillBox.left - rowBox.left - start;
+				}
+			}
+		},
 		// After every navigation (including Back and Forward) the router
 		// updates the server state; copy the selection and count from it.
 		syncFromServer() {
