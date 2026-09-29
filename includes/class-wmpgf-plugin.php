@@ -33,6 +33,9 @@ class WMPGF_Plugin {
 		$single_template = new WMPGF_Single_Template();
 		$single_template->init();
 
+		$meta_description = new WMPGF_Meta_Description();
+		$meta_description->init();
+
 		$image_loading = new WMPGF_Image_Loading();
 		$image_loading->init();
 

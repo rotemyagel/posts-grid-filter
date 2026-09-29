@@ -29,6 +29,7 @@ require_once WMPGF_DIR . 'includes/class-wmpgf-query.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-image-loading.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-blocks.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-single-template.php';
+require_once WMPGF_DIR . 'includes/class-wmpgf-meta-description.php';
 require_once WMPGF_DIR . 'includes/class-wmpgf-plugin.php';
 
 /**

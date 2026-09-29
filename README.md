@@ -120,6 +120,8 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Card titles are `h2` by default, and the level is a setting.** The page title is the `h1`, so `h3` card titles skipped a level, which screen reader users rely on to navigate. "Title heading level" in the grid's sidebar offers Heading 2, 3 or 4, for a grid placed under a heading of its own. `render.php` accepts only 2, 3 or 4 and falls back to 2, so a hand-edited attribute can't print another tag. The editor preview uses the same level. The filter's optional heading is an `h2` for the same reason. The Playwright suite runs axe on the demo page and a single post, in light and dark mode.
 
+**A meta description on single Grid Posts only.** Core and most themes print no meta description, and Lighthouse's SEO audit fails without one. Normally that's an SEO plugin's job, and a blocks plugin shouldn't write to every page's `<head>`. So the plugin covers only what it owns: single `wmpgf_post` pages, whose template and post type are its own. The description is the post's excerpt, or else the start of its content, as plain text, cut at a word to at most 160 characters (what search results show). It is never a second description: the plugin collects what `wp_head` prints (first and last on the hook) and adds its own only if nothing else printed one, whether an SEO plugin, the theme or anything else. If another plugin leaves an output buffer open inside `wp_head`, it adds nothing rather than risk closing the wrong buffer. The demo page and other pages are left to the theme and SEO plugins, so the demo page's SEO score stays at 92 on a site without one.
+
 **The single post page follows the theme type.** Block themes have no `header.php`, so a PHP template that calls `get_header()` makes WordPress fall back to a deprecated file: a notice in the page, and no doctype, viewport tag, theme header or footer. On a block theme the plugin registers a block template (`register_block_template()`, WordPress 6.7) made of core blocks: the theme's header and footer template parts, then the featured image, title, categories, content and tags. A theme's own `single-wmpgf_post.html`, or a copy edited in the Site Editor, takes precedence. Classic themes keep `templates/single-wmpgf_post.php` and its stylesheet.
 
 **Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
@@ -202,6 +204,7 @@ includes/
   class-wmpgf-blocks.php         Block and style registration
   class-wmpgf-seeder.php         Demo content
   class-wmpgf-single-template.php  Single post: block template, or the PHP one on classic themes
+  class-wmpgf-meta-description.php Meta description on single Grid Posts, unless one exists
   demo-content.php               The 12 demo posts
 templates/single-wmpgf_post.php  Single post template for classic themes without one
 src/tokens.css                   Design tokens and the font's @font-face (built to build/tokens.css)
