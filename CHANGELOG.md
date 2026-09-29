@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: seeding could be marked complete with missing covers or terms. Every demo post and the demo page are now checked after each run, and seeding is marked complete only when all checks pass.
+- Fixed: a retry skipped existing demo posts. It now repairs the plugin's own posts and page (status, excerpt, cover, terms, blocks) without creating duplicates.
+- Fixed: posts and pages with a matching title or slug were adopted as demo content. Only content the seeder recorded as created is treated as demo content. An existing page at the demo address is left alone, and the demo page uses the next free address.
+- Fixed: uninstall deleted seeded terms and images that surviving content still used. They are now kept, and kept whenever that can't be checked.
+
 ## 2.0.0 (2026-09-29)
 
 Breaking: the prefix changed from `pgf` to `wmpgf` everywhere, including the post type, block names, options and URL parameters. 1.x content doesn't carry over; delete 1.x before installing.

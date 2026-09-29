@@ -39,7 +39,7 @@ On activation the plugin creates:
 - 12 posts in its own post type, each with an excerpt, three paragraphs of body text and a generated cover image.
 - 4 categories with 4 posts each; 4 of the posts have two categories.
 - 6 tags.
-- A demo page, `/posts-grid-filter-demo/`, with the filter above the grid.
+- A demo page, `/posts-grid-filter-demo/`, with the filter above the grid. If a page already uses that address, it is left alone and the demo page gets the next free one (`/posts-grid-filter-demo-2/`).
 
 Filter rules: several categories match any of them (OR), and the same goes for tags. Categories, tags and search combine with AND.
 
@@ -85,7 +85,15 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
 
-**Seeding is safe to repeat, and uninstall only removes what the plugin created.** Each step of the seeder reuses what already exists: terms by name, posts by title, the page by slug. Seeding only counts as done when every piece exists, so a failed run is retried on the next activation. The seeder records the IDs it created, as opposed to ones it adopted, and `uninstall.php` deletes only those. A post someone wrote by hand in the same post type survives. Cover images are generated as SVG text, so activation needs no network access and no PHP image extension.
+**Seeding checks its own work, and only touches what the plugin created.** The seeder records the ID of everything it creates (posts, cover images, terms, the demo page) at the moment it creates it, and tags each demo post with the demo entry it belongs to. Content is treated as demo content only through those records, never because its title or slug matches, so a post or page the site owner made is never changed or counted as demo content. Terms are the one exception: an existing term with the same name is reused for assignment, but it isn't recorded as created.
+
+After each run the seeder reads everything back and checks it. Every demo post must be published, have an excerpt, a featured image whose file exists, and its categories and tags. The demo page must be published and contain the filter and a grid with the pagination block inside it. Only then is seeding marked complete. Failed image, attachment, featured-image and term assignments are logged (with `WP_DEBUG_LOG`) and leave seeding open. The next activation repairs the plugin's own posts and page in place (status, excerpt, cover, terms, blocks) instead of creating duplicates.
+
+`uninstall.php` deletes the demo page and demo posts first, then each seeded image and term only if nothing left on the site uses it. That covers:
+- a post of any status that still has the term;
+- an image that is a featured image, appears in post content or other post meta, or is the site icon or logo.
+
+If one of those checks fails, the item is kept. Cover images are generated as SVG text, so activation needs no network access and no PHP image extension.
 
 ## Tests and tooling
 
@@ -102,8 +110,16 @@ The PHPUnit suite covers:
 - The filter logic: OR within a taxonomy, AND across, search on top, unknown slugs, both URL forms, and clamping of posts per page and page number.
 - The PHP URL builder.
 - The rewrite regression above.
-- Seeding: no duplicates, retry after a failure.
-- Uninstall: only seeded content is removed.
+- Seeding:
+  - a fresh run creates complete demo content;
+  - failed image creation and failed term assignment leave seeding open;
+  - a retry repairs the plugin's own posts and page without duplicates;
+  - ownership records survive partial failures;
+  - a user's post or page with a matching title or slug is left untouched.
+- Uninstall:
+  - only seeded content is removed;
+  - a seeded term still used by a user's draft or private post is kept;
+  - a seeded image still used by other content is kept.
 
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
@@ -121,7 +137,7 @@ GitHub Actions runs all linters, the build, both test suites and a request to th
 
 ```
 wm-posts-grid-filter.php     Bootstrap and constants
-uninstall.php                Removes only what the seeder created
+uninstall.php                Removes only what the seeder created and nothing still uses
 includes/
   class-wmpgf-plugin.php         Hooks, activation, rewrite flush per version
   class-wmpgf-post-type.php      Post type and taxonomies
