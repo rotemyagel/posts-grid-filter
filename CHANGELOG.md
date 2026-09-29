@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New: a light/dark switch in the filter bar (moon and sun icons) for the plugin's blocks. It follows the device until clicked, remembers the choice, applies it before the blocks paint, and can be hidden per filter block. The filter and grid now sit on their own background in both modes, and the search field shrinks at phone widths so the bar still fits.
+
 ## 2.0.3 (2026-09-29)
 
 - Uninstall also keeps seeded images referenced by file name in options (widgets, theme mods), term meta or user meta. Transients don't count.

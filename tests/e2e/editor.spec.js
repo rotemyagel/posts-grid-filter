@@ -20,6 +20,10 @@ const canvas = async ( page ) =>
 		: page;
 
 test.describe( 'Blocks in the editor', () => {
+	// The first editor load on a fresh site builds its caches and can take
+	// most of the default 30 seconds; later loads take about four.
+	test.describe.configure( { timeout: 60 * 1000 } );
+
 	test.beforeEach( async ( { page, request } ) => {
 		const { id } = await demoPage( request );
 		await page.goto( `wp-admin/post.php?post=${ id }&action=edit` );
@@ -78,6 +82,33 @@ test.describe( 'Blocks in the editor', () => {
 			.getByRole( 'spinbutton', { name: 'Posts per page' } )
 			.fill( '3' );
 		await expect( grid.locator( '.wmpgf-grid__card' ) ).toHaveCount( 3 );
+	} );
+
+	test( 'the light/dark switch can be turned off per filter', async ( {
+		page,
+	} ) => {
+		await page.evaluate( () => {
+			const { select, dispatch } = window.wp.data;
+			const filter = select( 'core/block-editor' )
+				.getBlocks()
+				.find( ( block ) => block.name === 'wmpgf/posts-filter' );
+			dispatch( 'core/block-editor' ).selectBlock( filter.clientId );
+			dispatch( 'core/interface' ).enableComplementaryArea(
+				'core',
+				'edit-post/block'
+			);
+		} );
+		const preview = ( await canvas( page ) ).locator(
+			'.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme'
+		);
+		const setting = page.getByRole( 'checkbox', {
+			name: 'Show light/dark switch',
+		} );
+
+		await expect( preview ).toHaveCount( 1 );
+		await expect( setting ).toBeChecked();
+		await setting.click();
+		await expect( preview ).toHaveCount( 0 );
 	} );
 
 	test( 'a new grid always contains its locked pagination', async ( {

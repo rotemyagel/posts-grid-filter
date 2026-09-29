@@ -42,6 +42,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-gri
 	data-wp-class--is-loading="state.isLoading"
 	data-wp-bind--aria-busy="state.isLoading"
 >
+	<?php WMPGF_Blocks::print_color_scheme_script(); ?>
 	<div class="wmpgf-grid wmpgf-grid--cols-<?php echo esc_attr( $columns ); ?>">
 		<?php if ( $query->have_posts() ) : ?>
 			<?php

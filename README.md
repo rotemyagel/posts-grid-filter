@@ -33,7 +33,7 @@ Three blocks, grouped under "WM Widgets" in the inserter:
 
 - **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns and posts per page.
 - **Pagination** (`wmpgf/pagination`). This lives inside the grid and can't be used on its own. It has Prev and Next links, "Page 2 of 3", and a posts-per-page select for visitors (6, 12 or 24).
-- **Posts Filter** (`wmpgf/posts-filter`). It has a search field, category and tag pills, a result count and "Clear filters". It isn't nested in the grid; put it anywhere on the page.
+- **Posts Filter** (`wmpgf/posts-filter`). It has a search field, category and tag pills, a result count, "Clear filters" and a light/dark switch. It isn't nested in the grid; put it anywhere on the page.
 
 On activation the plugin creates:
 - 12 posts in its own post type, each with an excerpt, three paragraphs of body text and a generated cover image.
@@ -81,7 +81,16 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **The blocks bring their own font, and a theme can turn it off.** The font is Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there is no third-party request. Overriding a theme's font is a real tradeoff, so the font is a single token scoped to the plugin's blocks, and a theme that prefers its own sets `--wmpgf-font: inherit`.
 
-**A small design system.** There are three text sizes, two weights, one accent colour and two corner radii, all defined as tokens in `assets/css/tokens.css`. Stylelint rejects any other size, weight, radius or hex colour. Neutral colours are mixed from the theme's text colour, so the blocks work on dark themes.
+**A small design system.** There are three text sizes, two weights, one accent colour and two corner radii, all defined as tokens in `assets/css/tokens.css`. Stylelint rejects any other size, weight, radius or hex colour outside `tokens.css`. Each mode (light and dark) sets one text colour and one background, and the muted text, borders and surfaces are mixed from that text colour.
+
+**Light and dark mode, for the plugin's blocks only.** The switch in the filter bar (a moon in light mode, a sun in dark mode) changes the filter, grid and pagination together. It doesn't change the theme's header, footer or page, because a plugin shouldn't restyle a whole site.
+- A first visit follows the device's setting (`prefers-color-scheme`).
+- A click saves the choice in `localStorage` and sets `data-wmpgf-color-scheme` on `<html>`, which the blocks' CSS reads.
+- A saved choice is applied by a three-line inline script printed just before the first block, so the blocks never flash in the wrong mode before the plugin's scripts load.
+- Without JavaScript the switch is hidden, and the device's setting still applies.
+- Each mode brings its own background and text colour, so light stays light on a dark theme and the other way round. In dark mode the accent is lighter, and the active pill's text is dark to keep contrast.
+- The switch is a button labelled "Dark mode" with `aria-pressed`, so screen readers announce it as a toggle.
+- Authors can hide it with "Show light/dark switch" on the filter block.
 
 **Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
 
@@ -125,8 +134,8 @@ The PHPUnit suite covers:
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
 The Playwright suite (`tests/e2e`) drives a real browser.
-- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, and the form without JavaScript.
-- In the editor: the React preview, both Inspector controls, and the locked pagination inside a new grid.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load).
+- In the editor: the React preview, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
 
 It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.
 

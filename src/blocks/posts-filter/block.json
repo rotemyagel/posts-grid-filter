@@ -10,7 +10,8 @@
 	"textdomain": "wm-posts-grid-filter",
 	"attributes": {
 		"heading": { "type": "string", "default": "" },
-		"showSearch": { "type": "boolean", "default": true }
+		"showSearch": { "type": "boolean", "default": true },
+		"showColorSchemeToggle": { "type": "boolean", "default": true }
 	},
 	"supports": {
 		"html": false,

@@ -153,3 +153,75 @@ test( 'without JavaScript the filter is a working form', async ( {
 	await expect( cards( page ) ).toHaveCount( 4 );
 	await context.close();
 } );
+
+test.describe( 'Light and dark mode', () => {
+	const DARK = 'rgb(23, 25, 31)';
+	const LIGHT = 'rgb(255, 255, 255)';
+	const background = ( page ) =>
+		page
+			.locator( '.wp-block-wmpgf-posts-grid' )
+			.evaluate(
+				( grid ) => window.getComputedStyle( grid ).backgroundColor
+			);
+
+	test( 'follows the device, then remembers the choice', async ( {
+		page,
+		request,
+	} ) => {
+		const { link } = await demoPage( request );
+		await page.emulateMedia( { colorScheme: 'dark' } );
+		await page.goto( link );
+		const toggle = page.getByRole( 'button', { name: 'Dark mode' } );
+
+		await expect( toggle ).toHaveAttribute( 'aria-pressed', 'true' );
+		expect( await background( page ) ).toBe( DARK );
+
+		await toggle.click();
+		await expect( toggle ).toHaveAttribute( 'aria-pressed', 'false' );
+		await expect.poll( () => background( page ) ).toBe( LIGHT );
+
+		// Kept across a filter change and a reload, though the device is dark.
+		await pill( page, 'Design' );
+		await expect( count( page ) ).toHaveText( '4 posts' );
+		expect( await background( page ) ).toBe( LIGHT );
+		await page.reload();
+		await expect( toggle ).toHaveAttribute( 'aria-pressed', 'false' );
+		expect( await background( page ) ).toBe( LIGHT );
+	} );
+
+	test( 'a saved choice applies before the plugin’s scripts load', async ( {
+		page,
+		request,
+	} ) => {
+		const { link } = await demoPage( request );
+		await page.goto( link );
+		await page.getByRole( 'button', { name: 'Dark mode' } ).click();
+		await expect.poll( () => background( page ) ).toBe( DARK );
+
+		// With the view scripts blocked, only the inline script can apply it.
+		await page.route( /\/build\/blocks\/.*view\.js/, ( route ) =>
+			route.abort()
+		);
+		await page.reload();
+		expect( await background( page ) ).toBe( DARK );
+	} );
+
+	test( 'without JavaScript the switch is hidden and the device decides', async ( {
+		browser,
+		request,
+		baseURL,
+	} ) => {
+		const { link } = await demoPage( request );
+		const context = await browser.newContext( {
+			baseURL,
+			javaScriptEnabled: false,
+			colorScheme: 'dark',
+		} );
+		const page = await context.newPage();
+		await page.goto( link );
+
+		await expect( page.locator( '.wmpgf-filter__scheme' ) ).toBeHidden();
+		expect( await background( page ) ).toBe( DARK );
+		await context.close();
+	} );
+} );

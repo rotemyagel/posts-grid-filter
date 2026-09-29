@@ -11,6 +11,10 @@
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__form {
 	display: grid;
+
+	/* minmax(0, …) lets the column, and so the search field, shrink on
+	   narrow screens instead of pushing the bar past the block's edge. */
+	grid-template-columns: minmax(0, 1fr);
 	gap: 12px;
 	margin: 0;
 }
@@ -58,9 +62,49 @@
 	line-height: var(--wmpgf-leading-s);
 	text-decoration: underline;
 	white-space: nowrap;
+
+	/* Not the theme's link colour, which may not suit the block's mode. */
+	color: inherit;
 }
 
 .wp-block-wmpgf-posts-filter .wmpgf-filter__clear[hidden] {
+	display: none;
+}
+
+/* Light/dark switch: the moon shows in light mode, the sun in dark mode. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 40px;
+	height: 40px;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--wmpgf-line);
+	border-radius: var(--wmpgf-radius-pill);
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme[hidden] {
+	display: none;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme:hover {
+	background: var(--wmpgf-surface);
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme:focus-visible {
+	outline: 2px solid var(--wmpgf-accent);
+	outline-offset: 2px;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme[aria-pressed="true"] .wmpgf-filter__scheme-icon--moon,
+.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme:not([aria-pressed="true"]) .wmpgf-filter__scheme-icon--sun {
 	display: none;
 }
 
@@ -187,7 +231,8 @@
 
 @media (prefers-reduced-motion: reduce) {
 
-	.wp-block-wmpgf-posts-filter .wmpgf-filter__option {
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__option,
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme {
 		transition: none;
 	}
 }

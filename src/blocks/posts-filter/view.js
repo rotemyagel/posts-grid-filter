@@ -41,6 +41,9 @@ const { state } = store( 'wmpgf', {
 		get isTagChecked() {
 			return state.selectedTags.includes( getContext().slug );
 		},
+		get isDark() {
+			return state.colorScheme === 'dark';
+		},
 		get hideClearFilters() {
 			return (
 				! state.selectedCategories.length &&
@@ -90,6 +93,20 @@ const { state } = store( 'wmpgf', {
 				searchPending = false;
 			}
 		},
+		// Saved on this browser; the attribute on <html> restyles every
+		// plugin block at once, and the inline script in render.php applies
+		// it again on the next page load before the blocks paint.
+		toggleColorScheme() {
+			const { attribute, storageKey } = getConfig().colorScheme;
+			const next = state.isDark ? 'light' : 'dark';
+			document.documentElement.setAttribute( attribute, next );
+			try {
+				window.localStorage.setItem( storageKey, next );
+			} catch {
+				// Storage can be blocked; the choice then lasts for this page.
+			}
+			state.colorScheme = next;
+		},
 		*clearFilters( event ) {
 			event.preventDefault();
 			++searchInput;
@@ -101,6 +118,20 @@ const { state } = store( 'wmpgf', {
 		},
 	},
 	callbacks: {
+		// The mode the blocks are showing: the saved choice, or else the
+		// device setting, which the switch keeps following until clicked.
+		initColorScheme() {
+			const { attribute } = getConfig().colorScheme;
+			const dark = window.matchMedia( '(prefers-color-scheme: dark)' );
+			const current = () =>
+				document.documentElement.getAttribute( attribute ) ||
+				( dark.matches ? 'dark' : 'light' );
+
+			state.colorScheme = current();
+			const follow = () => ( state.colorScheme = current() );
+			dark.addEventListener( 'change', follow );
+			return () => dark.removeEventListener( 'change', follow );
+		},
 		// After every navigation (including Back and Forward) the router
 		// updates the server state; copy the selection and count from it.
 		syncFromServer() {

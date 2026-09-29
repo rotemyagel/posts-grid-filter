@@ -57,6 +57,46 @@
 	font-family: var(--wmpgf-font);
 }
 
+/*
+ * Light and dark mode for the blocks (the single-post template keeps the
+ * theme's colours). Each mode sets its own background and text, so light
+ * stays light on a dark theme and the other way round. With no saved
+ * choice the blocks follow the device; the filter's switch saves a choice
+ * as data-wmpgf-color-scheme on <html>.
+ */
+:where(.wp-block-wmpgf-posts-grid, .wp-block-wmpgf-posts-filter) {
+	--wmpgf-ink: #1c1d22;
+	--wmpgf-bg: #fff;
+
+	/* Native controls (the page-size list, scrollbars) match the mode. */
+	color-scheme: light;
+	box-sizing: border-box;
+	padding: 24px;
+	border-radius: var(--wmpgf-radius);
+	background-color: var(--wmpgf-bg);
+	color: var(--wmpgf-ink);
+}
+
+/* The accent is lighter on dark, so the active pill's text turns dark. */
+:root[data-wmpgf-color-scheme="dark"] :where(.wp-block-wmpgf-posts-grid, .wp-block-wmpgf-posts-filter) {
+	--wmpgf-ink: #e8e9ee;
+	--wmpgf-bg: #17191f;
+	--wmpgf-accent: #8fa3ff;
+	--wmpgf-on-accent: #11131a;
+	color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+
+	:root:not([data-wmpgf-color-scheme="light"]) :where(.wp-block-wmpgf-posts-grid, .wp-block-wmpgf-posts-filter) {
+		--wmpgf-ink: #e8e9ee;
+		--wmpgf-bg: #17191f;
+		--wmpgf-accent: #8fa3ff;
+		--wmpgf-on-accent: #11131a;
+		color-scheme: dark;
+	}
+}
+
 /* Shared utility: visually hidden, still read by screen readers. */
 .wmpgf-sr-only {
 	position: absolute;

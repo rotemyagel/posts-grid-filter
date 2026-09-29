@@ -30,17 +30,19 @@ abstract class WMPGF_TestCase extends WP_UnitTestCase {
 		$this->reset_static( 'WMPGF_Request', 'known_slugs' );
 		$this->reset_static( 'WMPGF_Query', 'counts' );
 		$this->reset_static( 'WMPGF_Query', 'pages' );
+		$this->reset_static( 'WMPGF_Blocks', 'color_scheme_script_printed', false );
 	}
 
 	/**
-	 * Empties a private static cache.
+	 * Resets a private static cache or flag.
 	 *
 	 * @param string $class_name Class name.
 	 * @param string $property   Property name.
+	 * @param mixed  $value      Initial value.
 	 */
-	private function reset_static( $class_name, $property ) {
+	private function reset_static( $class_name, $property, $value = array() ) {
 		$reflection = new ReflectionProperty( $class_name, $property );
 		$reflection->setAccessible( true );
-		$reflection->setValue( null, array() );
+		$reflection->setValue( null, $value );
 	}
 }

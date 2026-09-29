@@ -35,7 +35,7 @@ function TermGroup( { legend, terms } ) {
 }
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { heading, showSearch } = attributes;
+	const { heading, showSearch, showColorSchemeToggle } = attributes;
 	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
 
 	const { categories, tags, total } = useSelect( ( select ) => {
@@ -88,6 +88,21 @@ export default function Edit( { attributes, setAttributes } ) {
 							setAttributes( { showSearch: value } )
 						}
 					/>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __(
+							'Show light/dark switch',
+							'wm-posts-grid-filter'
+						) }
+						help={ __(
+							'Without a choice, the blocks follow the visitor’s device setting.',
+							'wm-posts-grid-filter'
+						) }
+						checked={ showColorSchemeToggle }
+						onChange={ ( value ) =>
+							setAttributes( { showColorSchemeToggle: value } )
+						}
+					/>
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
@@ -124,6 +139,28 @@ export default function Edit( { attributes, setAttributes } ) {
 									total
 								) }
 							</p>
+						) }
+						{ showColorSchemeToggle && (
+							// Display-only: the switch works on the published page.
+							<span
+								className="wmpgf-filter__scheme"
+								aria-hidden="true"
+							>
+								<svg
+									className="wmpgf-filter__scheme-icon"
+									viewBox="0 0 24 24"
+									width="18"
+									height="18"
+								>
+									<path
+										d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.8"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</span>
 						) }
 					</div>
 					{ isLoading && <Spinner /> }

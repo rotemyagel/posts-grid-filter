@@ -20,6 +20,10 @@
     "showSearch": {
       "type": "boolean",
       "default": true
+    },
+    "showColorSchemeToggle": {
+      "type": "boolean",
+      "default": true
     }
   },
   "supports": {

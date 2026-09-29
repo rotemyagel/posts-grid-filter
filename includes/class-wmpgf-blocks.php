@@ -20,11 +20,59 @@ class WMPGF_Blocks {
 	const BLOCK_CATEGORY_SLUG = 'wmpgf';
 
 	/**
+	 * The visitor's light/dark choice: an attribute on <html> that the
+	 * blocks' CSS reads, and the localStorage key that remembers it. Without
+	 * a saved choice the blocks follow the device (prefers-color-scheme).
+	 */
+	const COLOR_SCHEME_ATTRIBUTE   = 'data-wmpgf-color-scheme';
+	const COLOR_SCHEME_STORAGE_KEY = 'wmpgf-color-scheme';
+
+	/**
 	 * Block directories under build/blocks/.
 	 *
 	 * @var string[]
 	 */
 	private $blocks = array( 'posts-grid', 'pagination', 'posts-filter' );
+
+	/**
+	 * Whether this request has printed the color scheme script.
+	 *
+	 * @var bool
+	 */
+	private static $color_scheme_script_printed = false;
+
+	/**
+	 * The attribute and storage key, for the filter's script.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function color_scheme_config() {
+		return array(
+			'attribute'  => self::COLOR_SCHEME_ATTRIBUTE,
+			'storageKey' => self::COLOR_SCHEME_STORAGE_KEY,
+		);
+	}
+
+	/**
+	 * Applies a saved light/dark choice before the blocks paint, so a
+	 * visitor who chose dark never sees them flash light first. Printed
+	 * once, inside the first of the plugin's blocks on the page; it runs
+	 * as the browser parses it, before the markup that follows.
+	 */
+	public static function print_color_scheme_script() {
+		if ( self::$color_scheme_script_printed ) {
+			return;
+		}
+		self::$color_scheme_script_printed = true;
+
+		wp_print_inline_script_tag(
+			sprintf(
+				'try{var s=localStorage.getItem(%1$s);if(s==="light"||s==="dark"){document.documentElement.setAttribute(%2$s,s);}}catch(e){}',
+				wp_json_encode( self::COLOR_SCHEME_STORAGE_KEY ),
+				wp_json_encode( self::COLOR_SCHEME_ATTRIBUTE )
+			)
+		);
+	}
 
 	/**
 	 * Hooks registration into WordPress.
