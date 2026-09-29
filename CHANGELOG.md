@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Improved: on a phone (below 600 px), the blocks add no side padding of their own, so content lines up with the page and cards use the theme's whole content width (315 px instead of 267 px at 375 px). Their background still reaches the screen's edges, painted by a box-shadow rather than negative margins, so the page can't scroll sideways. A filter right above the grid joins it in one band, 16 px from the filter to the first card.
 - New: single Grid Post pages get a meta description from the post's excerpt (or the start of its content), at most 160 characters. It's added only when nothing else on the page, such as an SEO plugin or the theme, already prints one. Other pages, including the demo page, are left to the theme and SEO plugins.
 - Fixed: heading order. Card titles are `h2` by default instead of `h3`, which skipped a level after the page's `h1`. A new "Title heading level" setting on the grid offers h2 to h4; the server accepts nothing else. The filter's optional heading is an `h2` too. The browser tests run axe on the demo page and a single post, in light and dark mode.
 - Improved: the design tokens moved to `src/tokens.css` and are built like the blocks' stylesheets, so the inline copy in `<head>` is minified: 2.4 KB instead of 4.7 KB with 13 comment blocks.

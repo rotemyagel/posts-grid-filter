@@ -113,6 +113,40 @@
 }
 
 /*
+ * On a phone the theme already pads the page, so the blocks add no side
+ * padding of their own: content lines up with the rest of the page, and
+ * cards are as wide as the theme's content area. The background still
+ * reaches the screen's edges, which shows wherever it differs from the
+ * page's (dark mode, or a tinted theme): a box-shadow in the background
+ * colour paints the page's side padding, and clip-path keeps it to the
+ * block's height. Unlike negative margins, that needs no guess at the
+ * theme's padding, can't make the page scroll sideways, and isn't undone
+ * by core's "margin: auto !important" in constrained layouts.
+ */
+@media (max-width: 599px) {
+
+	:where(.wp-block-wmpgf-posts-grid, .wp-block-wmpgf-posts-filter) {
+		padding: 16px 0;
+		border-radius: 0;
+		box-shadow: 0 0 0 100vmax var(--wmpgf-bg);
+		clip-path: inset(0 -100vmax);
+	}
+
+	/* A filter right above the grid: one band, 16px from the filter's last
+	   row to the first card. Its background runs 2px under the grid, so
+	   where the two meet at a fractional pixel no hairline of the page
+	   shows through. */
+	:where(.wp-block-wmpgf-posts-filter):has(+ .wp-block-wmpgf-posts-grid) {
+		padding-bottom: 0;
+		clip-path: inset(0 -100vmax -2px);
+	}
+
+	.wp-block-wmpgf-posts-filter + .wp-block-wmpgf-posts-grid {
+		margin-block-start: 0;
+	}
+}
+
+/*
  * Loading placeholders (skeletons): a soft sweep across a shape in the
  * surface colour. Blocks apply it with the --wmpgf-shimmer background
  * (set with each mode's colours above) and this animation; reduced motion
