@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: paging through the grid could show a post twice and skip another. The demo posts share one creation time, and sorting by date alone let the database order them differently for each page (seen in 5 of 10 runs on 2.4.0). The grid's query and the editor preview's REST request now add the post ID as the last sort key.
+- Changed: the one-time check for installs seeded by 2.0.0 no longer repairs anything. A missing featured image or term can be a failed seed or the owner's own change, and removing either directly (WP-CLI, the REST API, other plugins or code) leaves a post's dates unchanged, so the timestamp comparison 2.3.1 and 2.4.0 relied on couldn't tell them apart. The check now logs what's missing and records that it ran. The new `wp wmpgf repair-demo-content [--dry-run]` restores missing featured images and existing terms on the plugin's own published demo posts, on request, and can be run again after a failure.
+- Changed: `.gitattributes` keeps text files LF on every system, so PHPCS and the build see the same bytes on Windows as in CI; binary files are never converted.
+- Changed: CI uses actions/checkout, actions/setup-node and actions/upload-artifact v7 (Node 24), replacing the deprecated Node 20 versions.
+- Docs: the README is shorter, separates the assessment's requirements from the optional features, and corrects the editor preview's data hook (`useSuspenseSelect`). Performance notes and measurements moved to `docs/performance.md`, which the release zip now includes.
+
 ## 2.4.0 (2026-09-29)
 
 - Fixed: on a phone, the filter's second row grew when the script showed the light/dark switch, moving the grid down (layout shift 0.018 on the demo page). The row now keeps the switch's height from the start, and the phone tests check that the page's layout shift stays under 0.01.

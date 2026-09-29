@@ -37,6 +37,7 @@
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
+    "docs",
     "uninstall.php",
     "wm-posts-grid-filter.php"
   ]
