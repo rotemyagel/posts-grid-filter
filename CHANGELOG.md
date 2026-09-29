@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.3 (2026-09-29)
 
 - Uninstall also keeps seeded images referenced by file name in options (widgets, theme mods), term meta or user meta. Transients don't count.
 - Added a Playwright browser suite covering the filter, Back and Forward, pagination, search, focus, the no-JavaScript form and the editor. CI runs it on WordPress 6.7 and latest.
