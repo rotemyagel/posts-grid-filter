@@ -4,7 +4,8 @@
 	"config": {
 		"WP_DEBUG": true,
 		"WP_DEBUG_LOG": true,
-		"SCRIPT_DEBUG": true
+		"WP_DEBUG_DISPLAY": false,
+		"SCRIPT_DEBUG": false
 	},
 	"lifecycleScripts": {
 		"afterStart": "wp-env run cli wp rewrite structure /%postname%/ --hard"

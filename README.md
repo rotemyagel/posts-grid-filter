@@ -25,6 +25,8 @@ npm run env start
 
 This starts WordPress at http://localhost:8888 with the plugin active and pretty permalinks switched on. The demo page is at http://localhost:8888/posts-grid-filter-demo/. Log in with `admin` / `password`.
 
+The environment serves what a live site serves: minified core scripts (`SCRIPT_DEBUG` off), so a Lighthouse run measures production code. PHP notices go to `wp-content/debug.log` (`WP_DEBUG_LOG`) and never into the page (`WP_DEBUG_DISPLAY` off); read it with `npm run env run cli -- cat wp-content/debug.log`.
+
 **From source.** `build/` is committed, so a checkout works as is. After changing anything in `src/`, run `npm install` and `npm run build`.
 
 ## What you get

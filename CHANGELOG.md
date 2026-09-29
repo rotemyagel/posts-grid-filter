@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Changed: wp-env serves production scripts (`SCRIPT_DEBUG` off) and writes notices to `debug.log` only (`WP_DEBUG_DISPLAY` off), so Lighthouse runs measure what a live site ships.
 - Fixed: on block themes such as Twenty Twenty-Five, a single Grid Post printed a deprecation notice and had no doctype, viewport tag, theme header or footer, because the PHP template called `get_header()` and block themes have no `header.php`. Block themes now get a block template made of core blocks; classic themes keep the PHP template.
 
 ## 2.3.1 (2026-09-29)
