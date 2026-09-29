@@ -10,11 +10,6 @@ import {
 	PanelBody,
 	RangeControl,
 	Spinner,
-	// Still only exported under the experimental name, up to WordPress 7.1.
-	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
-	__experimentalToggleGroupControl as ToggleGroupControl,
-	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
-	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
 } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
@@ -110,23 +105,20 @@ export default function Edit( { attributes, setAttributes } ) {
 				<PanelBody
 					title={ __( 'Grid settings', 'wm-posts-grid-filter' ) }
 				>
-					<ToggleGroupControl
+					<RangeControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
 						label={ __( 'Columns', 'wm-posts-grid-filter' ) }
+						min={ 2 }
+						max={ 4 }
 						value={ columns }
 						onChange={ ( value ) =>
-							setAttributes( { columns: Number( value ) } )
+							setAttributes( { columns: value } )
 						}
-						isBlock
-					>
-						{ [ 2, 3, 4 ].map( ( n ) => (
-							<ToggleGroupControlOption
-								key={ n }
-								value={ n }
-								label={ String( n ) }
-							/>
-						) ) }
-					</ToggleGroupControl>
+					/>
 					<RangeControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
 						label={ __( 'Posts per page', 'wm-posts-grid-filter' ) }
 						min={ 1 }
 						max={ 24 }

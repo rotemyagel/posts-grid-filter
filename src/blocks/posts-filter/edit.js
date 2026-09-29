@@ -68,6 +68,8 @@ export default function Edit( { attributes, setAttributes } ) {
 					title={ __( 'Filter settings', 'wm-posts-grid-filter' ) }
 				>
 					<TextControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
 						label={ __( 'Heading', 'wm-posts-grid-filter' ) }
 						help={ __(
 							'Optional. Leave empty for no heading.',
