@@ -65,7 +65,7 @@ I considered three other approaches:
 
 ## Decisions and tradeoffs
 
-**Own post type and taxonomies** (`wmpgf_post`, `wmpgf_category`, `wmpgf_tag`). Demo content stays separate from a site's real posts, so installing, reactivating and uninstalling never touch them. Everything uses one prefix, `wmpgf`: PHP classes, options, block names, the store, CSS classes and URL parameters.
+**Own post type and taxonomies** (`wmpgf_post`, `wmpgf_category`, `wmpgf_tag`). Demo content stays separate from a site's real posts, so installing, reactivating and uninstalling never touch them. Everything uses one prefix, `wmpgf`: PHP classes, options, block names, the store, CSS classes and URL parameters. `wmpgf` is the initials of the plugin slug, `wm-posts-grid-filter`. The slug itself couldn't be the prefix: WordPress limits a post type key to 20 characters, and hyphens aren't valid in PHP names. The slug and the text domain stay `wm-posts-grid-filter`, because WordPress expects both to match the plugin's folder name.
 
 **Readable URLs.** Links are built by hand (`src/shared/url.js`, mirrored by `WMPGF_Request::url()`), so slugs stay readable, as in `design,culture`, instead of `design%2Cculture`. The search term is the one free-text value, so it is the one value that gets encoded. The server also accepts `wmpgf-category[]=design`, which is what the no-JS form sends. Unknown slugs are ignored.
 
