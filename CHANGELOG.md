@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.1 (2026-09-29)
 
 - Fixed: seeding could be marked complete with missing covers or terms. Every demo post and the demo page are now checked after each run, and seeding is marked complete only when all checks pass.
 - Fixed: a retry skipped existing demo posts. It now repairs the plugin's own posts and page (status, excerpt, cover, terms, blocks) without creating duplicates.
