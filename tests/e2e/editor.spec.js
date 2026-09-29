@@ -118,6 +118,14 @@ test.describe( 'Blocks in the editor', () => {
 			.getByRole( 'spinbutton', { name: 'Posts per page' } )
 			.fill( '3' );
 		await expect( grid.locator( '.wmpgf-grid__card' ) ).toHaveCount( 3 );
+
+		const level = page.getByRole( 'combobox', {
+			name: 'Title heading level',
+		} );
+		await expect( level ).toHaveValue( '2' );
+		await expect( grid.locator( 'h2.wmpgf-grid__title' ) ).toHaveCount( 3 );
+		await level.selectOption( '3' );
+		await expect( grid.locator( 'h3.wmpgf-grid__title' ) ).toHaveCount( 3 );
 	} );
 
 	test( 'the grid offers a fallback image for posts without one', async ( {

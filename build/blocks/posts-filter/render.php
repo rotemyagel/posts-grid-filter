@@ -98,7 +98,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 >
 	<?php WMPGF_Blocks::print_color_scheme_script(); ?>
 	<?php if ( '' !== $heading ) : ?>
-		<h3 class="wmpgf-filter__heading"><?php echo esc_html( $heading ); ?></h3>
+		<h2 class="wmpgf-filter__heading"><?php echo esc_html( $heading ); ?></h2>
 	<?php endif; ?>
 
 	<form

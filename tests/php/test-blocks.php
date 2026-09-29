@@ -35,6 +35,31 @@ class Test_WMPGF_Blocks extends WMPGF_TestCase {
 		$this->assertStringContainsString( 'localStorage.getItem', $html );
 	}
 
+	public function test_card_titles_are_h2_unless_h3_or_h4_is_chosen() {
+		self::factory()->post->create( array( 'post_type' => WMPGF_Post_Type::POST_TYPE ) );
+		// Each card title's opening and closing tag, as "h2/h2".
+		$tag = static function ( $attributes ) {
+			$html = do_blocks( '<!-- wp:wmpgf/posts-grid ' . $attributes . ' --><!-- wp:wmpgf/pagination /--><!-- /wp:wmpgf/posts-grid -->' );
+			preg_match_all( '/<(h\d) class="wmpgf-grid__title">.*?<\/(h\d)>/s', $html, $titles );
+			$pairs = array_map(
+				static function ( $open, $close ) {
+					return "$open/$close";
+				},
+				$titles[1],
+				$titles[2]
+			);
+			return array_values( array_unique( $pairs ) );
+		};
+
+		$this->assertSame( array( 'h2/h2' ), $tag( '{}' ) );
+		$this->assertSame( array( 'h3/h3' ), $tag( '{"titleLevel":3}' ) );
+		$this->assertSame( array( 'h4/h4' ), $tag( '{"titleLevel":4}' ) );
+		// Only h2 to h4: anything else is h2.
+		$this->assertSame( array( 'h2/h2' ), $tag( '{"titleLevel":1}' ) );
+		$this->assertSame( array( 'h2/h2' ), $tag( '{"titleLevel":6}' ) );
+		$this->assertSame( array( 'h2/h2' ), $tag( '{"titleLevel":"script"}' ) );
+	}
+
 	public function test_the_tokens_are_inlined_instead_of_a_render_blocking_link() {
 		$styles   = wp_styles();
 		$original = clone $styles->registered['wmpgf-tokens'];

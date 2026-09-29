@@ -1,5 +1,5 @@
 import './style.css';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import {
 	useBlockProps,
 	useInnerBlocksProps,
@@ -13,6 +13,7 @@ import {
 	Disabled,
 	PanelBody,
 	RangeControl,
+	SelectControl,
 } from '@wordpress/components';
 import { useSuspenseSelect } from '@wordpress/data';
 import { Suspense, useMemo } from '@wordpress/element';
@@ -23,6 +24,11 @@ import GridSkeleton from './grid-skeleton';
 
 const TEMPLATE = [ [ 'wmpgf/pagination', {} ] ];
 const CATEGORY_QUERY = { per_page: -1, _fields: 'id,name' };
+const TITLE_LEVELS = [ 2, 3, 4 ].map( ( level ) => ( {
+	value: String( level ),
+	/* translators: %d: heading level, 2 to 4. */
+	label: sprintf( __( 'Heading %d', 'wm-posts-grid-filter' ), level ),
+} ) );
 
 /**
  * Plain text of a rendered excerpt, which the REST API returns as HTML.
@@ -44,9 +50,15 @@ const toText = ( html ) =>
  * @param {number} props.columns         2, 3 or 4.
  * @param {number} props.postsPerPage    Page size.
  * @param {number} props.fallbackImageId Image for posts without one, or 0.
+ * @param {number} props.titleLevel      Card title heading level, 2 to 4.
  * @return {Element} Grid preview.
  */
-function PreviewCards( { columns, postsPerPage, fallbackImageId } ) {
+function PreviewCards( {
+	columns,
+	postsPerPage,
+	fallbackImageId,
+	titleLevel,
+} ) {
 	// The first page of the unfiltered grid, as a visitor first sees it.
 	// Filters and pages only exist on the frontend, in the URL. Only store
 	// values are returned here, so the result is stable between calls.
@@ -111,11 +123,17 @@ function PreviewCards( { columns, postsPerPage, fallbackImageId } ) {
 		} );
 	}, [ posts, categories, images, fallbackImageId ] );
 
-	return <GridPreview cards={ cards } columns={ columns } />;
+	return (
+		<GridPreview
+			cards={ cards }
+			columns={ columns }
+			titleLevel={ titleLevel }
+		/>
+	);
 }
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { columns, postsPerPage, fallbackImageId } = attributes;
+	const { columns, postsPerPage, fallbackImageId, titleLevel } = attributes;
 
 	const blockProps = useBlockProps();
 	const innerBlocksProps = useInnerBlocksProps(
@@ -149,6 +167,23 @@ export default function Edit( { attributes, setAttributes } ) {
 						value={ postsPerPage }
 						onChange={ ( value ) =>
 							setAttributes( { postsPerPage: value } )
+						}
+					/>
+					<SelectControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
+						label={ __(
+							'Title heading level',
+							'wm-posts-grid-filter'
+						) }
+						help={ __(
+							'Heading 2 under the page title; one level below a heading placed above the grid.',
+							'wm-posts-grid-filter'
+						) }
+						value={ String( titleLevel ) }
+						options={ TITLE_LEVELS }
+						onChange={ ( value ) =>
+							setAttributes( { titleLevel: Number( value ) } )
 						}
 					/>
 					<MediaUploadCheck>
@@ -231,6 +266,7 @@ export default function Edit( { attributes, setAttributes } ) {
 							columns={ columns }
 							postsPerPage={ postsPerPage }
 							fallbackImageId={ fallbackImageId }
+							titleLevel={ titleLevel }
 						/>
 					</Suspense>
 				</Disabled>

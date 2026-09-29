@@ -24,6 +24,14 @@ if ( ! in_array( $columns, array( 2, 3, 4 ), true ) ) {
 	$columns = 3;
 }
 
+// Card titles sit under the page's own heading: h2 by default, h3 or h4
+// when the grid follows a heading of its own. Anything else falls back.
+$title_level = (int) ( $attributes['titleLevel'] ?? 2 );
+if ( ! in_array( $title_level, array( 2, 3, 4 ), true ) ) {
+	$title_level = 2;
+}
+$title_tag = 'h' . $title_level;
+
 $filters = WMPGF_Request::filters();
 $result  = WMPGF_Query::page(
 	$filters,
@@ -91,10 +99,10 @@ if ( $fallback_image_id && ! wp_attachment_is_image( $fallback_image_id ) ) {
 					<?php if ( isset( $labels[ get_the_ID() ] ) ) : ?>
 						<p class="wmpgf-grid__category"><?php echo esc_html( $labels[ get_the_ID() ]->name ); ?></p>
 					<?php endif; ?>
-					<h3 class="wmpgf-grid__title">
+					<<?php echo tag_escape( $title_tag ); ?> class="wmpgf-grid__title">
 						<?php // Its ::after covers the card, so the whole card is one link. ?>
 						<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-					</h3>
+					</<?php echo tag_escape( $title_tag ); ?>>
 					<div class="wmpgf-grid__excerpt"><?php the_excerpt(); ?></div>
 				</article>
 				<?php

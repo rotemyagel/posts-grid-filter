@@ -226,7 +226,7 @@
 }
 
 /* Themes often set a font on a, p and headings directly; inherit ours. */
-.wp-block-wmpgf-posts-grid .wmpgf-grid :is(h3, p, a) {
+.wp-block-wmpgf-posts-grid .wmpgf-grid :is(h2, h3, h4, p, a) {
 	font-family: inherit;
 }
 

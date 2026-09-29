@@ -122,6 +122,19 @@ describe( 'GridPreview', () => {
 		expect( thumb.className ).toBe( 'wmpgf-grid__thumb' );
 	} );
 
+	it( 'uses the title heading level, h2 unless h3 or h4 is chosen', () => {
+		const level = ( titleLevel ) =>
+			render( { cards: [ card ], titleLevel } ).querySelector(
+				'.wmpgf-grid__title'
+			).tagName;
+
+		expect( level( undefined ) ).toBe( 'H2' );
+		expect( level( 3 ) ).toBe( 'H3' );
+		expect( level( 4 ) ).toBe( 'H4' );
+		expect( level( 1 ) ).toBe( 'H2' );
+		expect( level( 5 ) ).toBe( 'H2' );
+	} );
+
 	it( 'sets the column class', () => {
 		const grid = render( { cards: [ card ], columns: 4 } ).firstChild;
 

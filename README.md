@@ -33,7 +33,7 @@ The environment serves what a live site serves: minified core scripts (`SCRIPT_D
 
 Three blocks, grouped under "WM Widgets" in the inserter:
 
-- **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns and posts per page. A post without a featured image shows the grid's fallback image, set in the sidebar; without one, a neutral placeholder the size of a cover keeps the row aligned. A featured image that isn't a usable image (a PDF, or an ID left behind by a database edit) counts as none.
+- **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns, posts per page and the card titles' heading level. A post without a featured image shows the grid's fallback image, set in the sidebar; without one, a neutral placeholder the size of a cover keeps the row aligned. A featured image that isn't a usable image (a PDF, or an ID left behind by a database edit) counts as none.
 - **Pagination** (`wmpgf/pagination`). This lives inside the grid and can't be used on its own. It has Prev and Next links, "Page 2 of 3", and a posts-per-page select for visitors (6, 12 or 24).
 - **Posts Filter** (`wmpgf/posts-filter`). It has a search field, category and tag pills, a result count, "Clear filters" and a light/dark switch. It isn't nested in the grid; put it anywhere on the page.
 
@@ -117,6 +117,8 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 - The three that do (submitting the search, "Clear filters", Prev/Next) are wrapped in `withSyncEvent()`, which WordPress 6.8 introduced; on 6.7, every handler already runs synchronously.
 
 **Code splitting only where it pays off.** The Interactivity Router, the largest frontend dependency, is a lazy chunk: it's imported the first time someone filters or pages, so visitors who never do never download it. The editor scripts are not split with `React.lazy`. They are 3 to 5 KB each, and a separate chunk would add a request before the preview could render, making the editor slower rather than faster.
+
+**Card titles are `h2` by default, and the level is a setting.** The page title is the `h1`, so `h3` card titles skipped a level, which screen reader users rely on to navigate. "Title heading level" in the grid's sidebar offers Heading 2, 3 or 4, for a grid placed under a heading of its own. `render.php` accepts only 2, 3 or 4 and falls back to 2, so a hand-edited attribute can't print another tag. The editor preview uses the same level. The filter's optional heading is an `h2` for the same reason. The Playwright suite runs axe on the demo page and a single post, in light and dark mode.
 
 **The single post page follows the theme type.** Block themes have no `header.php`, so a PHP template that calls `get_header()` makes WordPress fall back to a deprecated file: a notice in the page, and no doctype, viewport tag, theme header or footer. On a block theme the plugin registers a block template (`register_block_template()`, WordPress 6.7) made of core blocks: the theme's header and footer template parts, then the featured image, title, categories, content and tags. A theme's own `single-wmpgf_post.html`, or a copy edited in the Site Editor, takes precedence. Classic themes keep `templates/single-wmpgf_post.php` and its stylesheet.
 

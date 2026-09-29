@@ -10,5 +10,5 @@
 		'wp-html-entities',
 		'wp-i18n'
 	),
-	'version' => '0ae457fe7d0aa214cd85'
+	'version' => '7e0a5baab40258df4353'
 );

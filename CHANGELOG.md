@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed: heading order. Card titles are `h2` by default instead of `h3`, which skipped a level after the page's `h1`. A new "Title heading level" setting on the grid offers h2 to h4; the server accepts nothing else. The filter's optional heading is an `h2` too. The browser tests run axe on the demo page and a single post, in light and dark mode.
 - Improved: the design tokens moved to `src/tokens.css` and are built like the blocks' stylesheets, so the inline copy in `<head>` is minified: 2.4 KB instead of 4.7 KB with 13 comment blocks.
 - Improved: until the font loads, text shows in Arial resized to Bricolage Grotesque's metrics, so nothing moves when the font swaps in. A preload for the font was measured and left out: it didn't improve the median and competed with the first cover image, the page's largest element.
 - Improved: less work while the page hydrates. The plugin's blocks on the demo page carry 32 `data-wp-*` directives instead of 80. The image placeholder is the thumbnail's background colour (no script); the pills share one change handler per group and read their slug from the checkbox; handlers that don't cancel the event run with `data-wp-on-async`, and the three that do use `withSyncEvent()` where WordPress has it.

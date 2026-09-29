@@ -178,7 +178,7 @@ export default function Edit( { attributes, setAttributes } ) {
 			</InspectorControls>
 			<div { ...blockProps }>
 				{ heading && (
-					<h3 className="wmpgf-filter__heading">{ heading }</h3>
+					<h2 className="wmpgf-filter__heading">{ heading }</h2>
 				) }
 				<div className="wmpgf-filter__form">
 					<div className="wmpgf-filter__bar">

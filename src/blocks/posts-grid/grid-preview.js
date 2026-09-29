@@ -81,11 +81,15 @@ function Placeholder() {
 
 /**
  * @param {Object}        props
- * @param {PreviewCard[]} props.cards   Posts to show.
- * @param {number}        props.columns 2, 3 or 4.
+ * @param {PreviewCard[]} props.cards      Posts to show.
+ * @param {number}        props.columns    2, 3 or 4.
+ * @param {number}        props.titleLevel Card title heading level, 2 to 4.
  * @return {Element} Grid markup.
  */
-export default function GridPreview( { cards, columns } ) {
+export default function GridPreview( { cards, columns, titleLevel = 2 } ) {
+	// As in render.php: h2 to h4, anything else is h2.
+	const Title = `h${ [ 2, 3, 4 ].includes( titleLevel ) ? titleLevel : 2 }`;
+
 	return (
 		<div className={ `wmpgf-grid wmpgf-grid--cols-${ columns }` }>
 			{ cards.length ? (
@@ -106,9 +110,9 @@ export default function GridPreview( { cards, columns } ) {
 								{ card.category }
 							</p>
 						) }
-						<h3 className="wmpgf-grid__title">
+						<Title className="wmpgf-grid__title">
 							<a href={ card.link }>{ card.title }</a>
-						</h3>
+						</Title>
 						<div className="wmpgf-grid__excerpt">
 							<p>{ card.excerpt }</p>
 						</div>

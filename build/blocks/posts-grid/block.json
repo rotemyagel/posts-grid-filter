@@ -24,6 +24,10 @@
     "fallbackImageId": {
       "type": "number",
       "default": 0
+    },
+    "titleLevel": {
+      "type": "number",
+      "default": 2
     }
   },
   "providesContext": {
