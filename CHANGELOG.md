@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.0 (2026-09-29)
 
 - New: loading skeletons. On the frontend, a filter or page change slower than 200 ms turns the cards into placeholder shapes; card images shimmer until they load, then fade in.
 - New: the editor previews use React Suspense (`useSuspenseSelect`) with skeleton fallbacks in the block's final layout, instead of a spinner. The first row of preview images loads right away and later rows lazily, with `width` and `height`.
