@@ -62,6 +62,29 @@
 	color: var(--wmpgf-muted);
 }
 
+/* In a narrow grid (a phone): Prev, "Page 1 of 2" and Next on one row,
+   the page size below, both centred. Prev and Next grow to 44px tall,
+   a comfortable touch target. */
+@container (max-width: 599px) {
+
+	.wp-block-wmpgf-pagination {
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.wp-block-wmpgf-pagination .wmpgf-pagination__nav {
+		justify-content: center;
+	}
+
+	.wp-block-wmpgf-pagination .wmpgf-pagination__link {
+		height: 44px;
+	}
+
+	.wp-block-wmpgf-pagination .wmpgf-pagination__per-page {
+		margin: 0;
+	}
+}
+
 /* Themes often set a font on these elements directly; inherit ours. */
 .wp-block-wmpgf-pagination.wmpgf-pagination :is(a, span, label, select, button) {
 	font-family: inherit;
