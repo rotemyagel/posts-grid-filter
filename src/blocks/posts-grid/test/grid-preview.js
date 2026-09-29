@@ -5,8 +5,9 @@
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { renderToString } from '@wordpress/element';
+import { createRoot, flushSync } from '@wordpress/element';
 import GridPreview from '../grid-preview';
+import GridSkeleton from '../grid-skeleton';
 
 const card = {
 	id: 1,
@@ -17,10 +18,20 @@ const card = {
 	category: 'Design',
 };
 
-const render = ( props ) => {
-	const html = renderToString( <GridPreview columns={ 3 } { ...props } /> );
-	return new window.DOMParser().parseFromString( html, 'text/html' ).body;
+/**
+ * Renders with React itself (the preview uses hooks), into a detached
+ * element, synchronously.
+ *
+ * @param {Element} element Element to render.
+ * @return {HTMLElement} Container holding the markup.
+ */
+const mount = ( element ) => {
+	const container = document.createElement( 'div' );
+	flushSync( () => createRoot( container ).render( element ) );
+	return container;
 };
+
+const render = ( props ) => mount( <GridPreview columns={ 3 } { ...props } /> );
 
 const gridClasses = ( text ) => new Set( text.match( /wmpgf-grid__[a-z-]+/g ) );
 
@@ -42,7 +53,7 @@ describe( 'GridPreview', () => {
 		);
 
 		expect(
-			[ ...article.children ].map( ( child ) => child.className )
+			[ ...article.children ].map( ( child ) => child.classList[ 0 ] )
 		).toEqual( [
 			'wmpgf-grid__thumb',
 			'wmpgf-grid__category',
@@ -75,9 +86,41 @@ describe( 'GridPreview', () => {
 		expect( article.querySelector( '.wmpgf-grid__category' ) ).toBeNull();
 	} );
 
+	it( 'loads images lazily, with a placeholder until they arrive', () => {
+		const thumb = render( { cards: [ card ] } ).querySelector(
+			'.wmpgf-grid__thumb'
+		);
+		const img = thumb.querySelector( 'img' );
+
+		expect( img.getAttribute( 'loading' ) ).toBe( 'lazy' );
+		expect( img.getAttribute( 'decoding' ) ).toBe( 'async' );
+		expect( thumb.classList.contains( 'is-loading' ) ).toBe( true );
+	} );
+
 	it( 'sets the column class', () => {
 		const grid = render( { cards: [ card ], columns: 4 } ).firstChild;
 
 		expect( grid.className ).toBe( 'wmpgf-grid wmpgf-grid--cols-4' );
+	} );
+} );
+
+describe( 'GridSkeleton', () => {
+	const skeleton = ( props ) =>
+		mount( <GridSkeleton { ...props } /> ).firstChild;
+
+	it( 'has one placeholder per post on the page, in the same columns', () => {
+		const grid = skeleton( { columns: 4, count: 8 } );
+
+		expect( grid.className ).toBe( 'wmpgf-grid wmpgf-grid--cols-4' );
+		expect(
+			grid.querySelectorAll( '.wmpgf-grid__card.is-skeleton' )
+		).toHaveLength( 8 );
+	} );
+
+	it( 'is hidden from screen readers and has no links', () => {
+		const grid = skeleton( { columns: 3, count: 3 } );
+
+		expect( grid.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		expect( grid.querySelectorAll( 'a, img' ) ).toHaveLength( 0 );
 	} );
 } );

@@ -225,3 +225,81 @@ test.describe( 'Light and dark mode', () => {
 		await context.close();
 	} );
 } );
+
+test.describe( 'Loading states', () => {
+	let link;
+
+	test.beforeAll( async ( { request } ) => {
+		( { link } = await demoPage( request ) );
+	} );
+
+	test( 'a slow page load shows a skeleton in place of the cards', async ( {
+		page,
+	} ) => {
+		await page.goto( link );
+		await page.route(
+			( url ) => url.searchParams.get( 'wmpgf-category' ) === 'culture',
+			async ( route ) => {
+				await new Promise( ( resolve ) => setTimeout( resolve, 1500 ) );
+				await route.continue();
+			}
+		);
+		const grid = page.locator( '.wp-block-wmpgf-posts-grid' );
+
+		await pill( page, 'Culture' );
+		await expect( grid ).toHaveClass( /is-skeleton/ );
+		await expect( grid ).toHaveAttribute( 'aria-busy', 'true' );
+
+		await expect( count( page ) ).toHaveText( '4 posts' );
+		await expect( grid ).not.toHaveClass( /is-skeleton/ );
+		await expect( cards( page ) ).toHaveCount( 4 );
+	} );
+
+	test( 'the first image loads eagerly, later ones lazily', async ( {
+		page,
+	} ) => {
+		await page.goto( link );
+		const images = page.locator( '.wmpgf-grid__thumb img' );
+
+		await expect( images.first() ).toHaveAttribute(
+			'fetchpriority',
+			'high'
+		);
+		await expect( images.first() ).not.toHaveAttribute( 'loading', 'lazy' );
+		await expect( images.last() ).toHaveAttribute( 'loading', 'lazy' );
+	} );
+
+	test( 'an image shows a placeholder until it has loaded', async ( {
+		page,
+	} ) => {
+		let release;
+		const held = new Promise( ( resolve ) => ( release = resolve ) );
+		await page.route( /wmpgf-cover-[^/]*\.svg/, async ( route ) => {
+			await held;
+			await route.continue();
+		} );
+		// Not waiting for "load": that would wait for the held images.
+		await page.goto( link, { waitUntil: 'domcontentloaded' } );
+		const thumb = page.locator( '.wmpgf-grid__thumb' ).first();
+
+		await expect( thumb ).toHaveClass( /is-loading/ );
+		release();
+		await expect( thumb ).not.toHaveClass( /is-loading/ );
+	} );
+} );
+
+test( 'on a phone, the pill row starts at its first label', async ( {
+	page,
+	request,
+} ) => {
+	const { link } = await demoPage( request );
+	await page.setViewportSize( { width: 375, height: 812 } );
+	await page.goto( link );
+	const groups = page.locator( '.wmpgf-filter__groups' );
+
+	// Scroll snapping used to jump to the first pill, hiding "Categories".
+	await expect(
+		groups.getByText( 'Categories', { exact: true } )
+	).toBeInViewport();
+	expect( await groups.evaluate( ( row ) => row.scrollLeft ) ).toBe( 0 );
+} );

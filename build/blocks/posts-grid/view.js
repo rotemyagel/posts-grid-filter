@@ -1,1 +1,1 @@
-import{store as t}from"@wordpress/interactivity";t("wmpgf",{state:{isLoading:!1}});
+import{getContext as e,getElement as a,store as t}from"@wordpress/interactivity";t("wmpgf",{state:{isLoading:!1,showSkeleton:!1},actions:{imageLoaded(){e().imageLoading=!1}},callbacks:{watchImage(){e().imageLoading=!a().ref.complete}}});

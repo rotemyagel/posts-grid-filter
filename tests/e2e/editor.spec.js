@@ -57,6 +57,42 @@ test.describe( 'Blocks in the editor', () => {
 		).toHaveCount( 0 );
 	} );
 
+	test( 'while posts load, Suspense shows a skeleton of the same size', async ( {
+		page,
+	} ) => {
+		let release;
+		const held = new Promise( ( resolve ) => ( release = resolve ) );
+		await page.route(
+			( url ) =>
+				decodeURIComponent( url.href ).includes( '/wp/v2/wmpgf_post' ),
+			async ( route ) => {
+				await held;
+				await route.continue();
+			}
+		);
+		await page.reload();
+		await page.waitForSelector( 'iframe[name="editor-canvas"]' );
+		const editor = await canvas( page );
+		const grid = editor.locator( '.wp-block-wmpgf-posts-grid' );
+
+		// The demo grid shows 6 posts: 6 placeholders, and none of the real.
+		await expect(
+			grid.locator( '.wmpgf-grid__card.is-skeleton' )
+		).toHaveCount( 6 );
+		await expect(
+			editor.locator( '.wmpgf-filter__count.is-skeleton' )
+		).toHaveCount( 1 );
+
+		release();
+		await expect(
+			grid.locator( '.wmpgf-grid__card:not(.is-skeleton)' )
+		).toHaveCount( 6 );
+		await expect( grid.locator( '.is-skeleton' ) ).toHaveCount( 0 );
+		await expect( editor.locator( '.wmpgf-filter__count' ) ).toHaveText(
+			/\d+ posts/
+		);
+	} );
+
 	test( 'the inspector controls change the preview', async ( { page } ) => {
 		await page.evaluate( () => {
 			const { select, dispatch } = window.wp.data;

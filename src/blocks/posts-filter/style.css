@@ -134,6 +134,11 @@
 .wp-block-wmpgf-posts-filter .wmpgf-filter__group {
 	display: flex;
 	flex: none;
+
+	/* A snap point at each group's start (its label), not only at the pills:
+	   otherwise the browser snaps the row to the first pill and scrolls the
+	   "Categories" label out of view. */
+	scroll-snap-align: start;
 	align-items: center;
 	gap: 8px;
 	min-width: 0;
@@ -149,7 +154,8 @@
 
 /* A floated legend is laid out like any other flex item, so the label
    can sit inline before its pills while the fieldset keeps its meaning. */
-.wp-block-wmpgf-posts-filter .wmpgf-filter__group legend {
+.wp-block-wmpgf-posts-filter .wmpgf-filter__group legend,
+.wp-block-wmpgf-posts-filter .wmpgf-filter__legend {
 	float: left;
 	margin: 0 4px 0 0;
 	padding: 0;
@@ -229,11 +235,35 @@
 	}
 }
 
+/* Placeholders while the editor preview loads its count and terms. */
+.wp-block-wmpgf-posts-filter .wmpgf-filter__option.is-skeleton,
+.wp-block-wmpgf-posts-filter .wmpgf-filter__count.is-skeleton {
+	border-color: transparent;
+	border-radius: var(--wmpgf-radius-pill);
+	background: var(--wmpgf-shimmer);
+	background-size: 200% 100%;
+	color: transparent;
+	animation: wmpgf-shimmer 1.4s linear infinite;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__option.is-skeleton {
+	width: 76px;
+}
+
+.wp-block-wmpgf-posts-filter .wmpgf-filter__count.is-skeleton {
+	width: 64px;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
 	.wp-block-wmpgf-posts-filter .wmpgf-filter__option,
 	.wp-block-wmpgf-posts-filter .wmpgf-filter__scheme {
 		transition: none;
+	}
+
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__option.is-skeleton,
+	.wp-block-wmpgf-posts-filter .wmpgf-filter__count.is-skeleton {
+		animation: none;
 	}
 }
 

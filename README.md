@@ -92,6 +92,15 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 - The switch is a button labelled "Dark mode" with `aria-pressed`, so screen readers announce it as a toggle.
 - Authors can hide it with "Show light/dark switch" on the filter block.
 
+**Loading states: skeletons, Suspense and lazy images.**
+- **Frontend skeleton:** when a filter or page change takes longer than 200 ms, the current cards turn into placeholder shapes (a pill for the category, rounded blocks for the title and excerpt) until the new page arrives. A quicker load only dims the grid, because a skeleton that shows for a split second reads as a flicker.
+- **Image placeholders:** each card image shimmers until it has loaded, then fades in; a broken image stops shimmering too.
+- **Lazy images:** lazy loading is left to WordPress core, which gets it right. The first card image is eager with `fetchpriority="high"` (it is often the page's largest element), the next ones are eager, and the rest are `loading="lazy"`, all with `decoding="async"`.
+- **Editor Suspense:** the grid and filter previews read their data with `useSuspenseSelect` inside `<Suspense>`. Until the posts, categories and images have loaded, the fallback is a skeleton in the block's final layout (the chosen columns and page size), so nothing jumps when the content arrives. The filter's count and its pills are separate boundaries, and each appears as soon as its own data arrives.
+- **Reduced motion:** placeholders keep their shape without the moving sweep.
+
+**Code splitting only where it pays off.** The Interactivity Router, the largest frontend dependency, is a lazy chunk: it's imported the first time someone filters or pages, so visitors who never do never download it. The editor scripts are not split with `React.lazy`. They are 3 to 5 KB each, and a separate chunk would add a request before the preview could render, making the editor slower rather than faster.
+
 **Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
 
 **Seeding checks its own work, and only touches what the plugin created.** The seeder records the ID of everything it creates (posts, cover images, terms, the demo page) at the moment it creates it, and tags each demo post with the demo entry it belongs to. Content is treated as demo content only through those records, never because its title or slug matches, so a post or page the site owner made is never changed or counted as demo content. Terms are the one exception: an existing term with the same name is reused for assignment, but it isn't recorded as created.
@@ -134,8 +143,8 @@ The PHPUnit suite covers:
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
 The Playwright suite (`tests/e2e`) drives a real browser.
-- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load).
-- In the editor: the React preview, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and the pill row keeping its first label in view on a phone.
+- In the editor: the React preview, the Suspense skeleton while posts load, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
 
 It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.
 

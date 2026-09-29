@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- New: loading skeletons. On the frontend, a filter or page change slower than 200 ms turns the cards into placeholder shapes; card images shimmer until they load, then fade in.
+- New: the editor previews use React Suspense (`useSuspenseSelect`) with skeleton fallbacks in the block's final layout, instead of a spinner. Preview images load lazily.
+- Fixed: scroll snapping could scroll the filter's pill row so the "Categories" label was out of view, for example on phones. Each group is now a snap point.
+
 ## 2.1.0 (2026-09-29)
 
 - New: a light/dark switch in the filter bar (moon and sun icons) for the plugin's blocks. It follows the device until clicked, remembers the choice, applies it before the blocks paint, and can be hidden per filter block. The filter and grid now sit on their own background in both modes, and the search field shrinks at phone widths so the bar still fits.

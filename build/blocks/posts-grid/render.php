@@ -40,6 +40,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-gri
 	data-wp-interactive="wmpgf"
 	data-wp-router-region="wmpgf/grid"
 	data-wp-class--is-loading="state.isLoading"
+	data-wp-class--is-skeleton="state.showSkeleton"
 	data-wp-bind--aria-busy="state.isLoading"
 >
 	<?php WMPGF_Blocks::print_color_scheme_script(); ?>
@@ -51,9 +52,25 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-gri
 				?>
 				<article class="wmpgf-grid__card">
 					<?php if ( has_post_thumbnail() ) : ?>
-						<div class="wmpgf-grid__thumb">
-							<?php // Decorative: the title below says the same thing. ?>
-							<?php the_post_thumbnail( 'medium', array( 'alt' => '' ) ); ?>
+						<div
+							class="wmpgf-grid__thumb"
+							data-wp-context='{"imageLoading":false}'
+							data-wp-class--is-loading="context.imageLoading"
+						>
+							<?php
+							// Decorative: the title below says the same thing. Core
+							// decides loading and fetchpriority (eager and high for
+							// the first images, lazy for the rest).
+							the_post_thumbnail(
+								'medium',
+								array(
+									'alt'               => '',
+									'data-wp-init'      => 'callbacks.watchImage',
+									'data-wp-on--load'  => 'actions.imageLoaded',
+									'data-wp-on--error' => 'actions.imageLoaded',
+								)
+							);
+							?>
 						</div>
 					<?php endif; ?>
 					<?php if ( isset( $labels[ get_the_ID() ] ) ) : ?>

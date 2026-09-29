@@ -65,7 +65,14 @@
 	aspect-ratio: 3 / 2;
 	object-fit: cover;
 	background-color: var(--wmpgf-surface);
-	transition: transform 0.3s ease;
+	transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Hidden while a skeleton stands in, or until the image has loaded, when
+   it fades in over its placeholder. */
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__thumb img,
+.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading img {
+	opacity: 0;
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__category {
@@ -140,11 +147,68 @@
 	color: var(--wmpgf-muted);
 }
 
+/*
+ * Skeletons. After 200ms of loading (a slow connection) the current cards
+ * turn into placeholder shapes until the new ones arrive; the editor shows
+ * the same shapes while its preview loads. Text keeps its size, so the
+ * shapes match the cards they stand in for.
+ */
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid {
+	opacity: 1;
+}
+
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > *,
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > *,
+.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading {
+	background: var(--wmpgf-shimmer);
+	background-size: 200% 100%;
+	animation: wmpgf-shimmer 1.4s linear infinite;
+}
+
+/* The one-line category label is a short pill the width of its text; the
+   title and excerpt, often two or three lines, are rounded blocks. */
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > :not(.wmpgf-grid__thumb),
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > :not(.wmpgf-grid__thumb) {
+	border-radius: var(--wmpgf-radius);
+}
+
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > .wmpgf-grid__category,
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > .wmpgf-grid__category {
+	align-self: flex-start;
+	border-radius: var(--wmpgf-radius-pill);
+}
+
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card *,
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton * {
+	color: transparent;
+	text-decoration: none;
+}
+
+/* The editor's placeholder cards have no text or image to size them. */
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton .wmpgf-grid__thumb {
+	aspect-ratio: 3 / 2;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton .wmpgf-grid__category {
+	width: 30%;
+}
+
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton .wmpgf-grid__title {
+	width: 85%;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
 	.wp-block-wmpgf-posts-grid .wmpgf-grid,
 	.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb img {
 		transition: none;
+	}
+
+	/* Placeholders keep their shape, without the sweep. */
+	.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > *,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > *,
+	.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading {
+		animation: none;
 	}
 
 	.wp-block-wmpgf-posts-grid .wmpgf-grid__card:hover .wmpgf-grid__thumb img {

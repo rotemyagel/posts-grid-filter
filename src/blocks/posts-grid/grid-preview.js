@@ -4,6 +4,33 @@
  * if the two templates stop using the same classes.
  */
 import { __ } from '@wordpress/i18n';
+import { useState } from '@wordpress/element';
+
+/**
+ * A card image that loads lazily and shimmers until it has loaded, like
+ * the frontend's. Decorative, as in render.php: the title says the same.
+ *
+ * @param {Object} props
+ * @param {string} props.src Image URL.
+ * @return {Element} Thumbnail.
+ */
+function Thumb( { src } ) {
+	const [ loaded, setLoaded ] = useState( false );
+	const done = () => setLoaded( true );
+
+	return (
+		<div className={ `wmpgf-grid__thumb${ loaded ? '' : ' is-loading' }` }>
+			<img
+				src={ src }
+				alt=""
+				loading="lazy"
+				decoding="async"
+				onLoad={ done }
+				onError={ done }
+			/>
+		</div>
+	);
+}
 
 /**
  * @typedef {Object} PreviewCard
@@ -27,11 +54,7 @@ export default function GridPreview( { cards, columns } ) {
 			{ cards.length ? (
 				cards.map( ( card ) => (
 					<article key={ card.id } className="wmpgf-grid__card">
-						{ card.imageUrl && (
-							<div className="wmpgf-grid__thumb">
-								<img src={ card.imageUrl } alt="" />
-							</div>
-						) }
+						{ card.imageUrl && <Thumb src={ card.imageUrl } /> }
 						{ card.category && (
 							<p className="wmpgf-grid__category">
 								{ card.category }

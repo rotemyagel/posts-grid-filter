@@ -5,17 +5,13 @@ import {
 	useInnerBlocksProps,
 	InspectorControls,
 } from '@wordpress/block-editor';
-import {
-	Disabled,
-	PanelBody,
-	RangeControl,
-	Spinner,
-} from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
+import { Disabled, PanelBody, RangeControl } from '@wordpress/components';
+import { useSuspenseSelect } from '@wordpress/data';
+import { Suspense, useMemo } from '@wordpress/element';
 import { store as coreStore } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 import GridPreview from './grid-preview';
+import GridSkeleton from './grid-skeleton';
 
 const TEMPLATE = [ [ 'wmpgf/pagination', {} ] ];
 const CATEGORY_QUERY = { per_page: -1, _fields: 'id,name' };
@@ -31,13 +27,21 @@ const toText = ( html ) =>
 		.parseFromString( html, 'text/html' )
 		.body.textContent.trim();
 
-export default function Edit( { attributes, setAttributes } ) {
-	const { columns, postsPerPage } = attributes;
-
+/**
+ * The preview's posts, read with useSuspenseSelect: until the posts, their
+ * categories and their images have all loaded, it suspends, and the
+ * nearest <Suspense> shows its fallback instead.
+ *
+ * @param {Object} props
+ * @param {number} props.columns      2, 3 or 4.
+ * @param {number} props.postsPerPage Page size.
+ * @return {Element} Grid preview.
+ */
+function PreviewCards( { columns, postsPerPage } ) {
 	// The first page of the unfiltered grid, as a visitor first sees it.
 	// Filters and pages only exist on the frontend, in the URL. Only store
 	// values are returned here, so the result is stable between calls.
-	const { posts, categories, images } = useSelect(
+	const { posts, categories, images } = useSuspenseSelect(
 		( select ) => {
 			const { getEntityRecords } = select( coreStore );
 			const records = getEntityRecords( 'postType', 'wmpgf_post', {
@@ -69,9 +73,6 @@ export default function Edit( { attributes, setAttributes } ) {
 	);
 
 	const cards = useMemo( () => {
-		if ( ! posts ) {
-			return null;
-		}
 		const find = ( list, id ) => list?.find( ( item ) => item.id === id );
 
 		return posts.map( ( post ) => {
@@ -92,6 +93,12 @@ export default function Edit( { attributes, setAttributes } ) {
 			};
 		} );
 	}, [ posts, categories, images ] );
+
+	return <GridPreview cards={ cards } columns={ columns } />;
+}
+
+export default function Edit( { attributes, setAttributes } ) {
+	const { columns, postsPerPage } = attributes;
 
 	const blockProps = useBlockProps();
 	const innerBlocksProps = useInnerBlocksProps(
@@ -130,15 +137,23 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
-				{ cards ? (
-					// Disabled: a click on a card selects the block instead of
-					// following the link.
-					<Disabled>
-						<GridPreview cards={ cards } columns={ columns } />
-					</Disabled>
-				) : (
-					<Spinner />
-				) }
+				{ /* Disabled: a click on a card selects the block instead of
+				   following the link. */ }
+				<Disabled>
+					<Suspense
+						fallback={
+							<GridSkeleton
+								columns={ columns }
+								count={ postsPerPage }
+							/>
+						}
+					>
+						<PreviewCards
+							columns={ columns }
+							postsPerPage={ postsPerPage }
+						/>
+					</Suspense>
+				</Disabled>
 				<div { ...innerBlocksProps } />
 			</div>
 		</>

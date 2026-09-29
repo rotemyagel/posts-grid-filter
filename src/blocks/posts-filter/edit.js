@@ -1,13 +1,9 @@
 import './style.css';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import {
-	PanelBody,
-	TextControl,
-	ToggleControl,
-	Spinner,
-} from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
+import { PanelBody, TextControl, ToggleControl } from '@wordpress/components';
+import { useSuspenseSelect } from '@wordpress/data';
+import { Suspense } from '@wordpress/element';
 import { store as coreStore } from '@wordpress/core-data';
 
 // Same terms render.php lists: every non-empty term, ordered by name.
@@ -34,32 +30,107 @@ function TermGroup( { legend, terms } ) {
 	);
 }
 
-export default function Edit( { attributes, setAttributes } ) {
-	const { heading, showSearch, showColorSchemeToggle } = attributes;
-	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
+/*
+ * The count and the pills each load on their own: each suspends until its
+ * data has arrived, and its <Suspense> shows a placeholder until then.
+ */
 
-	const { categories, tags, total } = useSelect( ( select ) => {
+function PostCount() {
+	const total = useSuspenseSelect( ( select ) => {
 		const { getEntityRecords, getEntityRecordsTotalItems } =
 			select( coreStore );
 		// The total selector is filled in by this records request.
 		getEntityRecords( 'postType', 'wmpgf_post', COUNT_QUERY );
-		return {
-			categories: getEntityRecords(
+		return getEntityRecordsTotalItems(
+			'postType',
+			'wmpgf_post',
+			COUNT_QUERY
+		);
+	}, [] );
+
+	return (
+		<p className="wmpgf-filter__count">
+			{ sprintf(
+				/* translators: %s: number of posts. */
+				_n( '%s post', '%s posts', total ?? 0, 'wm-posts-grid-filter' ),
+				total ?? 0
+			) }
+		</p>
+	);
+}
+
+function TermGroups() {
+	const { categories, tags } = useSuspenseSelect(
+		( select ) => ( {
+			categories: select( coreStore ).getEntityRecords(
 				'taxonomy',
 				'wmpgf_category',
 				TERMS_QUERY
 			),
-			tags: getEntityRecords( 'taxonomy', 'wmpgf_tag', TERMS_QUERY ),
-			total: getEntityRecordsTotalItems(
-				'postType',
-				'wmpgf_post',
-				COUNT_QUERY
+			tags: select( coreStore ).getEntityRecords(
+				'taxonomy',
+				'wmpgf_tag',
+				TERMS_QUERY
 			),
-		};
-	}, [] );
+		} ),
+		[]
+	);
 
-	const isLoading = categories === null || tags === null;
-	const isEmpty = ! isLoading && ! categories?.length && ! tags?.length;
+	if ( ! categories?.length && ! tags?.length ) {
+		return (
+			<p>
+				{ __(
+					'No Grid Categories or Grid Tags with posts yet.',
+					'wm-posts-grid-filter'
+				) }
+			</p>
+		);
+	}
+
+	return (
+		<div className="wmpgf-filter__groups">
+			<TermGroup
+				legend={ __( 'Categories', 'wm-posts-grid-filter' ) }
+				terms={ categories }
+			/>
+			<TermGroup
+				legend={ __( 'Tags', 'wm-posts-grid-filter' ) }
+				terms={ tags }
+			/>
+		</div>
+	);
+}
+
+// Placeholder pills with the real group labels, the size the row will be.
+function TermGroupsSkeleton() {
+	const pills = ( count ) =>
+		Array.from( { length: count }, ( _, index ) => (
+			<span key={ index } className="wmpgf-filter__option is-skeleton">
+				&nbsp;
+			</span>
+		) );
+
+	return (
+		<div className="wmpgf-filter__groups" aria-hidden="true">
+			<div className="wmpgf-filter__group">
+				<span className="wmpgf-filter__legend">
+					{ __( 'Categories', 'wm-posts-grid-filter' ) }
+				</span>
+				<div className="wmpgf-filter__options">{ pills( 4 ) }</div>
+			</div>
+			<div className="wmpgf-filter__group">
+				<span className="wmpgf-filter__legend">
+					{ __( 'Tags', 'wm-posts-grid-filter' ) }
+				</span>
+				<div className="wmpgf-filter__options">{ pills( 6 ) }</div>
+			</div>
+		</div>
+	);
+}
+
+export default function Edit( { attributes, setAttributes } ) {
+	const { heading, showSearch, showColorSchemeToggle } = attributes;
+	const blockProps = useBlockProps( { className: 'wmpgf-filter' } );
 
 	return (
 		<>
@@ -126,20 +197,15 @@ export default function Edit( { attributes, setAttributes } ) {
 								disabled
 							/>
 						) }
-						{ total !== null && (
-							<p className="wmpgf-filter__count">
-								{ sprintf(
-									/* translators: %s: number of posts. */
-									_n(
-										'%s post',
-										'%s posts',
-										total,
-										'wm-posts-grid-filter'
-									),
-									total
-								) }
-							</p>
-						) }
+						<Suspense
+							fallback={
+								<p className="wmpgf-filter__count is-skeleton">
+									&nbsp;
+								</p>
+							}
+						>
+							<PostCount />
+						</Suspense>
 						{ showColorSchemeToggle && (
 							// Display-only: the switch works on the published page.
 							<span
@@ -163,28 +229,9 @@ export default function Edit( { attributes, setAttributes } ) {
 							</span>
 						) }
 					</div>
-					{ isLoading && <Spinner /> }
-					{ isEmpty && (
-						<p>
-							{ __(
-								'No Grid Categories or Grid Tags with posts yet.',
-								'wm-posts-grid-filter'
-							) }
-						</p>
-					) }
-					<div className="wmpgf-filter__groups">
-						<TermGroup
-							legend={ __(
-								'Categories',
-								'wm-posts-grid-filter'
-							) }
-							terms={ categories }
-						/>
-						<TermGroup
-							legend={ __( 'Tags', 'wm-posts-grid-filter' ) }
-							terms={ tags }
-						/>
-					</div>
+					<Suspense fallback={ <TermGroupsSkeleton /> }>
+						<TermGroups />
+					</Suspense>
 				</div>
 			</div>
 		</>

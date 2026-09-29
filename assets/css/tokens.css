@@ -67,6 +67,7 @@
 :where(.wp-block-wmpgf-posts-grid, .wp-block-wmpgf-posts-filter) {
 	--wmpgf-ink: #1c1d22;
 	--wmpgf-bg: #fff;
+	--wmpgf-shimmer: linear-gradient(90deg, var(--wmpgf-surface) 25%, var(--wmpgf-line) 50%, var(--wmpgf-surface) 75%);
 
 	/* Native controls (the page-size list, scrollbars) match the mode. */
 	color-scheme: light;
@@ -94,6 +95,23 @@
 		--wmpgf-accent: #8fa3ff;
 		--wmpgf-on-accent: #11131a;
 		color-scheme: dark;
+	}
+}
+
+/*
+ * Loading placeholders (skeletons): a soft sweep across a shape in the
+ * surface colour. Blocks apply it with the --wmpgf-shimmer background
+ * (set with each mode's colours above) and this animation; reduced motion
+ * keeps the shape, still.
+ */
+@keyframes wmpgf-shimmer {
+
+	from {
+		background-position: 100% 0;
+	}
+
+	to {
+		background-position: -100% 0;
 	}
 }
 

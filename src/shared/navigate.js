@@ -8,19 +8,32 @@
 // Counts overlapping navigations, so the loading state doesn't switch off
 // while a newer one is still running. The router itself drops stale results.
 let pending = 0;
+let skeletonTimer;
+
+// Loads quicker than this only dim the grid; a skeleton would just flash.
+const SKELETON_DELAY = 200;
 
 /**
- * @param {Object} state Store state (for isLoading).
+ * @param {Object} state Store state (isLoading, showSkeleton).
  * @param {string} url   URL to load.
  */
 export function* navigateTo( state, url ) {
 	pending++;
 	state.isLoading = true;
+	clearTimeout( skeletonTimer );
+	skeletonTimer = setTimeout( () => {
+		state.showSkeleton = pending > 0;
+	}, SKELETON_DELAY );
+
 	try {
 		const { actions } = yield import( '@wordpress/interactivity-router' );
 		yield actions.navigate( url );
 	} finally {
 		pending--;
 		state.isLoading = pending > 0;
+		if ( ! pending ) {
+			clearTimeout( skeletonTimer );
+			state.showSkeleton = false;
+		}
 	}
 }
