@@ -61,4 +61,17 @@ jobs:
           curl -sf http://localhost:8888/posts-grid-filter-demo/ -o demo.html
           grep -q 'wmpgf-grid__card' demo.html
           grep -q 'wp-block-wmpgf-posts-filter' demo.html
+      # Many fresh installs keep plain permalinks, where the demo page is
+      # /?page_id=N and every link the plugin builds must keep page_id.
+      - name: Filtered demo page works under plain permalinks
+        run: |
+          npx wp-env run cli wp eval "update_option( 'permalink_structure', '' ); flush_rewrite_rules( true );"
+          ID=$(npx wp-env run cli wp option get wmpgf_demo_page_id 2>/dev/null | grep -oE '^[0-9]+' | head -1)
+          echo "Demo page ID: $ID"
+          curl -sf "http://localhost:8888/?page_id=$ID&wmpgf-category=design" -o plain-filtered.html
+          grep -q 'wmpgf-grid__card' plain-filtered.html
+          tr '\n' ' ' < plain-filtered.html | grep -oE '<a[^>]*wmpgf-filter__clear[^>]*>' | grep -q "page_id=$ID"
+          curl -sf "http://localhost:8888/?page_id=$ID" -o plain.html
+          grep -q "page_id=$ID&#038;wmpgf-page=2" plain.html
+          grep -q 'name="page_id"' plain.html
       - run: npm run test:php

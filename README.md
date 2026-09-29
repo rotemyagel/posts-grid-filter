@@ -123,7 +123,11 @@ The PHPUnit suite covers:
 
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
-GitHub Actions runs all linters, the build, both test suites and a request to the demo page of a fresh wp-env on every push. It also fails if the committed `build/` doesn't match the source.
+GitHub Actions runs all linters, the build and both test suites on every push, on WordPress 6.7 and the latest release. It also fails if the committed `build/` doesn't match the source. It then starts a fresh wp-env and requests the demo page twice:
+- with pretty permalinks;
+- with plain permalinks, where the page is `/?page_id=N`, checking a filtered view and that the Clear filters link, the Next link and the forms all keep `page_id`.
+
+By hand, I've checked the demo page on Twenty Twenty-Four (a block theme, desktop and 375px) and on a classic theme: filtering, Back, pagination, and the editor preview.
 
 ## Known limitations
 
