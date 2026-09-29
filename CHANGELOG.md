@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.1 (2026-09-29)
 
 - Fixed: installs seeded by 2.0.0, which could mark seeding complete with featured images or terms missing, never got the later checks, because seeding stopped as soon as it saw the old completion flag. They're now checked once, on activation or, after an in-place update, from a one-off WP-Cron event. The check repairs missing covers and terms on the plugin's own unedited posts only, records `wmpgf_seed_validated_version` only after it succeeds, retries a failed repair an hour later, and holds a lock against concurrent runs. Uninstall removes the new option and the scheduled event.
 
