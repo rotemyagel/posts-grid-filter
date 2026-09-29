@@ -23,6 +23,11 @@ class WMPGF_Query {
 	const MAX_POSTS_PER_PAGE = 24;
 
 	/**
+	 * Query var that marks a query for stable_order().
+	 */
+	const STABLE_ORDER_VAR = 'wmpgf_stable_order';
+
+	/**
 	 * Matching-post counts, keyed by filters.
 	 *
 	 * @var array<string, int>
@@ -35,6 +40,47 @@ class WMPGF_Query {
 	 * @var array<string, array>
 	 */
 	private static $pages = array();
+
+	/**
+	 * Hooks the stable order into the grid's queries and the editor
+	 * preview's REST requests.
+	 */
+	public static function init() {
+		add_filter( 'posts_orderby', array( __CLASS__, 'stable_order' ), 10, 2 );
+		add_filter( 'rest_' . WMPGF_Post_Type::POST_TYPE . '_query', array( __CLASS__, 'stable_rest_order' ) );
+	}
+
+	/**
+	 * Adds the post ID as the last sort key. Posts with the same date (the
+	 * demo posts are all created in the same second) otherwise come back
+	 * in whatever order the database picks for each page, so paging could
+	 * show a post twice and skip another. WordPress's own order (date, or
+	 * relevance for a search) still comes first.
+	 *
+	 * @param string   $orderby ORDER BY clause.
+	 * @param WP_Query $query   The query.
+	 * @return string
+	 */
+	public static function stable_order( $orderby, $query ) {
+		global $wpdb;
+
+		if ( ! $query->get( self::STABLE_ORDER_VAR ) || false !== strpos( $orderby, "{$wpdb->posts}.ID" ) ) {
+			return $orderby;
+		}
+		return ( '' === trim( $orderby ) ? '' : $orderby . ', ' ) . "{$wpdb->posts}.ID DESC";
+	}
+
+	/**
+	 * The same stable order for the editor preview, which reads the grid's
+	 * posts over REST.
+	 *
+	 * @param array $args WP_Query arguments of a REST request.
+	 * @return array
+	 */
+	public static function stable_rest_order( $args ) {
+		$args[ self::STABLE_ORDER_VAR ] = true;
+		return $args;
+	}
 
 	/**
 	 * Number of posts matching the filters.
@@ -78,9 +124,10 @@ class WMPGF_Query {
 		if ( ! isset( self::$pages[ $key ] ) ) {
 			$query = new WP_Query(
 				self::base_args( $filters ) + array(
-					'posts_per_page' => $posts_per_page,
-					'paged'          => $page,
-					'no_found_rows'  => true,
+					'posts_per_page'       => $posts_per_page,
+					'paged'                => $page,
+					'no_found_rows'        => true,
+					self::STABLE_ORDER_VAR => true,
 				)
 			);
 			// One query for all featured images instead of two per card.

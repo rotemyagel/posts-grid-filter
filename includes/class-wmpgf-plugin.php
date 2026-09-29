@@ -27,6 +27,8 @@ class WMPGF_Plugin {
 		$post_type = new WMPGF_Post_Type();
 		$post_type->init();
 
+		WMPGF_Query::init();
+
 		$blocks = new WMPGF_Blocks();
 		$blocks->init();
 
