@@ -110,6 +110,19 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 - **Editor Suspense:** the grid and filter previews read their data with `useSuspenseSelect` inside `<Suspense>`. Until the posts, categories and images have loaded, the fallback is a skeleton in the block's final layout (the chosen columns and page size), so nothing jumps when the content arrives. The filter's count and its pills are separate boundaries, and each appears as soon as its own data arrives.
 - **Reduced motion:** placeholders keep their shape without the moving sweep.
 
+**On a phone.** Measured at 375 px on Twenty Twenty-Five, which pads the page 30 px on each side.
+- **No padding of their own.** Below 600 px the blocks add no side padding, so their content lines up with the page title and cards are 315 px wide, the theme's whole content area (they were 267 px, 71% of the screen). The padding exists because each mode paints its own background, so that background still runs to the screen's edges: a `box-shadow` in the background colour paints the theme's side padding, and `clip-path` keeps it to the block's height. I chose that over the negative margins I first considered. Core's constrained layout sets `margin-left: auto !important` on its children, a wrong guess at the theme's padding would make the page scroll sideways, and a shadow never changes the layout.
+- **The filter**, below a 600 px block width, stacks into four rows:
+  1. search, full width, at 17 px so iOS doesn't zoom on focus;
+  2. the post count on the left, "Clear filters" and the switch on the right;
+  3. categories, and 4. tags, each in a row of its own that scrolls sideways.
+  Each group's label sits above its row, small and muted, rather than being hidden: it tells a sighted user what the row is, and screen readers get the same `<legend>` either way. Each row runs to the screen's edge, so a pill cut off there shows there is more, and the fade stays. Scrollbars are hidden in both layouts. A pill selected in the URL is scrolled into view within its row when the page loads. Pills keep their 44 px touch area.
+- **Pagination** stacks into Prev, "Page 1 of 2" and Next on one row and the page size below it, both centred, with 44 px Prev and Next.
+- **Spacing**: 16 px between the filter and the grid when the filter sits right above it, as one band in dark mode.
+- A Playwright suite at 375 × 812 checks all of this in light and dark mode, including that the page never scrolls sideways.
+
+Desktop is unchanged: every change is inside a 600 px media or container query.
+
 **Less work while the page hydrates.** Before a page is interactive, the Interactivity API runtime walks every `data-wp-*` attribute and binds it. The demo page had 80 of ours; now it has under 40.
 - The image placeholder is CSS only (see above), which removed five directives per card.
 - The pills carry no `data-wp-context` and no handler of their own. Each group's fieldset has one `data-wp-on-async--change`, which the checkboxes' change events bubble up to. Each checkbox keeps one `data-wp-bind--checked`, whose getter reads the slug from the checkbox's `value`.
@@ -172,7 +185,7 @@ The PHPUnit suite covers:
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
 The Playwright suite (`tests/e2e`) drives a real browser.
-- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and the pill row keeping its first label in view on a phone.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and, at 375 × 812 in light and dark mode (`mobile.spec.js`), the phone layout: no sideways scroll, full-width cards, the filter's four rows with both groups in view, the 16 px gap, pagination on two centred rows, a selected pill scrolled into view and 44 px touch targets. Axe checks the demo page and a single post in both modes.
 - In the editor: the React preview, the Suspense skeleton while posts load, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
 
 It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.

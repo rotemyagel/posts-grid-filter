@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tests: a Playwright suite at 375 × 812, in light and dark mode, checks the phone layout: no sideways page scroll, cards at least 300 px wide and aligned with the page title, a 250 px+ search field at 16 px+, both pill groups in view, hidden scrollbars, the 16 px gap, centred pagination, a selected pill scrolled into view and 44 px touch targets.
 - Improved: pagination on a phone: Prev, "Page 1 of 2" and Next centred on one row, the page size centred below, and Prev and Next 44 px tall.
 - Improved: the filter on a phone. Below a 600 px block width it stacks into four rows: search at full width; the post count, "Clear filters" and the switch; then categories and tags, each in its own sideways-scrolling row that runs to the screen's edge, with its label above it. A pill selected in the URL is scrolled into view in its row. Scrollbars are hidden in every layout.
 - Improved: on a phone (below 600 px), the blocks add no side padding of their own, so content lines up with the page and cards use the theme's whole content width (315 px instead of 267 px at 375 px). Their background still reaches the screen's edges, painted by a box-shadow rather than negative margins, so the page can't scroll sideways. A filter right above the grid joins it in one band, 16 px from the filter to the first card.
