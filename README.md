@@ -108,6 +108,8 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Code splitting only where it pays off.** The Interactivity Router, the largest frontend dependency, is a lazy chunk: it's imported the first time someone filters or pages, so visitors who never do never download it. The editor scripts are not split with `React.lazy`. They are 3 to 5 KB each, and a separate chunk would add a request before the preview could render, making the editor slower rather than faster.
 
+**The single post page follows the theme type.** Block themes have no `header.php`, so a PHP template that calls `get_header()` makes WordPress fall back to a deprecated file: a notice in the page, and no doctype, viewport tag, theme header or footer. On a block theme the plugin registers a block template (`register_block_template()`, WordPress 6.7) made of core blocks: the theme's header and footer template parts, then the featured image, title, categories, content and tags. A theme's own `single-wmpgf_post.html`, or a copy edited in the Site Editor, takes precedence. Classic themes keep `templates/single-wmpgf_post.php` and its stylesheet.
+
 **Single posts live at `/grid-post/{slug}/`.** Version 1.3 put the category first (`/{category}/{slug}/`). A rewrite rule with no fixed text in front matches every two-segment URL, so author archives, date archives, feeds, `/page/2/` and nested pages all returned 404. The brief didn't ask for category URLs, so I removed them. A test now covers those five URLs.
 
 **Seeding checks its own work, and only touches what the plugin created.** The seeder records the ID of everything it creates (posts, cover images, terms, the demo page) at the moment it creates it, and tags each demo post with the demo entry it belongs to. Content is treated as demo content only through those records, never because its title or slug matches, so a post or page the site owner made is never changed or counted as demo content. Terms are the one exception: an existing term with the same name is reused for assignment, but it isn't recorded as created.
@@ -187,9 +189,9 @@ includes/
   class-wmpgf-query.php          Queries, cached per request
   class-wmpgf-blocks.php         Block and style registration
   class-wmpgf-seeder.php         Demo content
-  class-wmpgf-single-template.php
+  class-wmpgf-single-template.php  Single post: block template, or the PHP one on classic themes
   demo-content.php               The 12 demo posts
-templates/single-wmpgf_post.php  Single post template for themes without one
+templates/single-wmpgf_post.php  Single post template for classic themes without one
 assets/css/tokens.css            Design tokens and the font
 src/shared/                      url.js (URL builder), navigate.js (router call)
 src/blocks/*/                    block.json, edit.js, render.php, view.js, style.css

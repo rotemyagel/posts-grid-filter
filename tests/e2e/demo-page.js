@@ -16,3 +16,20 @@ export async function demoPage( request ) {
 	}
 	return page;
 }
+
+/**
+ * The address of one seeded Grid Post.
+ *
+ * @param {import('@playwright/test').APIRequestContext} request Request context.
+ * @return {Promise<string>} Its permalink.
+ */
+export async function gridPost( request ) {
+	const response = await request.get(
+		'?rest_route=/wp/v2/wmpgf_post&per_page=1&_fields=link'
+	);
+	const [ post ] = await response.json();
+	if ( ! post ) {
+		throw new Error( 'No Grid Post was found. Is the plugin active?' );
+	}
+	return post.link;
+}
