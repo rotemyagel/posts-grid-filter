@@ -4,3 +4,5 @@ vendor/
 wm-posts-grid-filter.zip
 .phpunit.result.cache
 .wp-env.override.json
+tests/e2e/.auth/
+test-results/

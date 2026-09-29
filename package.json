@@ -16,9 +16,11 @@
     "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/wm-posts-grid-filter vendor/bin/phpunit",
     "packages-update": "wp-scripts packages-update",
     "env": "wp-env",
-    "plugin-zip": "wp-scripts plugin-zip"
+    "plugin-zip": "wp-scripts plugin-zip",
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@wordpress/env": "^10.0.0",
     "@wordpress/scripts": "^30.0.0",
     "cross-env": "^7.0.3"

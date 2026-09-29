@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Uninstall also keeps seeded images referenced by file name in options (widgets, theme mods), term meta or user meta. Transients don't count.
+- Added a Playwright browser suite covering the filter, Back and Forward, pagination, search, focus, the no-JavaScript form and the editor. CI runs it on WordPress 6.7 and latest.
+- README: the block CSS is about 11 KB.
+
 ## 2.0.2 (2026-09-29)
 
 - Fixed: the stated minimum was WordPress 6.6, but the filter's script needs `getServerState()`, added in 6.7; on 6.6 it failed to load and the filter did nothing. The minimum is now 6.7, and CI tests 6.7 and the latest release.

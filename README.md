@@ -103,6 +103,7 @@ npm run lint:css     # Stylelint, including the token rules
 npm run lint:php     # WordPress Coding Standards (run composer install first)
 npm run test:js      # Jest: the URL builder
 npm run test:php     # PHPUnit in wp-env's tests container (start wp-env first)
+npm run test:e2e     # Playwright in a real browser against wp-env (start wp-env first)
 npm run plugin-zip   # Builds wm-posts-grid-filter.zip
 ```
 
@@ -123,7 +124,13 @@ The PHPUnit suite covers:
 
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
-GitHub Actions runs all linters, the build and both test suites on every push, on WordPress 6.7 and the latest release. It also fails if the committed `build/` doesn't match the source. It then starts a fresh wp-env and requests the demo page twice:
+The Playwright suite (`tests/e2e`) drives a real browser.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, and the form without JavaScript.
+- In the editor: the React preview, both Inspector controls, and the locked pagination inside a new grid.
+
+It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.
+
+GitHub Actions runs all linters, the build, and the Jest, PHPUnit and Playwright suites on every push, on WordPress 6.7 and the latest release. It also fails if the committed `build/` doesn't match the source. It then starts a fresh wp-env and requests the demo page twice:
 - with pretty permalinks;
 - with plain permalinks, where the page is `/?page_id=N`, checking a filtered view and that the Clear filters link, the Next link and the forms all keep `page_id`.
 

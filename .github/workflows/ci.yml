@@ -61,6 +61,19 @@ jobs:
           curl -sf http://localhost:8888/posts-grid-filter-demo/ -o demo.html
           grep -q 'wmpgf-grid__card' demo.html
           grep -q 'wp-block-wmpgf-posts-filter' demo.html
+      # The JavaScript side in a real browser: filtering, Back, pagination,
+      # search, focus, the no-JS form, and the editor preview and controls.
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:e2e
+      - name: Keep browser traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-wp-${{ matrix.wordpress }}
+          path: test-results/
+          if-no-files-found: ignore
       # Many fresh installs keep plain permalinks, where the demo page is
       # /?page_id=N and every link the plugin builds must keep page_id.
       - name: Filtered demo page works under plain permalinks
