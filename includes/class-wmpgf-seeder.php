@@ -31,6 +31,23 @@ class WMPGF_Seeder {
 	const DEMO_PAGE_OWNED_OPTION       = 'wmpgf_demo_page_owned';
 
 	/**
+	 * Version of the rules seeded content is checked against. Raise it when
+	 * those rules change, so existing installs are checked again, once.
+	 * 2: every demo post has a usable featured image and its terms (2.0.1).
+	 */
+	const VALIDATION_VERSION       = 2;
+	const VALIDATED_VERSION_OPTION = 'wmpgf_seed_validated_version';
+
+	/**
+	 * One-off WP-Cron event that checks an install seeded by an earlier
+	 * version, and the lock that keeps two runs from repairing at once.
+	 */
+	const VALIDATION_HOOK = 'wmpgf_validate_demo_content';
+	const LOCK_OPTION     = 'wmpgf_seed_lock';
+	const LOCK_TIMEOUT    = 600;
+	const RETRY_DELAY     = 3600;
+
+	/**
 	 * Post meta naming which demo-content.php entry a seeded post is. Only
 	 * read on posts in the "created" list, so a user's post can't claim it.
 	 */
@@ -64,25 +81,83 @@ class WMPGF_Seeder {
 	private $author_id = 0;
 
 	/**
-	 * Runs on plugin activation until one run leaves complete demo content.
+	 * Runs on plugin activation, and from WP-Cron after an update.
 	 *
-	 * Each run first repairs: it creates what is missing and fixes the
-	 * seeder's own posts and page (status, excerpt, cover, terms, blocks).
-	 * Then it re-reads everything and checks it. Only if every check passes
-	 * is seeding marked complete; otherwise the next activation tries again.
+	 * A new install is seeded until one run leaves complete demo content;
+	 * see seed_and_validate(). An install seeded by an earlier version has
+	 * its demo content checked once against the current rules; see
+	 * validate_seeded(). Either way the run holds a lock, so two requests
+	 * never repair at the same time.
+	 *
+	 * On multisite this seeds only the site it runs on; network activation
+	 * seeds the main site. See the README's known limitations.
+	 *
+	 * @return bool Whether the demo content is complete and checked.
+	 */
+	public function seed() {
+		$seeded = (bool) get_option( self::SEEDED_OPTION );
+		if ( $seeded && ! self::needs_validation() ) {
+			return true;
+		}
+		if ( ! self::lock() ) {
+			return false;
+		}
+
+		try {
+			return $seeded ? $this->validate_seeded() : $this->seed_and_validate();
+		} finally {
+			self::unlock();
+		}
+	}
+
+	/**
+	 * Whether an install was seeded by a version whose checks were weaker
+	 * than today's (2.0.0 could mark seeding complete with featured images
+	 * or terms missing). Two autoloaded options: cheap on every request.
+	 *
+	 * @return bool
+	 */
+	public static function needs_validation() {
+		return get_option( self::SEEDED_OPTION ) && (int) get_option( self::VALIDATED_VERSION_OPTION, 0 ) < self::VALIDATION_VERSION;
+	}
+
+	/**
+	 * On init: when an update left an install needing a check, schedules it
+	 * as a one-off WP-Cron event, so it runs in a background request rather
+	 * than during a visitor's page load. Activation doesn't run on updates.
+	 */
+	public static function schedule_validation() {
+		if ( self::needs_validation() && ! wp_next_scheduled( self::VALIDATION_HOOK ) ) {
+			wp_schedule_single_event( time(), self::VALIDATION_HOOK );
+		}
+	}
+
+	/**
+	 * The WP-Cron event. A run that couldn't finish (a failed repair, or
+	 * another run holding the lock) is tried again an hour later, not on
+	 * every request.
+	 */
+	public static function run_scheduled_validation() {
+		$seeder = new self();
+		if ( ! $seeder->seed() && self::needs_validation() && ! wp_next_scheduled( self::VALIDATION_HOOK ) ) {
+			wp_schedule_single_event( time() + self::RETRY_DELAY, self::VALIDATION_HOOK );
+		}
+	}
+
+	/**
+	 * Seeds a new install. Each run first repairs: it creates what is
+	 * missing and fixes the seeder's own posts and page (status, excerpt,
+	 * cover, terms, blocks). Then it re-reads everything and checks it.
+	 * Only if every check passes is seeding marked complete; otherwise the
+	 * next activation tries again.
 	 *
 	 * Posts and pages are recognised as demo content only through the
 	 * seeder's own ownership records, never by title or slug, so a site
 	 * owner's content is never changed or counted as demo content.
 	 *
-	 * On multisite this seeds only the site it runs on; network activation
-	 * seeds the main site. See the README's known limitations.
+	 * @return bool Whether seeding is complete.
 	 */
-	public function seed() {
-		if ( get_option( self::SEEDED_OPTION ) ) {
-			return;
-		}
-
+	private function seed_and_validate() {
 		$this->author_id = $this->default_author_id();
 		$demo_posts      = require WMPGF_DIR . 'includes/demo-content.php';
 
@@ -100,10 +175,155 @@ class WMPGF_Seeder {
 				self::log( 'Seeding incomplete: ' . $problem );
 			}
 			self::log( 'Not marking seeding complete. The next activation will repair what is missing.' );
-			return;
+			return false;
 		}
 
 		update_option( self::SEEDED_OPTION, true );
+		update_option( self::VALIDATED_VERSION_OPTION, self::VALIDATION_VERSION );
+		wp_clear_scheduled_hook( self::VALIDATION_HOOK );
+		return true;
+	}
+
+	/**
+	 * Checks an install seeded by an earlier version, and repairs what such
+	 * a version could leave missing: a demo post's featured image, and its
+	 * categories and tags.
+	 *
+	 * Only the seeder's own posts are touched, and only those still exactly
+	 * as seeded: published and never saved since. Nothing is created,
+	 * republished or recreated, so a post or term the owner deleted, and a
+	 * post they edited, drafted or trashed, stay as they are and don't count
+	 * against the check. The demo page is left alone for the same reason.
+	 *
+	 * @return bool Whether everything in scope is complete. The validated
+	 *              version is recorded only then; otherwise it's tried again.
+	 */
+	private function validate_seeded() {
+		$this->author_id = $this->default_author_id();
+		$demo_posts      = require WMPGF_DIR . 'includes/demo-content.php';
+		$category_ids    = $this->existing_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
+		$tag_ids         = $this->existing_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
+		$problems        = array();
+
+		foreach ( $demo_posts as $index => $demo_post ) {
+			$post_id = $this->find_owned_post( $demo_post );
+			if ( ! $post_id || ! self::untouched_since_seeding( $post_id ) ) {
+				continue;
+			}
+
+			$this->assign_terms( $post_id, $demo_post['title'], $demo_post['categories'], $category_ids, WMPGF_Post_Type::TAX_CATEGORY );
+			$this->assign_terms( $post_id, $demo_post['title'], $demo_post['tags'], $tag_ids, WMPGF_Post_Type::TAX_TAG );
+			if ( ! $this->has_valid_cover( $post_id ) ) {
+				$this->add_cover( $post_id, $demo_post, $index );
+			}
+
+			// Read back, rather than trusting what this run believes it did.
+			clean_post_cache( $post_id );
+			$name = sprintf( 'post "%s" (ID %d)', $demo_post['title'], $post_id );
+			if ( ! $this->has_valid_cover( $post_id ) ) {
+				$problems[] = $name . ' has no valid cover image.';
+			}
+			foreach ( array(
+				WMPGF_Post_Type::TAX_CATEGORY => $this->intended_term_ids( $demo_post['categories'], $category_ids ),
+				WMPGF_Post_Type::TAX_TAG      => $this->intended_term_ids( $demo_post['tags'], $tag_ids ),
+			) as $taxonomy => $intended ) {
+				$current = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+				if ( is_wp_error( $current ) || array_diff( $intended, array_map( 'intval', $current ) ) ) {
+					$problems[] = sprintf( '%s is missing %s terms.', $name, $taxonomy );
+				}
+			}
+		}
+
+		if ( $problems ) {
+			foreach ( $problems as $problem ) {
+				self::log( 'Upgrade check incomplete: ' . $problem );
+			}
+			self::log( 'The demo content check will run again in an hour, or on the next activation.' );
+			return false;
+		}
+
+		update_option( self::VALIDATED_VERSION_OPTION, self::VALIDATION_VERSION );
+		// A retry scheduled by an earlier failed run has nothing left to do.
+		wp_clear_scheduled_hook( self::VALIDATION_HOOK );
+		return true;
+	}
+
+	/**
+	 * Whether a seeded post is still exactly as seeded. Adding terms or a
+	 * featured image doesn't change a post's modified date; saving it in
+	 * the editor, drafting or trashing it does.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	private static function untouched_since_seeding( $post_id ) {
+		$post = get_post( $post_id );
+		return $post && 'publish' === $post->post_status && $post->post_modified_gmt === $post->post_date_gmt;
+	}
+
+	/**
+	 * Term IDs by name, for terms that exist; none are created.
+	 *
+	 * @param string[] $names    Term names.
+	 * @param string   $taxonomy Taxonomy.
+	 * @return array<string, int>
+	 */
+	private function existing_terms( array $names, $taxonomy ) {
+		$ids = array();
+		foreach ( $names as $name ) {
+			$term = term_exists( $name, $taxonomy );
+			if ( $term ) {
+				$ids[ $name ] = (int) $term['term_id'];
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * Takes the seeding lock. INSERT IGNORE adds the row only if no run
+	 * holds it, so two requests can't both get it (the approach of
+	 * WP_Upgrader::create_lock()). A lock older than LOCK_TIMEOUT belongs to
+	 * a run that died, and is taken over.
+	 *
+	 * @return bool Whether this run holds the lock.
+	 */
+	private static function lock() {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- An atomic lock can't go through the options cache.
+		$taken = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO `{$wpdb->options}` ( `option_name`, `option_value`, `autoload` ) VALUES ( %s, %s, 'off' )",
+				self::LOCK_OPTION,
+				time()
+			)
+		);
+		if ( $taken ) {
+			return true;
+		}
+
+		$since = (int) $wpdb->get_var( $wpdb->prepare( "SELECT `option_value` FROM `{$wpdb->options}` WHERE `option_name` = %s", self::LOCK_OPTION ) );
+		if ( $since && $since < time() - self::LOCK_TIMEOUT ) {
+			// Only one request can move the timestamp on from $since.
+			return (bool) $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE `{$wpdb->options}` SET `option_value` = %s WHERE `option_name` = %s AND `option_value` = %s",
+					time(),
+					self::LOCK_OPTION,
+					$since
+				)
+			);
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		return false;
+	}
+
+	/**
+	 * Releases the seeding lock.
+	 */
+	private static function unlock() {
+		delete_option( self::LOCK_OPTION );
 	}
 
 	/**

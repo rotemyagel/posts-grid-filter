@@ -37,6 +37,12 @@ class WMPGF_Plugin {
 		$image_loading->init();
 
 		add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
+
+		// Activation doesn't run when the plugin is updated in place, so an
+		// install seeded by an earlier version is checked from here, in the
+		// background, once. See WMPGF_Seeder::seed().
+		add_action( 'init', array( 'WMPGF_Seeder', 'schedule_validation' ), 20 );
+		add_action( WMPGF_Seeder::VALIDATION_HOOK, array( 'WMPGF_Seeder', 'run_scheduled_validation' ) );
 	}
 
 	/**
@@ -74,5 +80,6 @@ class WMPGF_Plugin {
 	 */
 	public static function deactivate() {
 		flush_rewrite_rules();
+		wp_clear_scheduled_hook( WMPGF_Seeder::VALIDATION_HOOK );
 	}
 }

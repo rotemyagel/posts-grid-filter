@@ -114,6 +114,12 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 After each run the seeder reads everything back and checks it. Every demo post must be published, have an excerpt, a featured image whose file exists, and its categories and tags. The demo page must be published and contain the filter and a grid with the pagination block inside it. Only then is seeding marked complete. Failed image, attachment, featured-image and term assignments are logged (with `WP_DEBUG_LOG`) and leave seeding open. The next activation repairs the plugin's own posts and page in place (status, excerpt, cover, terms, blocks) instead of creating duplicates.
 
+**Upgrading from 2.0.0.** Version 2.0.0 could mark seeding complete even when a post's featured image or its categories and tags had failed. Those installs are checked once against the current rules:
+- **When it runs:** on the next activation, or, when the plugin is updated in place (which doesn't run activation), from a one-off WP-Cron event. `init` schedules that event only while the check is outstanding, which costs two autoloaded options per request. The check itself runs in the background, not during a visitor's page load.
+- **What it repairs:** a missing or unusable featured image, and categories and tags that still exist. It does this only on the plugin's own posts (the ownership records), and only on those still exactly as seeded: published and never saved since.
+- **What it leaves alone:** it creates, republishes and recreates nothing. A post or term the owner deleted, a post they edited, drafted or trashed, and the demo page all stay as they are, and none of them count against the check.
+- **When it's done:** only after everything in scope reads back complete does it record `wmpgf_seed_validated_version` (a number raised whenever the rules change). A failed repair is tried again an hour later, and a database lock keeps two requests from repairing at once.
+
 `uninstall.php` deletes the demo page and demo posts first, then each seeded image and term only if nothing left on the site uses it. That covers:
 - a post of any status that still has the term;
 - an image that is a featured image, the site icon or the logo, or whose file name appears in post content, post meta, options (widgets, theme mods such as a header image), term meta or user meta. Transients don't count, because they're caches.

@@ -140,4 +140,7 @@ delete_option( 'wmpgf_seeded_post_ids' );
 delete_option( 'wmpgf_seeded_attachment_ids' );
 delete_option( 'wmpgf_seeded_term_ids' );
 delete_option( 'wmpgf_rewrite_version' );
+delete_option( 'wmpgf_seed_validated_version' );
+delete_option( 'wmpgf_seed_lock' );
+wp_clear_scheduled_hook( 'wmpgf_validate_demo_content' );
 delete_option( 'wmpgf_category_children' ); // Created by core for hierarchical taxonomies.
