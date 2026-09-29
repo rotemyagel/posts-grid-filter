@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 (2026-09-29)
 
 - Improved: the shared design tokens (2.4 KB) are printed inline with the blocks' own styles instead of as a render-blocking stylesheet, which also takes one request out of the font's chain. Lighthouse no longer lists any plugin file as render-blocking.
 - New: posts without a featured image no longer break the row. The grid shows its fallback image (a new "Fallback image" setting in the sidebar), or else a neutral placeholder the size of a cover. A featured image that isn't a usable image counts as none. Image loading takes its cue from the first card that has an image.
