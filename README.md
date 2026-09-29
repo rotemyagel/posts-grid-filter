@@ -95,12 +95,14 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 **Loading states: skeletons, Suspense and lazy images.**
 - **Frontend skeleton:** when a filter or page change takes longer than 200 ms, the current cards turn into placeholder shapes (a pill for the category, rounded blocks for the title and excerpt) until the new page arrives. A quicker load only dims the grid, because a skeleton that shows for a split second reads as a flicker.
 - **Image placeholders:** each card image shimmers until it has loaded, then fades in; a broken image stops shimmering too.
-- **Lazy images**, following web.dev's guidance on browser-level lazy loading:
-  - Images in the first view load right away, and only those further down use `loading="lazy"`. WordPress core decides per image: the page's first 3 content images are eager (the first with `fetchpriority="high"`, as it's often the largest element), and the rest are lazy. A 4-column first row would be split by that rule, so the rest of the first row follows core's decision for its first image: all eager near the top of the page, all lazy when the grid starts further down. Only core's output is adjusted, through its `wp_get_loading_optimization_attributes` filter, so core's count for the images after the row stays right.
-  - An image is never both lazy and high priority.
-  - Every image has `width` and `height`, and a CSS `aspect-ratio`, so nothing shifts when it arrives.
-  - The editor preview loads its first row eagerly and later rows lazily too.
-  - The loading placeholder hides the image with `opacity`, not `display: none`, so the browser still loads it.
+- **Lazy images**, following web.dev's guidance on browser-level lazy loading, and measured in Chrome:
+  - The page's image optimiser decides first. That's WordPress core, or a plugin that replaces it, such as Elementor's optimised image loading: the first few content images are eager (the first with `fetchpriority="high"`), and the rest lazy. The grid follows that decision for its first image, because the optimiser counts every image on the page.
+  - If the first image is eager (the grid starts near the top), the rest of the first row is eager too. Otherwise a 4-column row has its 4th image lazy though it's in view.
+  - The second row then starts loading right away at `fetchpriority="low"`. It's in view on most laptop and desktop screens, and a lazy image can't start until the page's CSS has loaded. Measured on Fast 3G at 1280×800, the second row started at about 1.6 s instead of about 4.1 s. On a phone it's below the fold, but Chrome would load most of it at once anyway (lazy images within about 1250 px are fetched immediately), so it costs one extra small request. Low priority keeps it from delaying the first image.
+  - Everything after the second row is lazy, and nothing changes when the grid starts further down the page.
+  - `WMPGF_Image_Loading` makes these changes after the optimiser's own: on `wp_content_img_tag` for grids in post content (where core decides late), and on `wp_get_loading_optimization_attributes` elsewhere. Each card image carries `data-wmpgf-load` (first, first-row or second-row).
+  - Every image has `width` and `height` and a CSS `aspect-ratio`, so nothing shifts as images arrive (measured CLS 0.001 on a phone, 0.008 on desktop). The loading placeholder hides the image with `opacity`, not `display: none`, so the browser still loads it. No image is both lazy and high priority, and a page has one high-priority image.
+  - The editor preview loads its first row eagerly and the rest lazily.
 - **Editor Suspense:** the grid and filter previews read their data with `useSuspenseSelect` inside `<Suspense>`. Until the posts, categories and images have loaded, the fallback is a skeleton in the block's final layout (the chosen columns and page size), so nothing jumps when the content arrives. The filter's count and its pills are separate boundaries, and each appears as soon as its own data arrives.
 - **Reduced motion:** placeholders keep their shape without the moving sweep.
 

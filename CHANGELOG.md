@@ -4,7 +4,7 @@
 
 - New: loading skeletons. On the frontend, a filter or page change slower than 200 ms turns the cards into placeholder shapes; card images shimmer until they load, then fade in.
 - New: the editor previews use React Suspense (`useSuspenseSelect`) with skeleton fallbacks in the block's final layout, instead of a spinner. The first row of preview images loads right away and later rows lazily, with `width` and `height`.
-- Improved: a 4-column grid's whole first row loads eagerly when it's near the top of the page. WordPress core alone makes the 4th image lazy though it's in view.
+- Improved image loading, measured in Chrome. When the grid is near the top of the page, its whole first row loads right away (core alone made a 4-column row's 4th image lazy) and the second row starts at low priority instead of waiting for the CSS (about 2.4 s sooner on Fast 3G). This follows the page's own optimiser, including Elementor's optimised image loading.
 - Fixed: scroll snapping could scroll the filter's pill row so the "Categories" label was out of view, for example on phones. Each group is now a snap point.
 
 ## 2.1.0 (2026-09-29)

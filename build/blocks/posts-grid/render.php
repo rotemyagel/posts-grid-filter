@@ -35,21 +35,8 @@ $labels  = WMPGF_Query::primary_categories( wp_list_pluck( $query->posts, 'ID' )
 
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-grid-block' ) );
 
-/*
- * Lazy loading: core decides each image (eager, and fetchpriority="high"
- * for the first, for the page's first 3 content images; lazy after that).
- * A first row wider than 3 would then be split, its 4th image lazy though
- * it's in view, so the rest of the first row follows core's decision for
- * the row's first image: all eager near the top of the page, all lazy
- * when the grid starts further down. Only core's output is changed, after
- * it has counted the image, so its count for later images stays right.
- */
-$card_index      = 0;
-$first_row_eager = false;
-$keep_eager      = static function ( $loading_attributes ) {
-	unset( $loading_attributes['loading'] );
-	return $loading_attributes;
-};
+// Card position, for how soon its image loads (see WMPGF_Image_Loading).
+$card_index = 0;
 ?>
 <div
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -75,24 +62,16 @@ $keep_eager      = static function ( $loading_attributes ) {
 						>
 							<?php
 							// Decorative: the title below says the same thing.
-							$thumbnail_attributes = array(
-								'alt'               => '',
-								'data-wp-init'      => 'callbacks.watchImage',
-								'data-wp-on--load'  => 'actions.imageLoaded',
-								'data-wp-on--error' => 'actions.imageLoaded',
+							the_post_thumbnail(
+								'medium',
+								array(
+									'alt'               => '',
+									WMPGF_Image_Loading::ATTRIBUTE => WMPGF_Image_Loading::role( $card_index, $columns ),
+									'data-wp-init'      => 'callbacks.watchImage',
+									'data-wp-on--load'  => 'actions.imageLoaded',
+									'data-wp-on--error' => 'actions.imageLoaded',
+								)
 							);
-							$in_first_row         = $first_row_eager && $card_index < $columns;
-							if ( $in_first_row ) {
-								add_filter( 'wp_get_loading_optimization_attributes', $keep_eager );
-							}
-							$thumbnail = get_the_post_thumbnail( null, 'medium', $thumbnail_attributes );
-							if ( $in_first_row ) {
-								remove_filter( 'wp_get_loading_optimization_attributes', $keep_eager );
-							}
-							if ( 0 === $card_index ) {
-								$first_row_eager = false === strpos( $thumbnail, 'loading="lazy"' );
-							}
-							echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by core.
 							?>
 						</div>
 					<?php endif; ?>

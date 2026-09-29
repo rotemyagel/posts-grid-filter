@@ -255,18 +255,48 @@ test.describe( 'Loading states', () => {
 		await expect( cards( page ) ).toHaveCount( 4 );
 	} );
 
-	test( 'the first image loads eagerly, later ones lazily', async ( {
+	test( 'the first row loads right away, the second early, the rest lazily', async ( {
 		page,
 	} ) => {
-		await page.goto( link );
+		// 12 posts in 3 columns: rows of 3.
+		await page.goto(
+			`${ link }${ link.includes( '?' ) ? '&' : '?' }wmpgf-per-page=12`
+		);
 		const images = page.locator( '.wmpgf-grid__thumb img' );
+		await expect( images ).toHaveCount( 12 );
 
-		await expect( images.first() ).toHaveAttribute(
+		// First row: eager; the first is the high-priority image.
+		await expect( images.nth( 0 ) ).toHaveAttribute(
 			'fetchpriority',
 			'high'
 		);
-		await expect( images.first() ).not.toHaveAttribute( 'loading', 'lazy' );
-		await expect( images.last() ).toHaveAttribute( 'loading', 'lazy' );
+		for ( const index of [ 0, 1, 2 ] ) {
+			await expect( images.nth( index ) ).not.toHaveAttribute(
+				'loading',
+				'lazy'
+			);
+		}
+		// Second row: starts right away, at low priority.
+		for ( const index of [ 3, 4, 5 ] ) {
+			await expect( images.nth( index ) ).not.toHaveAttribute(
+				'loading',
+				'lazy'
+			);
+			await expect( images.nth( index ) ).toHaveAttribute(
+				'fetchpriority',
+				'low'
+			);
+		}
+		// Everything after: lazy, and never high priority.
+		for ( const index of [ 6, 7, 8, 9, 10, 11 ] ) {
+			await expect( images.nth( index ) ).toHaveAttribute(
+				'loading',
+				'lazy'
+			);
+		}
+		await expect( page.locator( 'img[fetchpriority="high"]' ) ).toHaveCount(
+			1
+		);
 	} );
 
 	test( 'an image shows a placeholder until it has loaded', async ( {

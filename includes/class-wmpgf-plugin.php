@@ -33,6 +33,9 @@ class WMPGF_Plugin {
 		$single_template = new WMPGF_Single_Template();
 		$single_template->init();
 
+		$image_loading = new WMPGF_Image_Loading();
+		$image_loading->init();
+
 		add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
 	}
 

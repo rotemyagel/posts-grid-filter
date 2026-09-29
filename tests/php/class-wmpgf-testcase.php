@@ -31,6 +31,7 @@ abstract class WMPGF_TestCase extends WP_UnitTestCase {
 		$this->reset_static( 'WMPGF_Query', 'counts' );
 		$this->reset_static( 'WMPGF_Query', 'pages' );
 		$this->reset_static( 'WMPGF_Blocks', 'color_scheme_script_printed', false );
+		$this->reset_static( 'WMPGF_Image_Loading', 'near_top', false );
 	}
 
 	/**
