@@ -3,3 +3,4 @@ vendor/
 *.log
 wm-posts-grid-filter.zip
 .phpunit.result.cache
+.wp-env.override.json

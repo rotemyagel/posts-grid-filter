@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: the stated minimum was WordPress 6.6, but the filter's script needs `getServerState()`, added in 6.7; on 6.6 it failed to load and the filter did nothing. The minimum is now 6.7, and CI tests 6.7 and the latest release.
+
 ## 2.0.1 (2026-09-29)
 
 - Fixed: seeding could be marked complete with missing covers or terms. Every demo post and the demo page are now checked after each run, and seeding is marked complete only when all checks pass.

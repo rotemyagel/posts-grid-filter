@@ -6,7 +6,7 @@ I built it for the WalkMe WordPress technical assessment.
 
 ## Install
 
-Requires WordPress 6.6 and PHP 7.4 or later.
+Requires WordPress 6.7 and PHP 7.4 or later. 6.7 is the first release whose Interactivity API has `getServerState()`, which the filter uses to stay in sync after each navigation; CI tests 6.7 and the latest release.
 
 **From the release zip.** Download [wm-posts-grid-filter.zip](https://github.com/rotemyagel/wm-posts-grid-filter/releases/latest/download/wm-posts-grid-filter.zip), then upload it under Plugins > Add New > Upload, or:
 

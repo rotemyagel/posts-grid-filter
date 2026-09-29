@@ -3,7 +3,7 @@
  * Plugin Name:       Posts Grid + Filter
  * Description:       Dynamic Posts Grid and Posts Filter Gutenberg blocks, synced via the Interactivity API, with demo content seeded automatically on activation.
  * Version:           2.0.1
- * Requires at least: 6.6
+ * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            Rotem Yagel
  * License:           GPL-2.0-or-later

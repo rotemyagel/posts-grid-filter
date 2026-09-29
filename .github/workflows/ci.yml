@@ -25,8 +25,13 @@ jobs:
       - run: npm run test:js
 
   php:
-    name: PHP, tests and demo page
+    name: PHP, tests and demo page (WordPress ${{ matrix.wordpress }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin's stated minimum, and the latest release.
+        wordpress: [ '6.7', 'latest' ]
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -41,8 +46,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Pin WordPress ${{ matrix.wordpress }}
+        if: matrix.wordpress != 'latest'
+        run: |
+          echo '{ "core": "WordPress/WordPress#${{ matrix.wordpress }}" }' > .wp-env.override.json
       - name: Start wp-env
         run: npx wp-env start
+      - name: Check the WordPress version
+        run: npx wp-env run cli wp core version
       # A fresh environment must reach a working demo page with no manual
       # steps: activation seeds it, afterStart sets pretty permalinks.
       - name: Demo page renders the grid
