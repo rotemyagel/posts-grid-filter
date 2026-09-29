@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.5.0 (2026-09-30)
 
 - Fixed: paging through the grid could show a post twice and skip another. The demo posts share one creation time, and sorting by date alone let the database order them differently for each page (seen in 5 of 10 runs on 2.4.0). The grid's query and the editor preview's REST request now add the post ID as the last sort key.
 - Changed: the one-time check for installs seeded by 2.0.0 no longer repairs anything. A missing featured image or term can be a failed seed or the owner's own change, and removing either directly (WP-CLI, the REST API, other plugins or code) leaves a post's dates unchanged, so the timestamp comparison 2.3.1 and 2.4.0 relied on couldn't tell them apart. The check now logs what's missing and records that it ran. The new `wp wmpgf repair-demo-content [--dry-run]` restores missing featured images and existing terms on the plugin's own published demo posts, on request, and can be run again after a failure.
