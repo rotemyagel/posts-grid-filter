@@ -40,7 +40,8 @@ class WMPGF_Seeder {
 
 	/**
 	 * One-off WP-Cron event that checks an install seeded by an earlier
-	 * version, and the lock that keeps two runs from repairing at once.
+	 * version, and the lock that keeps two runs (seeding, the check, or a
+	 * requested repair) from working on the demo content at once.
 	 */
 	const VALIDATION_HOOK = 'wmpgf_validate_demo_content';
 	const LOCK_OPTION     = 'wmpgf_seed_lock';
@@ -85,9 +86,9 @@ class WMPGF_Seeder {
 	 *
 	 * A new install is seeded until one run leaves complete demo content;
 	 * see seed_and_validate(). An install seeded by an earlier version has
-	 * its demo content checked once against the current rules; see
-	 * validate_seeded(). Either way the run holds a lock, so two requests
-	 * never repair at the same time.
+	 * its demo content checked once against the current rules, without
+	 * changing it; see check_seeded(). Either way the run holds a lock, so
+	 * two requests never work on the demo content at the same time.
 	 *
 	 * On multisite this seeds only the site it runs on; network activation
 	 * seeds the main site. See the README's known limitations.
@@ -104,7 +105,7 @@ class WMPGF_Seeder {
 		}
 
 		try {
-			return $seeded ? $this->validate_seeded() : $this->seed_and_validate();
+			return $seeded ? $this->check_seeded() : $this->seed_and_validate();
 		} finally {
 			self::unlock();
 		}
@@ -133,9 +134,8 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * The WP-Cron event. A run that couldn't finish (a failed repair, or
-	 * another run holding the lock) is tried again an hour later, not on
-	 * every request.
+	 * The WP-Cron event. A run that couldn't finish (another run holding
+	 * the lock) is tried again an hour later, not on every request.
 	 */
 	public static function run_scheduled_validation() {
 		$seeder = new self();
@@ -185,80 +185,189 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Checks an install seeded by an earlier version, and repairs what such
-	 * a version could leave missing: a demo post's featured image, and its
-	 * categories and tags.
+	 * Checks an install seeded by an earlier version against the current
+	 * rules, and changes none of its content.
 	 *
-	 * Only the seeder's own posts are touched, and only those still exactly
-	 * as seeded: published and never saved since. Nothing is created,
-	 * republished or recreated, so a post or term the owner deleted, and a
-	 * post they edited, drafted or trashed, stay as they are and don't count
-	 * against the check. The demo page is left alone for the same reason.
+	 * 2.0.0 could mark seeding complete with a demo post's featured image or
+	 * terms missing. From what's stored, that can't be told apart from a site
+	 * owner removing them on purpose: delete_post_thumbnail() and
+	 * wp_remove_object_terms() leave a post's dates as they were, and so do
+	 * WP-CLI, the REST API and other plugins that edit terms or meta
+	 * directly. So this check repairs nothing. It logs what's missing, with
+	 * the command that restores it (repair_demo_content(), run on request
+	 * through `wp wmpgf repair-demo-content`), and records that the check
+	 * ran. The only write to demo posts is bookkeeping: a post seeded by
+	 * 2.0.0 is given its demo key (see find_owned_post()).
 	 *
-	 * @return bool Whether everything in scope is complete. The validated
-	 *              version is recorded only then; otherwise it's tried again.
+	 * @return bool True: the check ran. Only a held lock stops it, and seed()
+	 *              reports that; the scheduled run then tries again later.
 	 */
-	private function validate_seeded() {
-		$this->author_id = $this->default_author_id();
-		$demo_posts      = require WMPGF_DIR . 'includes/demo-content.php';
-		$category_ids    = $this->existing_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
-		$tag_ids         = $this->existing_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
-		$problems        = array();
-
-		foreach ( $demo_posts as $index => $demo_post ) {
-			$post_id = $this->find_owned_post( $demo_post );
-			if ( ! $post_id || ! self::untouched_since_seeding( $post_id ) ) {
-				continue;
+	private function check_seeded() {
+		$gaps = $this->gaps();
+		if ( $gaps ) {
+			foreach ( $gaps as $gap ) {
+				self::log( 'Demo content check: ' . $gap['description'] );
 			}
-
-			$this->assign_terms( $post_id, $demo_post['title'], $demo_post['categories'], $category_ids, WMPGF_Post_Type::TAX_CATEGORY );
-			$this->assign_terms( $post_id, $demo_post['title'], $demo_post['tags'], $tag_ids, WMPGF_Post_Type::TAX_TAG );
-			if ( ! $this->has_valid_cover( $post_id ) ) {
-				$this->add_cover( $post_id, $demo_post, $index );
-			}
-
-			// Read back, rather than trusting what this run believes it did.
-			clean_post_cache( $post_id );
-			$name = sprintf( 'post "%s" (ID %d)', $demo_post['title'], $post_id );
-			if ( ! $this->has_valid_cover( $post_id ) ) {
-				$problems[] = $name . ' has no valid cover image.';
-			}
-			foreach ( array(
-				WMPGF_Post_Type::TAX_CATEGORY => $this->intended_term_ids( $demo_post['categories'], $category_ids ),
-				WMPGF_Post_Type::TAX_TAG      => $this->intended_term_ids( $demo_post['tags'], $tag_ids ),
-			) as $taxonomy => $intended ) {
-				$current = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
-				if ( is_wp_error( $current ) || array_diff( $intended, array_map( 'intval', $current ) ) ) {
-					$problems[] = sprintf( '%s is missing %s terms.', $name, $taxonomy );
-				}
-			}
-		}
-
-		if ( $problems ) {
-			foreach ( $problems as $problem ) {
-				self::log( 'Upgrade check incomplete: ' . $problem );
-			}
-			self::log( 'The demo content check will run again in an hour, or on the next activation.' );
-			return false;
+			self::log( 'Nothing was changed: a missing image or term can be a failed 2.0.0 seed or the site owner\'s own change. To restore them, run: wp wmpgf repair-demo-content' );
 		}
 
 		update_option( self::VALIDATED_VERSION_OPTION, self::VALIDATION_VERSION );
-		// A retry scheduled by an earlier failed run has nothing left to do.
+		// A retry scheduled by a run that found the lock held has nothing left to do.
 		wp_clear_scheduled_hook( self::VALIDATION_HOOK );
 		return true;
 	}
 
 	/**
-	 * Whether a seeded post is still exactly as seeded. Adding terms or a
-	 * featured image doesn't change a post's modified date; saving it in
-	 * the editor, drafting or trashing it does.
+	 * Restores what the seeder's own published demo posts are missing: a
+	 * usable featured image, and categories and tags that still exist. Run
+	 * only on request (`wp wmpgf repair-demo-content`), because it can undo
+	 * an owner's deliberate removal; see check_seeded().
 	 *
-	 * @param int $post_id Post ID.
-	 * @return bool
+	 * Posts are recognised only through the ownership records. Nothing is
+	 * created or republished: a deleted post or term stays deleted, and a
+	 * drafted, private or trashed post stays as it is. Extra terms and edited
+	 * text are kept. Safe to run again: a failed run changes what it could,
+	 * reports the rest, and the next run picks it up.
+	 *
+	 * @param bool $dry_run Only report what would change.
+	 * @return array {
+	 *     @type string   $status   'repaired', 'planned' (dry run), 'nothing',
+	 *                              'failed', 'busy' (another run holds the
+	 *                              lock) or 'not-seeded' (activation hasn't
+	 *                              finished seeding; reactivating does that).
+	 *     @type string[] $changes  What was, or would be, restored.
+	 *     @type string[] $skipped  What was left alone, and why.
+	 *     @type string[] $problems What is still missing after the run.
+	 * }
 	 */
-	private static function untouched_since_seeding( $post_id ) {
-		$post = get_post( $post_id );
-		return $post && 'publish' === $post->post_status && $post->post_modified_gmt === $post->post_date_gmt;
+	public function repair_demo_content( $dry_run = false ) {
+		$result = array(
+			'status'   => 'nothing',
+			'changes'  => array(),
+			'skipped'  => array(),
+			'problems' => array(),
+		);
+		if ( ! get_option( self::SEEDED_OPTION ) ) {
+			$result['status'] = 'not-seeded';
+			return $result;
+		}
+		if ( ! self::lock() ) {
+			$result['status'] = 'busy';
+			return $result;
+		}
+
+		try {
+			$this->author_id = $this->default_author_id();
+			foreach ( $this->gaps() as $gap ) {
+				if ( ! $gap['repairable'] ) {
+					$result['skipped'][] = $gap['description'];
+					continue;
+				}
+				$result['changes'][] = $gap['description'];
+				if ( $dry_run ) {
+					continue;
+				}
+
+				$demo_post = $gap['demo_post'];
+				$this->assign_terms( $gap['post_id'], $demo_post['title'], $demo_post['categories'], $gap['category_ids'], WMPGF_Post_Type::TAX_CATEGORY );
+				$this->assign_terms( $gap['post_id'], $demo_post['title'], $demo_post['tags'], $gap['tag_ids'], WMPGF_Post_Type::TAX_TAG );
+				if ( ! $this->has_valid_cover( $gap['post_id'] ) ) {
+					$this->add_cover( $gap['post_id'], $demo_post, $gap['index'] );
+				}
+			}
+
+			if ( $dry_run ) {
+				$result['status'] = $result['changes'] ? 'planned' : 'nothing';
+				return $result;
+			}
+
+			// Read back, rather than trusting what this run believes it did.
+			foreach ( $this->gaps() as $gap ) {
+				if ( $gap['repairable'] ) {
+					$result['problems'][] = $gap['description'];
+				}
+			}
+			if ( $result['problems'] ) {
+				$result['status'] = 'failed';
+			} elseif ( $result['changes'] ) {
+				$result['status'] = 'repaired';
+			}
+			return $result;
+		} finally {
+			self::unlock();
+		}
+	}
+
+	/**
+	 * What the seeder's own demo posts lack by the current rules: a usable
+	 * featured image, or intended categories and tags that still exist.
+	 * Read-only, apart from find_owned_post() giving a 2.0.0 post its demo
+	 * key. A term that no longer exists is mentioned but never counts as
+	 * missing: it can't be restored without recreating it.
+	 *
+	 * @return array[] One entry per post with something to restore: post_id,
+	 *                 index, demo_post, category_ids and tag_ids (intended
+	 *                 terms that exist), description, and repairable
+	 *                 (whether repair_demo_content() may restore it: only
+	 *                 published posts).
+	 */
+	private function gaps() {
+		$demo_posts   = require WMPGF_DIR . 'includes/demo-content.php';
+		$category_ids = $this->existing_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
+		$tag_ids      = $this->existing_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
+		$gaps         = array();
+
+		foreach ( $demo_posts as $index => $demo_post ) {
+			$post_id = $this->find_owned_post( $demo_post );
+			if ( ! $post_id ) {
+				continue;
+			}
+
+			clean_post_cache( $post_id );
+			$missing = array();
+			$deleted = array();
+			if ( ! $this->has_valid_cover( $post_id ) ) {
+				$missing[] = 'a featured image';
+			}
+			foreach ( array(
+				WMPGF_Post_Type::TAX_CATEGORY => array( $demo_post['categories'], $category_ids ),
+				WMPGF_Post_Type::TAX_TAG      => array( $demo_post['tags'], $tag_ids ),
+			) as $taxonomy => list( $names, $term_ids ) ) {
+				$current = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+				$current = is_wp_error( $current ) ? array() : array_map( 'intval', $current );
+				foreach ( $names as $name ) {
+					if ( ! isset( $term_ids[ $name ] ) ) {
+						$deleted[] = '"' . $name . '"';
+					} elseif ( ! in_array( $term_ids[ $name ], $current, true ) ) {
+						$missing[] = '"' . $name . '"';
+					}
+				}
+			}
+			if ( ! $missing ) {
+				continue;
+			}
+
+			$status      = get_post_status( $post_id );
+			$description = sprintf( 'post "%s" (ID %d) is missing %s', $demo_post['title'], $post_id, implode( ', ', $missing ) );
+			if ( $deleted ) {
+				$description .= sprintf( '; %s no longer exist and are not recreated', implode( ', ', $deleted ) );
+			}
+			if ( 'publish' !== $status ) {
+				$description .= sprintf( '; it is %s, so it is left as it is', $status );
+			}
+
+			$gaps[] = array(
+				'post_id'      => $post_id,
+				'index'        => $index,
+				'demo_post'    => $demo_post,
+				'category_ids' => $category_ids,
+				'tag_ids'      => $tag_ids,
+				'description'  => $description . '.',
+				'repairable'   => 'publish' === $status,
+			);
+		}
+
+		return $gaps;
 	}
 
 	/**

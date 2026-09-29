@@ -46,6 +46,11 @@ function wmpgf_plugin() {
 	return $plugin;
 }
 
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once WMPGF_DIR . 'includes/class-wmpgf-cli.php';
+	WP_CLI::add_command( 'wmpgf', 'WMPGF_CLI' );
+}
+
 register_activation_hook( __FILE__, array( 'WMPGF_Plugin', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'WMPGF_Plugin', 'deactivate' ) );
 
