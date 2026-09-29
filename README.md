@@ -181,12 +181,15 @@ The PHPUnit suite covers:
   - only seeded content is removed;
   - a seeded term still used by a user's draft or private post is kept;
   - a seeded image still used by other content is kept.
+- The single post page: on Twenty Twenty-Five, a complete page (doctype, viewport tag, the theme's header and footer, nothing written to the debug log); on a classic theme, the PHP template and its stylesheet.
+- The meta description: from the excerpt or the content, cut at a word, only on Grid Posts, and never a second one.
+- Block output: card titles at h2, h3 or h4 only, and the design tokens inlined, minified, with the fallback font face.
 
 To run it without Docker, run `composer install` and set `WP_PHPUNIT__TESTS_CONFIG` to a `wp-tests-config.php` that points at an empty database.
 
 The Playwright suite (`tests/e2e`) drives a real browser.
-- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders and lazy loading, and, at 375 × 812 in light and dark mode (`mobile.spec.js`), the phone layout: no sideways scroll, full-width cards, the filter's four rows with both groups in view, the 16 px gap, pagination on two centred rows, a selected pill scrolled into view, 44 px touch targets, and a layout shift under 0.01 while the page loads. Axe checks the demo page and a single post in both modes.
-- In the editor: the React preview, the Suspense skeleton while posts load, both Inspector controls, the light/dark switch setting, and the locked pagination inside a new grid.
+- On the frontend, as a visitor: the OR/AND filter logic, Back and Forward, pagination and page size, the search debounce, keyboard focus, the form without JavaScript, and light and dark mode (following the device, remembering a choice, and applying it before the scripts load), the skeleton on a slow load, image placeholders, lazy loading and image sizes, fewer than 40 directives to hydrate, a single post as a complete page with the theme's header and footer, and, at 375 × 812 in light and dark mode (`mobile.spec.js`), the phone layout: no sideways scroll, full-width cards, the filter's four rows with both groups in view, the 16 px gap, pagination on two centred rows, a selected pill scrolled into view, 44 px touch targets, and a layout shift under 0.01 while the page loads. Axe checks the demo page and a single post in both modes.
+- In the editor: the React preview, the Suspense skeleton while posts load, the Inspector controls (columns, posts per page, title heading level), the fallback image control, the light/dark switch setting, and the locked pagination inside a new grid.
 
 It finds the demo page through the REST API, so it runs under any permalink setting. To run it against another disposable site, set `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`.
 
