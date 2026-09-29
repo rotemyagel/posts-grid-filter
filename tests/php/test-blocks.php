@@ -34,4 +34,23 @@ class Test_WMPGF_Blocks extends WMPGF_TestCase {
 		// The blocks still follow a saved choice or the device.
 		$this->assertStringContainsString( 'localStorage.getItem', $html );
 	}
+
+	public function test_the_tokens_are_inlined_instead_of_a_render_blocking_link() {
+		$styles   = wp_styles();
+		$original = clone $styles->registered['wmpgf-tokens'];
+
+		wp_enqueue_style( 'wmpgf-tokens' );
+		wp_maybe_inline_styles();
+		$registered = $styles->registered['wmpgf-tokens'];
+		$inline     = implode( '', (array) $styles->get_data( 'wmpgf-tokens', 'after' ) );
+
+		$styles->registered['wmpgf-tokens'] = $original;
+		wp_dequeue_style( 'wmpgf-tokens' );
+
+		$this->assertFalse( $registered->src, 'No <link>: the file is printed inline.' );
+		$this->assertStringContainsString( '--wmpgf-text-s', $inline );
+		// The font's relative URL is rewritten from the site root.
+		$this->assertStringContainsString( 'url(/wp-content/plugins/', str_replace( wp_parse_url( home_url(), PHP_URL_PATH ) ?? '', '', $inline ) );
+		$this->assertStringNotContainsString( 'url(../fonts/', $inline );
+	}
 }

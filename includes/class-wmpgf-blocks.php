@@ -112,6 +112,9 @@ class WMPGF_Blocks {
 			array(),
 			(string) filemtime( WMPGF_DIR . 'assets/css/tokens.css' )
 		);
+		// With a path, core can print these 2.4 KB inline with the blocks'
+		// own styles instead of as a render-blocking <link>.
+		wp_style_add_data( 'wmpgf-tokens', 'path', WMPGF_DIR . 'assets/css/tokens.css' );
 
 		foreach ( $this->blocks as $block ) {
 			$path = WMPGF_DIR . 'build/blocks/' . $block;
