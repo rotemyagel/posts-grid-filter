@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.4.0 (2026-09-29)
 
 - Fixed: on a phone, the filter's second row grew when the script showed the light/dark switch, moving the grid down (layout shift 0.018 on the demo page). The row now keeps the switch's height from the start, and the phone tests check that the page's layout shift stays under 0.01.
 - Docs: the README lists what Lighthouse will keep reporting that a plugin can't fix (cache headers, core's navigation stylesheet and list markup, the Interactivity runtime's own cost, the theme's font), with the reason for each.
