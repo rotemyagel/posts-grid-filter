@@ -204,6 +204,17 @@ By hand, I've checked the demo page on Twenty Twenty-Four (a block theme, deskto
 - **Search** is WordPress's built-in search on title, excerpt and content, with no relevance ranking beyond that.
 - **Every filter combination can be indexed.** With 4 categories and 6 tags, each combination is a different, legitimate page. On a site with thousands of terms I would limit indexing of combinations, based on real traffic data.
 
+### What Lighthouse will keep reporting
+
+These come from the web server, core or the theme, so no change inside the plugin removes them. Measured on a fresh wp-env with Twenty Twenty-Five.
+
+- **Cache lifetimes on static assets.** How long browsers may keep files is the web server's `Cache-Control` configuration, and wp-env's Apache sends none.
+- **A render-blocking navigation stylesheet.** It belongs to core's navigation block in the theme's header. It shows up on the demo page and not on `/sample-page/` because core inlines stylesheets smallest first, up to 40 KB in total: the plugin's four (16 KB) and core's small ones leave no room for the navigation block's 20.8 KB, so it is printed as a `<link>`. I measured raising that budget so it's inlined as well. The median score didn't change (mobile 96 either way), and first paint came later because the HTML grew by 21 KB, so the plugin leaves core's budget alone.
+- **The Interactivity API runtime's own cost.** Core loads it for the theme's navigation block too, so it runs on pages with none of the plugin's blocks: the review measured about 430 ms of blocking time for it on `/sample-page/` under mobile throttling. The plugin's part is the directives it adds (32 on the demo page) and its own view scripts.
+- **The theme's Manrope font** (54 KB) and its `font-display` warning. The theme loads it on every page.
+- **The `list` accessibility audit on desktop.** Core's navigation block, when it falls back to a list of pages, nests a `<ul>` directly inside another `<ul>`. That fails on every page, `/sample-page/` included, so the demo page scores 97 for accessibility on desktop and 100 on mobile, where the menu is collapsed. The axe browser test leaves that block out for the same reason.
+- **A missing meta description** everywhere except single Grid Posts, the demo page included. See "A meta description on single Grid Posts only" above.
+
 ## Project layout
 
 ```

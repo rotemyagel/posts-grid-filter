@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Docs: the README lists what Lighthouse will keep reporting that a plugin can't fix (cache headers, core's navigation stylesheet and list markup, the Interactivity runtime's own cost, the theme's font), with the reason for each.
 - Tests: a Playwright suite at 375 × 812, in light and dark mode, checks the phone layout: no sideways page scroll, cards at least 300 px wide and aligned with the page title, a 250 px+ search field at 16 px+, both pill groups in view, hidden scrollbars, the 16 px gap, centred pagination, a selected pill scrolled into view and 44 px touch targets.
 - Improved: pagination on a phone: Prev, "Page 1 of 2" and Next centred on one row, the page size centred below, and Prev and Next 44 px tall.
 - Improved: the filter on a phone. Below a 600 px block width it stacks into four rows: search at full width; the post count, "Clear filters" and the switch; then categories and tags, each in its own sideways-scrolling row that runs to the screen's edge, with its label above it. A pill selected in the URL is scrolled into view in its row. Scrollbars are hidden in every layout.
