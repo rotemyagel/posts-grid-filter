@@ -508,4 +508,32 @@ class Test_WMPGF_Seeder extends WMPGF_TestCase {
 		$this->assertSame( 'attachment', get_post_type( $in_content ) );
 		$this->assertSame( 2, $this->count_posts( 'attachment' ), 'Every other seeded image is removed.' );
 	}
+
+	public function test_uninstall_keeps_seeded_images_referenced_outside_posts() {
+		$this->seed();
+		list( $in_widget, $in_term_meta, $in_user_meta, $in_transient ) = $this->owned( WMPGF_Seeder::SEEDED_ATTACHMENT_IDS_OPTION );
+
+		// An image widget stores the URL in a serialized option.
+		update_option(
+			'widget_media_image',
+			array(
+				2 => array(
+					'attachment_id' => $in_widget,
+					'url'           => wp_get_attachment_url( $in_widget ),
+				),
+			)
+		);
+		$term = self::factory()->term->create( array( 'taxonomy' => 'category' ) );
+		update_term_meta( $term, 'cover', wp_get_attachment_url( $in_term_meta ) );
+		update_user_meta( get_current_user_id(), 'profile_picture', wp_get_attachment_url( $in_user_meta ) );
+		// A cache of rendered HTML is not a reference.
+		set_transient( 'rendered_demo', '<img src="' . wp_get_attachment_url( $in_transient ) . '">' );
+
+		$this->uninstall();
+
+		$this->assertSame( 'attachment', get_post_type( $in_widget ), 'Used by a widget option.' );
+		$this->assertSame( 'attachment', get_post_type( $in_term_meta ), 'Used in term meta.' );
+		$this->assertSame( 'attachment', get_post_type( $in_user_meta ), 'Used in user meta.' );
+		$this->assertNull( get_post( $in_transient ), 'Only cached in a transient, so removed.' );
+	}
 }

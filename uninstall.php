@@ -51,7 +51,9 @@ foreach ( $owned_ids( 'wmpgf_seeded_post_ids' ) as $seeded_post_id ) {
 
 // 3. Seeded images, unless something that survived still uses one: as a
 // featured image, in content, in any other post meta (page builders keep
-// image URLs there), or as the site icon or logo.
+// image URLs there), as the site icon or logo, or by file name in options
+// (widgets, theme mods such as a header image), term meta or user meta.
+// Transients are caches, not references, so they don't count.
 $attachment_in_use = static function ( $attachment_id ) use ( $wpdb ) {
 	if ( (int) get_option( 'site_icon' ) === $attachment_id || (int) get_theme_mod( 'custom_logo' ) === $attachment_id ) {
 		return true;
@@ -77,6 +79,16 @@ $attachment_in_use = static function ( $attachment_id ) use ( $wpdb ) {
 		$name     = '%' . $wpdb->esc_like( wp_basename( $file ) ) . '%';
 		$counts[] = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE ID <> %d AND post_content LIKE %s", $attachment_id, $name ) );
 		$counts[] = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id <> %d AND meta_value LIKE %s", $attachment_id, $name ) );
+		$counts[] = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->options} WHERE option_value LIKE %s AND option_name NOT LIKE %s AND option_name NOT LIKE %s",
+				$name,
+				$wpdb->esc_like( '_transient_' ) . '%',
+				$wpdb->esc_like( '_site_transient_' ) . '%'
+			)
+		);
+		$counts[] = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->termmeta} WHERE meta_value LIKE %s", $name ) );
+		$counts[] = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE meta_value LIKE %s", $name ) );
 	}
 
 	foreach ( $counts as $count ) {

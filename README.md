@@ -91,7 +91,7 @@ After each run the seeder reads everything back and checks it. Every demo post m
 
 `uninstall.php` deletes the demo page and demo posts first, then each seeded image and term only if nothing left on the site uses it. That covers:
 - a post of any status that still has the term;
-- an image that is a featured image, appears in post content or other post meta, or is the site icon or logo.
+- an image that is a featured image, the site icon or the logo, or whose file name appears in post content, post meta, options (widgets, theme mods such as a header image), term meta or user meta. Transients don't count, because they're caches.
 
 If one of those checks fails, the item is kept. Cover images are generated as SVG text, so activation needs no network access and no PHP image extension.
 
