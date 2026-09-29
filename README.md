@@ -85,7 +85,7 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 - **Until it loads**, text shows in a fallback face: Arial with `size-adjust`, `ascent-override` and `descent-override` set from both fonts' metric tables (average width of English text, ascent and descent), so the swap doesn't move the text. On the demo page this took layout shift from 0.001 to 0.
 - **No preload.** I tried `<link rel="preload">` for the font, printed only on pages with one of the blocks, and measured five Lighthouse runs each way. It didn't improve the median (mobile performance 97 either way, LCP 2004 ms with it, 2000 ms without). The largest element is the first cover image, not text, and the preload started the font at the same moment as that image, so the two shared the bandwidth. Without the preload, the image starts about 140 ms before the font. So I removed it.
 
-**A small design system.** There are three text sizes, two weights, one accent colour and two corner radii, all defined as tokens in `assets/css/tokens.css`. Stylelint rejects any other size, weight, radius or hex colour outside `tokens.css`. Each mode (light and dark) sets one text colour and one background, and the muted text, borders and surfaces are mixed from that text colour.
+**A small design system.** There are three text sizes, two weights, one accent colour and two corner radii, all defined as tokens in `src/tokens.css`. Stylelint rejects any other size, weight, radius or hex colour outside `tokens.css`. The build minifies it like the blocks' stylesheets (4.7 KB of source with comments becomes 2.4 KB), and WordPress prints it inline in `<head>`: the webpack config adds it as a stylesheet-only entry and points its font URL at `assets/fonts/`, where the font stays with its licence. Each mode (light and dark) sets one text colour and one background, and the muted text, borders and surfaces are mixed from that text colour.
 
 **Light and dark mode, for the plugin's blocks only.** The switch in the filter bar (a moon in light mode, a sun in dark mode) changes the filter, grid and pagination together. It doesn't change the theme's header, footer or page, because a plugin shouldn't restyle a whole site.
 - A first visit follows the device's setting (`prefers-color-scheme`).
@@ -202,7 +202,9 @@ includes/
   class-wmpgf-single-template.php  Single post: block template, or the PHP one on classic themes
   demo-content.php               The 12 demo posts
 templates/single-wmpgf_post.php  Single post template for classic themes without one
-assets/css/tokens.css            Design tokens and the font
+src/tokens.css                   Design tokens and the font's @font-face (built to build/tokens.css)
+assets/fonts/                    The font and its licence
+webpack.config.js                @wordpress/scripts' config, plus the tokens
 src/shared/                      url.js (URL builder), navigate.js (router call)
 src/blocks/*/                    block.json, edit.js, render.php, view.js, style.css
 tests/php/                       PHPUnit

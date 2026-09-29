@@ -102,19 +102,21 @@ class WMPGF_Blocks {
 	}
 
 	/**
-	 * Registers the shared design tokens, then every block from its
-	 * build/blocks/<name>/block.json (each lists "wmpgf-tokens" as a style).
+	 * Registers the shared design tokens (built from src/tokens.css), then
+	 * every block from its build/blocks/<name>/block.json (each lists
+	 * "wmpgf-tokens" as a style).
 	 */
 	public function register_blocks() {
+		$tokens = 'build/tokens.css';
 		wp_register_style(
 			'wmpgf-tokens',
-			WMPGF_URL . 'assets/css/tokens.css',
+			WMPGF_URL . $tokens,
 			array(),
-			(string) filemtime( WMPGF_DIR . 'assets/css/tokens.css' )
+			(string) filemtime( WMPGF_DIR . $tokens )
 		);
-		// With a path, core can print these 2.4 KB inline with the blocks'
-		// own styles instead of as a render-blocking <link>.
-		wp_style_add_data( 'wmpgf-tokens', 'path', WMPGF_DIR . 'assets/css/tokens.css' );
+		// With a path, core can print them inline with the blocks' own
+		// styles instead of as a render-blocking <link>.
+		wp_style_add_data( 'wmpgf-tokens', 'path', WMPGF_DIR . $tokens );
 
 		foreach ( $this->blocks as $block ) {
 			$path = WMPGF_DIR . 'build/blocks/' . $block;

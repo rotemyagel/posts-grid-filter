@@ -49,11 +49,16 @@ class Test_WMPGF_Blocks extends WMPGF_TestCase {
 
 		$this->assertFalse( $registered->src, 'No <link>: the file is printed inline.' );
 		$this->assertStringContainsString( '--wmpgf-text-s', $inline );
+		// Built like the blocks' stylesheets: minified, without comments.
+		$this->assertStringNotContainsString( '/*', $inline );
+		$this->assertLessThan( 3, substr_count( $inline, "\n" ) );
 		// The font's relative URL is rewritten from the site root.
 		$this->assertStringContainsString( 'url(/wp-content/plugins/', str_replace( wp_parse_url( home_url(), PHP_URL_PATH ) ?? '', '', $inline ) );
 		$this->assertStringNotContainsString( 'url(../fonts/', $inline );
 		// A metric-matched stand-in keeps text in place when the font swaps in.
-		$this->assertMatchesRegularExpression( '/font-family:\s*"Bricolage Grotesque Fallback";\s*src:\s*local\("Arial"\)/', $inline );
-		$this->assertStringContainsString( '"Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui', $inline );
+		$compact = str_replace( array( ' ', '"' ), '', $inline );
+		$this->assertMatchesRegularExpression( '/@font-face\{[^}]*font-family:BricolageGrotesqueFallback;[^}]*size-adjust:106\.51%/', $compact );
+		$this->assertStringContainsString( 'src:local(Arial)', $compact );
+		$this->assertStringContainsString( '--wmpgf-font:BricolageGrotesque,BricolageGrotesqueFallback,system-ui', $compact );
 	}
 }

@@ -14,7 +14,7 @@
 	},
 	"overrides": [
 		{
-			"files": [ "assets/css/tokens.css" ],
+			"files": [ "src/tokens.css" ],
 			"rules": {
 				"color-no-hex": null,
 				"declaration-property-value-allowed-list": null
