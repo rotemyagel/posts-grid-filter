@@ -4,8 +4,16 @@ import {
 	useBlockProps,
 	useInnerBlocksProps,
 	InspectorControls,
+	MediaUpload,
+	MediaUploadCheck,
 } from '@wordpress/block-editor';
-import { Disabled, PanelBody, RangeControl } from '@wordpress/components';
+import {
+	BaseControl,
+	Button,
+	Disabled,
+	PanelBody,
+	RangeControl,
+} from '@wordpress/components';
 import { useSuspenseSelect } from '@wordpress/data';
 import { Suspense, useMemo } from '@wordpress/element';
 import { store as coreStore } from '@wordpress/core-data';
@@ -33,11 +41,12 @@ const toText = ( html ) =>
  * nearest <Suspense> shows its fallback instead.
  *
  * @param {Object} props
- * @param {number} props.columns      2, 3 or 4.
- * @param {number} props.postsPerPage Page size.
+ * @param {number} props.columns         2, 3 or 4.
+ * @param {number} props.postsPerPage    Page size.
+ * @param {number} props.fallbackImageId Image for posts without one, or 0.
  * @return {Element} Grid preview.
  */
-function PreviewCards( { columns, postsPerPage } ) {
+function PreviewCards( { columns, postsPerPage, fallbackImageId } ) {
 	// The first page of the unfiltered grid, as a visitor first sees it.
 	// Filters and pages only exist on the frontend, in the URL. Only store
 	// values are returned here, so the result is stable between calls.
@@ -48,9 +57,10 @@ function PreviewCards( { columns, postsPerPage } ) {
 				per_page: postsPerPage,
 				_fields: 'id,link,title,excerpt,featured_media,wmpgf_category',
 			} );
-			const imageIds = ( records ?? [] )
-				.map( ( post ) => post.featured_media )
-				.filter( Boolean );
+			const imageIds = [
+				...( records ?? [] ).map( ( post ) => post.featured_media ),
+				fallbackImageId,
+			].filter( Boolean );
 
 			return {
 				posts: records,
@@ -69,14 +79,17 @@ function PreviewCards( { columns, postsPerPage } ) {
 					: null,
 			};
 		},
-		[ postsPerPage ]
+		[ postsPerPage, fallbackImageId ]
 	);
 
 	const cards = useMemo( () => {
 		const find = ( list, id ) => list?.find( ( item ) => item.id === id );
 
 		return posts.map( ( post ) => {
-			const image = find( images, post.featured_media );
+			// A missing or deleted featured image falls back, as on the frontend.
+			const image =
+				find( images, post.featured_media ) ??
+				find( images, fallbackImageId );
 			const size =
 				image?.media_details?.sizes?.medium ?? image?.media_details;
 			return {
@@ -96,13 +109,13 @@ function PreviewCards( { columns, postsPerPage } ) {
 					find( categories, post.wmpgf_category?.[ 0 ] )?.name ?? '',
 			};
 		} );
-	}, [ posts, categories, images ] );
+	}, [ posts, categories, images, fallbackImageId ] );
 
 	return <GridPreview cards={ cards } columns={ columns } />;
 }
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { columns, postsPerPage } = attributes;
+	const { columns, postsPerPage, fallbackImageId } = attributes;
 
 	const blockProps = useBlockProps();
 	const innerBlocksProps = useInnerBlocksProps(
@@ -138,6 +151,68 @@ export default function Edit( { attributes, setAttributes } ) {
 							setAttributes( { postsPerPage: value } )
 						}
 					/>
+					<MediaUploadCheck>
+						<BaseControl
+							__nextHasNoMarginBottom
+							id="wmpgf-fallback-image"
+							help={ __(
+								'Shown for posts without a featured image. Without one, a neutral placeholder is shown.',
+								'wm-posts-grid-filter'
+							) }
+						>
+							<BaseControl.VisualLabel>
+								{ __(
+									'Fallback image',
+									'wm-posts-grid-filter'
+								) }
+							</BaseControl.VisualLabel>
+							<MediaUpload
+								allowedTypes={ [ 'image' ] }
+								value={ fallbackImageId }
+								onSelect={ ( media ) =>
+									setAttributes( {
+										fallbackImageId: media.id,
+									} )
+								}
+								render={ ( { open } ) => (
+									<div>
+										<Button
+											__next40pxDefaultSize
+											aria-describedby="wmpgf-fallback-image__help"
+											variant="secondary"
+											onClick={ open }
+										>
+											{ fallbackImageId
+												? __(
+														'Replace image',
+														'wm-posts-grid-filter'
+												  )
+												: __(
+														'Choose image',
+														'wm-posts-grid-filter'
+												  ) }
+										</Button>
+										{ !! fallbackImageId && (
+											<Button
+												variant="link"
+												isDestructive
+												onClick={ () =>
+													setAttributes( {
+														fallbackImageId: 0,
+													} )
+												}
+											>
+												{ __(
+													'Remove',
+													'wm-posts-grid-filter'
+												) }
+											</Button>
+										) }
+									</div>
+								) }
+							/>
+						</BaseControl>
+					</MediaUploadCheck>
 				</PanelBody>
 			</InspectorControls>
 			<div { ...blockProps }>
@@ -155,6 +230,7 @@ export default function Edit( { attributes, setAttributes } ) {
 						<PreviewCards
 							columns={ columns }
 							postsPerPage={ postsPerPage }
+							fallbackImageId={ fallbackImageId }
 						/>
 					</Suspense>
 				</Disabled>

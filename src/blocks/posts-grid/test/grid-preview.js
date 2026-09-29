@@ -39,8 +39,8 @@ describe( 'GridPreview', () => {
 	it( 'uses exactly the classes render.php uses', () => {
 		const php = readFileSync( join( __dirname, '../render.php' ), 'utf8' );
 		const preview =
-			render( { cards: [ card ] } ).innerHTML +
-			render( { cards: [] } ).innerHTML;
+			render( { cards: [ card, { ...card, id: 2, imageUrl: '' } ] } )
+				.innerHTML + render( { cards: [] } ).innerHTML;
 
 		expect( [ ...gridClasses( preview ) ].sort() ).toEqual(
 			[ ...gridClasses( php ) ].sort()
@@ -77,12 +77,19 @@ describe( 'GridPreview', () => {
 		expect( title.children ).toHaveLength( 0 );
 	} );
 
-	it( 'leaves out the image and label when a post has none', () => {
+	it( 'shows a placeholder the size of a cover when a post has no image', () => {
 		const article = render( {
 			cards: [ { ...card, imageUrl: '', category: '' } ],
 		} ).querySelector( 'article' );
+		const thumb = article.firstElementChild;
 
-		expect( article.querySelector( '.wmpgf-grid__thumb' ) ).toBeNull();
+		expect( thumb.className ).toBe(
+			'wmpgf-grid__thumb wmpgf-grid__thumb--placeholder'
+		);
+		expect( thumb.querySelector( 'img' ) ).toBeNull();
+		expect(
+			thumb.querySelector( 'svg' ).getAttribute( 'aria-hidden' )
+		).toBe( 'true' );
 		expect( article.querySelector( '.wmpgf-grid__category' ) ).toBeNull();
 	} );
 

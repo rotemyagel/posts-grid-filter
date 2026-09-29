@@ -10,7 +10,8 @@
 	"textdomain": "wm-posts-grid-filter",
 	"attributes": {
 		"columns": { "type": "number", "default": 3 },
-		"postsPerPage": { "type": "number", "default": 6 }
+		"postsPerPage": { "type": "number", "default": 6 },
+		"fallbackImageId": { "type": "number", "default": 0 }
 	},
 	"providesContext": {
 		"wmpgf/postsPerPage": "postsPerPage"

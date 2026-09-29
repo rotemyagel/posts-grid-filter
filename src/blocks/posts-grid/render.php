@@ -36,7 +36,14 @@ $labels  = WMPGF_Query::primary_categories( wp_list_pluck( $query->posts, 'ID' )
 $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-grid-block' ) );
 
 // Card position, for how soon its image loads (see WMPGF_Image_Loading).
-$card_index = 0;
+$card_index  = 0;
+$first_image = true;
+
+// Shown for posts without a featured image; without one, a placeholder.
+$fallback_image_id = (int) ( $attributes['fallbackImageId'] ?? 0 );
+if ( $fallback_image_id && ! wp_attachment_is_image( $fallback_image_id ) ) {
+	$fallback_image_id = 0;
+}
 ?>
 <div
 	<?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -54,7 +61,11 @@ $card_index = 0;
 				$query->the_post();
 				?>
 				<article class="wmpgf-grid__card">
-					<?php if ( has_post_thumbnail() ) : ?>
+					<?php
+					// A featured image whose attachment was deleted counts as none.
+					$has_thumbnail = has_post_thumbnail() && wp_attachment_is_image( get_post_thumbnail_id() );
+					?>
+					<?php if ( $has_thumbnail || $fallback_image_id ) : ?>
 						<div
 							class="wmpgf-grid__thumb"
 							data-wp-context='{"imageLoading":false}'
@@ -62,17 +73,25 @@ $card_index = 0;
 						>
 							<?php
 							// Decorative: the title below says the same thing.
-							the_post_thumbnail(
-								'medium',
-								array(
-									'alt'               => '',
-									WMPGF_Image_Loading::ATTRIBUTE => WMPGF_Image_Loading::role( $card_index, $columns ),
-									'data-wp-init'      => 'callbacks.watchImage',
-									'data-wp-on--load'  => 'actions.imageLoaded',
-									'data-wp-on--error' => 'actions.imageLoaded',
-								)
+							$image_attributes = array(
+								'alt'               => '',
+								WMPGF_Image_Loading::ATTRIBUTE => WMPGF_Image_Loading::role( $card_index, $columns, $first_image ),
+								'data-wp-init'      => 'callbacks.watchImage',
+								'data-wp-on--load'  => 'actions.imageLoaded',
+								'data-wp-on--error' => 'actions.imageLoaded',
 							);
+							if ( $has_thumbnail ) {
+								the_post_thumbnail( 'medium', $image_attributes );
+							} else {
+								echo wp_get_attachment_image( $fallback_image_id, 'medium', false, $image_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by core.
+							}
+							$first_image = false;
 							?>
+						</div>
+					<?php else : ?>
+						<?php // No image at all: a neutral placeholder the size of a cover, so the row still lines up. ?>
+						<div class="wmpgf-grid__thumb wmpgf-grid__thumb--placeholder">
+							<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="9.5" r="1.75" fill="currentColor"/><path d="M3.75 17.5l5-5 3.5 3.5 2.5-2.5 5.5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
 						</div>
 					<?php endif; ?>
 					<?php if ( isset( $labels[ get_the_ID() ] ) ) : ?>

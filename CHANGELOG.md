@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New: posts without a featured image no longer break the row. The grid shows its fallback image (a new "Fallback image" setting in the sidebar), or else a neutral placeholder the size of a cover. A featured image that isn't a usable image counts as none. Image loading takes its cue from the first card that has an image.
+
 ## 2.2.0 (2026-09-29)
 
 - New: loading skeletons. On the frontend, a filter or page change slower than 200 ms turns the cards into placeholder shapes; card images shimmer until they load, then fade in.

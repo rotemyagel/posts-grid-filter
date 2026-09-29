@@ -56,14 +56,17 @@ class WMPGF_Image_Loading {
 	}
 
 	/**
-	 * The role of a card image, for its ATTRIBUTE.
+	 * The role of a card image, for its ATTRIBUTE. The grid's first image
+	 * anchors the decision; when the first card has no image, the first card
+	 * that has one takes that role.
 	 *
-	 * @param int $index   Card index on the page, from 0.
-	 * @param int $columns Grid columns.
+	 * @param int  $index       Card index on the page, from 0.
+	 * @param int  $columns     Grid columns.
+	 * @param bool $first_image Whether no earlier card had an image.
 	 * @return string '' for images after the second row.
 	 */
-	public static function role( $index, $columns ) {
-		if ( 0 === $index ) {
+	public static function role( $index, $columns, $first_image ) {
+		if ( $first_image ) {
 			return 'first';
 		}
 		if ( $index < $columns ) {

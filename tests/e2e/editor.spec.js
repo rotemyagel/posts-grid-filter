@@ -120,6 +120,32 @@ test.describe( 'Blocks in the editor', () => {
 		await expect( grid.locator( '.wmpgf-grid__card' ) ).toHaveCount( 3 );
 	} );
 
+	test( 'the grid offers a fallback image for posts without one', async ( {
+		page,
+	} ) => {
+		await page.evaluate( () => {
+			const { select, dispatch } = window.wp.data;
+			const grid = select( 'core/block-editor' )
+				.getBlocks()
+				.find( ( block ) => block.name === 'wmpgf/posts-grid' );
+			dispatch( 'core/block-editor' ).selectBlock( grid.clientId );
+			dispatch( 'core/interface' ).enableComplementaryArea(
+				'core',
+				'edit-post/block'
+			);
+		} );
+
+		await expect(
+			page.getByText( 'Fallback image', { exact: true } )
+		).toBeVisible();
+		// Its visible text is its name, and the help text describes it.
+		const choose = page.getByRole( 'button', { name: 'Choose image' } );
+		await expect( choose ).toBeVisible();
+		await expect( choose ).toHaveAccessibleDescription(
+			/Shown for posts without a featured image/
+		);
+	} );
+
 	test( 'the light/dark switch can be turned off per filter', async ( {
 		page,
 	} ) => {

@@ -31,7 +31,7 @@ This starts WordPress at http://localhost:8888 with the plugin active and pretty
 
 Three blocks, grouped under "WM Widgets" in the inserter:
 
-- **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns and posts per page.
+- **Posts Grid** (`wmpgf/posts-grid`). The grid shows 2, 3 or 4 columns, and the columns step down when the block itself gets narrow, not only the screen. In the sidebar you choose columns and posts per page. A post without a featured image shows the grid's fallback image, set in the sidebar; without one, a neutral placeholder the size of a cover keeps the row aligned. A featured image that isn't a usable image (a PDF, or an ID left behind by a database edit) counts as none.
 - **Pagination** (`wmpgf/pagination`). This lives inside the grid and can't be used on its own. It has Prev and Next links, "Page 2 of 3", and a posts-per-page select for visitors (6, 12 or 24).
 - **Posts Filter** (`wmpgf/posts-filter`). It has a search field, category and tag pills, a result count, "Clear filters" and a light/dark switch. It isn't nested in the grid; put it anywhere on the page.
 

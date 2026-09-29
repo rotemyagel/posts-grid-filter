@@ -75,6 +75,17 @@
 	opacity: 0;
 }
 
+/* A post with no featured image and no fallback image: a neutral shape the
+   size of a cover, so the cards in a row still line up. */
+.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb--placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 3 / 2;
+	background-color: var(--wmpgf-surface);
+	color: var(--wmpgf-muted);
+}
+
 .wp-block-wmpgf-posts-grid .wmpgf-grid__category {
 	margin: 0;
 	font-size: var(--wmpgf-text-s);

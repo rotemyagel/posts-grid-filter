@@ -20,6 +20,10 @@
     "postsPerPage": {
       "type": "number",
       "default": 6
+    },
+    "fallbackImageId": {
+      "type": "number",
+      "default": 0
     }
   },
   "providesContext": {
