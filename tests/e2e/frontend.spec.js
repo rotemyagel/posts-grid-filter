@@ -297,6 +297,11 @@ test.describe( 'Loading states', () => {
 		await expect( page.locator( 'img[fetchpriority="high"]' ) ).toHaveCount(
 			1
 		);
+		// Every image has its size, so the page doesn't shift as they arrive.
+		for ( const image of await images.all() ) {
+			await expect( image ).toHaveAttribute( 'width', /^[1-9]\d*$/ );
+			await expect( image ).toHaveAttribute( 'height', /^[1-9]\d*$/ );
+		}
 	} );
 
 	test( 'an image’s placeholder is its thumbnail’s background, with no script', async ( {
