@@ -66,19 +66,13 @@ if ( $fallback_image_id && ! wp_attachment_is_image( $fallback_image_id ) ) {
 					$has_thumbnail = has_post_thumbnail() && wp_attachment_is_image( get_post_thumbnail_id() );
 					?>
 					<?php if ( $has_thumbnail || $fallback_image_id ) : ?>
-						<div
-							class="wmpgf-grid__thumb"
-							data-wp-context='{"imageLoading":false}'
-							data-wp-class--is-loading="context.imageLoading"
-						>
+						<?php // Its background is the placeholder until the image paints over it. ?>
+						<div class="wmpgf-grid__thumb">
 							<?php
 							// Decorative: the title below says the same thing.
 							$image_attributes = array(
-								'alt'               => '',
+								'alt' => '',
 								WMPGF_Image_Loading::ATTRIBUTE => WMPGF_Image_Loading::role( $card_index, $columns, $first_image ),
-								'data-wp-init'      => 'callbacks.watchImage',
-								'data-wp-on--load'  => 'actions.imageLoaded',
-								'data-wp-on--error' => 'actions.imageLoaded',
 							);
 							if ( $has_thumbnail ) {
 								the_post_thumbnail( 'medium', $image_attributes );

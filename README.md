@@ -47,7 +47,7 @@ Filter rules: several categories match any of them (OR), and the same goes for t
 
 ## How a filter click travels
 
-1. **Click.** The checkbox's `data-wp-on--change` runs `toggleCategory` in the shared `wmpgf` store, which updates `state.selectedCategories`.
+1. **Click.** The checkbox's change event bubbles up to its group's fieldset, whose `data-wp-on-async--change` runs `toggleCategory` in the shared `wmpgf` store. The action reads the term's slug from the checkbox's own `value` and updates `state.selectedCategories`.
 2. **URL.** The action builds the new address with `urlWith()`, for example `?wmpgf-category=design,culture`, and resets the page to 1.
 3. **Router.** `navigate()` from `@wordpress/interactivity-router` requests that URL like any page load and adds it to the browser history.
 4. **Server.** `WMPGF_Request` reads the parameters, `WMPGF_Query` runs the query, and the grid's `render.php` prints the cards and pagination.
@@ -96,17 +96,23 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Loading states: skeletons, Suspense and lazy images.**
 - **Frontend skeleton:** when a filter or page change takes longer than 200 ms, the current cards turn into placeholder shapes (a pill for the category, rounded blocks for the title and excerpt) until the new page arrives. A quicker load only dims the grid, because a skeleton that shows for a split second reads as a flicker.
-- **Image placeholders:** each card image shimmers until it has loaded, then fades in; a broken image stops shimmering too.
+- **Image placeholders:** each card's thumbnail has the surface colour as its background, and the image covers it when it paints. That takes no script. An earlier version shimmered each image until its `load` event, which cost five directives per card for the runtime to hydrate (see "Less work while the page hydrates").
 - **Lazy images**, following web.dev's guidance on browser-level lazy loading, and measured in Chrome:
   - The page's image optimiser decides first. That's WordPress core, or a plugin that replaces it, such as Elementor's optimised image loading: the first few content images are eager (the first with `fetchpriority="high"`), and the rest lazy. The grid follows that decision for its first image, because the optimiser counts every image on the page.
   - If the first image is eager (the grid starts near the top), the rest of the first row is eager too. Otherwise a 4-column row has its 4th image lazy though it's in view.
   - The second row then starts loading right away at `fetchpriority="low"`. It's in view on most laptop and desktop screens, and a lazy image can't start until the page's CSS has loaded. Measured on Fast 3G at 1280×800, the second row started at about 1.6 s instead of about 4.1 s. On a phone it's below the fold, but Chrome would load most of it at once anyway (lazy images within about 1250 px are fetched immediately), so it costs one extra small request. Low priority keeps it from delaying the first image.
   - Everything after the second row is lazy, and nothing changes when the grid starts further down the page.
   - `WMPGF_Image_Loading` makes these changes after the optimiser's own: on `wp_content_img_tag` for grids in post content (where core decides late), and on `wp_get_loading_optimization_attributes` elsewhere. Each card image carries `data-wmpgf-load` (first, first-row or second-row).
-  - Every image has `width` and `height` and a CSS `aspect-ratio`, so nothing shifts as images arrive (measured CLS 0.001 on a phone, 0.008 on desktop). The loading placeholder hides the image with `opacity`, not `display: none`, so the browser still loads it. No image is both lazy and high priority, and a page has one high-priority image.
+  - Every image has `width` and `height` and a CSS `aspect-ratio`, so nothing shifts as images arrive (measured CLS 0.001 on a phone, 0.008 on desktop). The skeleton hides the images with `opacity`, not `display: none`, so the browser still loads them. No image is both lazy and high priority, and a page has one high-priority image.
   - The editor preview loads its first row eagerly and the rest lazily.
 - **Editor Suspense:** the grid and filter previews read their data with `useSuspenseSelect` inside `<Suspense>`. Until the posts, categories and images have loaded, the fallback is a skeleton in the block's final layout (the chosen columns and page size), so nothing jumps when the content arrives. The filter's count and its pills are separate boundaries, and each appears as soon as its own data arrives.
 - **Reduced motion:** placeholders keep their shape without the moving sweep.
+
+**Less work while the page hydrates.** Before a page is interactive, the Interactivity API runtime walks every `data-wp-*` attribute and binds it. The demo page had 80 of ours; now it has under 40.
+- The image placeholder is CSS only (see above), which removed five directives per card.
+- The pills carry no `data-wp-context` and no handler of their own. Each group's fieldset has one `data-wp-on-async--change`, which the checkboxes' change events bubble up to. Each checkbox keeps one `data-wp-bind--checked`, whose getter reads the slug from the checkbox's `value`.
+- Handlers that don't call `preventDefault()` (search input, pill changes, page size, the light/dark switch) use `data-wp-on-async`. The runtime yields to the browser before running them, so a keystroke or click never waits for them.
+- The three that do (submitting the search, "Clear filters", Prev/Next) are wrapped in `withSyncEvent()`, which WordPress 6.8 introduced; on 6.7, every handler already runs synchronously.
 
 **Code splitting only where it pays off.** The Interactivity Router, the largest frontend dependency, is a lazy chunk: it's imported the first time someone filters or pages, so visitors who never do never download it. The editor scripts are not split with `React.lazy`. They are 3 to 5 KB each, and a separate chunk would add a request before the preview could render, making the editor slower rather than faster.
 

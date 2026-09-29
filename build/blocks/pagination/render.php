@@ -93,7 +93,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-pag
 			<select
 				id="<?php echo esc_attr( $per_page_id ); ?>"
 				name="<?php echo esc_attr( WMPGF_Request::PER_PAGE_PARAM ); ?>"
-				data-wp-on--change="actions.changePerPage"
+				data-wp-on-async--change="actions.changePerPage"
 			>
 				<?php foreach ( $per_page_options as $option ) : ?>
 					<option value="<?php echo (int) $option; ?>" <?php selected( $option, $page_size ); ?>><?php echo (int) $option; ?></option>

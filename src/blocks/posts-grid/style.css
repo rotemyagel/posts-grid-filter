@@ -50,10 +50,13 @@
 	gap: 8px;
 }
 
+/* The background is the image's placeholder: a surface-coloured shape the
+   size of the cover, which the image covers once it paints. No script. */
 .wp-block-wmpgf-posts-grid .wmpgf-grid__thumb {
 	margin-bottom: 8px;
 	overflow: hidden;
 	border-radius: var(--wmpgf-radius);
+	background-color: var(--wmpgf-surface);
 }
 
 .wp-block-wmpgf-posts-grid .wmpgf-grid__thumb img {
@@ -64,14 +67,11 @@
 	/* Reserves space before the image loads, so filtering doesn't shift layout. */
 	aspect-ratio: 3 / 2;
 	object-fit: cover;
-	background-color: var(--wmpgf-surface);
 	transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-/* Hidden while a skeleton stands in, or until the image has loaded, when
-   it fades in over its placeholder. */
-.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__thumb img,
-.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading img {
+/* Hidden while a skeleton stands in for the next page's cards. */
+.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__thumb img {
 	opacity: 0;
 }
 
@@ -169,8 +169,7 @@
 }
 
 .wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > *,
-.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > *,
-.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading {
+.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > * {
 	background: var(--wmpgf-shimmer);
 	background-size: 200% 100%;
 	animation: wmpgf-shimmer 1.4s linear infinite;
@@ -217,8 +216,7 @@
 
 	/* Placeholders keep their shape, without the sweep. */
 	.wp-block-wmpgf-posts-grid.is-skeleton .wmpgf-grid__card > *,
-	.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > *,
-	.wp-block-wmpgf-posts-grid .wmpgf-grid__thumb.is-loading {
+	.wp-block-wmpgf-posts-grid .wmpgf-grid__card.is-skeleton > * {
 		animation: none;
 	}
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Improved: less work while the page hydrates. The plugin's blocks on the demo page carry 32 `data-wp-*` directives instead of 80. The image placeholder is the thumbnail's background colour (no script); the pills share one change handler per group and read their slug from the checkbox; handlers that don't cancel the event run with `data-wp-on-async`, and the three that do use `withSyncEvent()` where WordPress has it.
 - Changed: wp-env serves production scripts (`SCRIPT_DEBUG` off) and writes notices to `debug.log` only (`WP_DEBUG_DISPLAY` off), so Lighthouse runs measure what a live site ships.
 - Fixed: on block themes such as Twenty Twenty-Five, a single Grid Post printed a deprecation notice and had no doctype, viewport tag, theme header or footer, because the PHP template called `get_header()` and block themes have no `header.php`. Block themes now get a block template made of core blocks; classic themes keep the PHP template.
 

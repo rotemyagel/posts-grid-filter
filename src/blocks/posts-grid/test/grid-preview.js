@@ -114,12 +114,12 @@ describe( 'GridPreview', () => {
 		} );
 	} );
 
-	it( 'shows a placeholder until an image has loaded', () => {
+	it( 'has no loading state: the thumbnail’s background is the placeholder', () => {
 		const thumb = render( { cards: [ card ] } ).querySelector(
 			'.wmpgf-grid__thumb'
 		);
 
-		expect( thumb.classList.contains( 'is-loading' ) ).toBe( true );
+		expect( thumb.className ).toBe( 'wmpgf-grid__thumb' );
 	} );
 
 	it( 'sets the column class', () => {

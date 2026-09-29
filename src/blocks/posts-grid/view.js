@@ -1,27 +1,15 @@
 /**
  * The grid's markup comes from render.php, and filter and page changes
- * replace it through the router. This store owns only its loading states:
- * the dim and the skeleton while a new page is on its way, and each card
- * image's placeholder until the image has loaded.
+ * replace it through the router. This store owns only the loading state of
+ * those changes: the dim, and the skeleton when one is slow. Card images
+ * need no script: each thumbnail's background is its placeholder, and the
+ * image covers it once it paints.
  */
-import { store, getContext, getElement } from '@wordpress/interactivity';
+import { store } from '@wordpress/interactivity';
 
 store( 'wmpgf', {
 	state: {
 		isLoading: false,
 		showSkeleton: false,
-	},
-	actions: {
-		// Fires on load and on error, so a broken image never shimmers forever.
-		imageLoaded() {
-			getContext().imageLoading = false;
-		},
-	},
-	callbacks: {
-		// An image that finished before this script ran never fires load,
-		// so only one still loading gets the placeholder.
-		watchImage() {
-			getContext().imageLoading = ! getElement().ref.complete;
-		},
 	},
 } );

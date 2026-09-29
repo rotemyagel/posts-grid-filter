@@ -4,13 +4,13 @@
  * if the two templates stop using the same classes.
  */
 import { __ } from '@wordpress/i18n';
-import { useState } from '@wordpress/element';
 
 /**
- * A card image that shimmers until it has loaded, like the frontend's.
- * Decorative, as in render.php: the title says the same. The first row is
- * in view, so it loads right away; later rows load lazily. Width and
- * height give the browser the image's shape before it arrives.
+ * A card image. Until it paints, the thumbnail's background shows in its
+ * place, as on the frontend. Decorative, as in render.php: the title says
+ * the same. The first row is in view, so it loads right away; later rows
+ * load lazily. Width and height give the browser the image's shape before
+ * it arrives.
  *
  * @param {Object}  props
  * @param {string}  props.src    Image URL.
@@ -20,11 +20,8 @@ import { useState } from '@wordpress/element';
  * @return {Element} Thumbnail.
  */
 function Thumb( { src, width, height, eager } ) {
-	const [ loaded, setLoaded ] = useState( false );
-	const done = () => setLoaded( true );
-
 	return (
-		<div className={ `wmpgf-grid__thumb${ loaded ? '' : ' is-loading' }` }>
+		<div className="wmpgf-grid__thumb">
 			<img
 				src={ src }
 				alt=""
@@ -32,8 +29,6 @@ function Thumb( { src, width, height, eager } ) {
 				height={ height || undefined }
 				loading={ eager ? 'eager' : 'lazy' }
 				decoding="async"
-				onLoad={ done }
-				onError={ done }
 			/>
 		</div>
 	);

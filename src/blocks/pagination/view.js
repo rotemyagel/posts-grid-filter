@@ -6,6 +6,7 @@
 import { store, getElement, getConfig } from '@wordpress/interactivity';
 import { urlWith } from '../../shared/url';
 import { navigateTo } from '../../shared/navigate';
+import { withSyncEvent } from '../../shared/sync-event';
 
 const { state } = store( 'wmpgf', {
 	actions: {
@@ -27,7 +28,7 @@ const { state } = store( 'wmpgf', {
 				?.querySelector( '.wmpgf-pagination__per-page select' )
 				?.focus();
 		},
-		*goToPage( event ) {
+		goToPage: withSyncEvent( function* ( event ) {
 			// Let the browser handle new-tab and new-window clicks.
 			if (
 				event.button !== 0 ||
@@ -57,6 +58,6 @@ const { state } = store( 'wmpgf', {
 			if ( region.getBoundingClientRect().top < 0 ) {
 				region.scrollIntoView( { block: 'start' } );
 			}
-		},
+		} ),
 	},
 } );

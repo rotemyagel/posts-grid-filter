@@ -299,7 +299,7 @@ test.describe( 'Loading states', () => {
 		);
 	} );
 
-	test( 'an image shows a placeholder until it has loaded', async ( {
+	test( 'an image’s placeholder is its thumbnail’s background, with no script', async ( {
 		page,
 	} ) => {
 		let release;
@@ -311,10 +311,50 @@ test.describe( 'Loading states', () => {
 		// Not waiting for "load": that would wait for the held images.
 		await page.goto( link, { waitUntil: 'domcontentloaded' } );
 		const thumb = page.locator( '.wmpgf-grid__thumb' ).first();
+		const image = thumb.locator( 'img' );
 
-		await expect( thumb ).toHaveClass( /is-loading/ );
+		// While the image is on its way, the thumbnail's own colour shows.
+		expect( await image.evaluate( ( img ) => img.naturalWidth ) ).toBe( 0 );
+		expect(
+			await thumb.evaluate(
+				( el ) => window.getComputedStyle( el ).backgroundColor
+			)
+		).not.toBe( 'rgba(0, 0, 0, 0)' );
+		// No directives for it: nothing for the runtime to hydrate.
+		expect(
+			await thumb.evaluate( ( el ) =>
+				[ el, ...el.querySelectorAll( '*' ) ].flatMap( ( node ) =>
+					node
+						.getAttributeNames()
+						.filter( ( name ) => name.startsWith( 'data-wp-' ) )
+				)
+			)
+		).toEqual( [] );
+
 		release();
-		await expect( thumb ).not.toHaveClass( /is-loading/ );
+		await expect
+			.poll( () => image.evaluate( ( img ) => img.naturalWidth ) )
+			.toBeGreaterThan( 0 );
+	} );
+
+	test( 'the plugin’s blocks carry fewer than 40 directives to hydrate', async ( {
+		page,
+	} ) => {
+		await page.goto( link );
+		const directives = await page.evaluate(
+			() =>
+				[
+					...document.querySelectorAll(
+						'[class*="wp-block-wmpgf-"], [class*="wp-block-wmpgf-"] *'
+					),
+				].flatMap( ( node ) =>
+					node
+						.getAttributeNames()
+						.filter( ( name ) => name.startsWith( 'data-wp-' ) )
+				).length
+		);
+
+		expect( directives ).toBeLessThan( 40 );
 	} );
 } );
 

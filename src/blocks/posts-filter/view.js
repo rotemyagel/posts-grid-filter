@@ -4,12 +4,13 @@
  */
 import {
 	store,
-	getContext,
+	getElement,
 	getConfig,
 	getServerState,
 } from '@wordpress/interactivity';
 import { urlWith } from '../../shared/url';
 import { navigateTo } from '../../shared/navigate';
+import { withSyncEvent } from '../../shared/sync-event';
 
 const toggle = ( list, value, on ) =>
 	on ? [ ...list, value ] : list.filter( ( item ) => item !== value );
@@ -35,11 +36,14 @@ function* applyFilters() {
 
 const { state } = store( 'wmpgf', {
 	state: {
+		// Each checkbox's own value is its term's slug, so it needs no context.
 		get isCategoryChecked() {
-			return state.selectedCategories.includes( getContext().slug );
+			return state.selectedCategories.includes(
+				getElement().attributes.value
+			);
 		},
 		get isTagChecked() {
-			return state.selectedTags.includes( getContext().slug );
+			return state.selectedTags.includes( getElement().attributes.value );
 		},
 		get isDark() {
 			return state.colorScheme === 'dark';
@@ -53,10 +57,11 @@ const { state } = store( 'wmpgf', {
 		},
 	},
 	actions: {
+		// On the group's fieldset: the event comes from the checkbox inside.
 		*toggleCategory( event ) {
 			state.selectedCategories = toggle(
 				state.selectedCategories,
-				getContext().slug,
+				event.target.value,
 				event.target.checked
 			);
 			yield* applyFilters();
@@ -64,7 +69,7 @@ const { state } = store( 'wmpgf', {
 		*toggleTag( event ) {
 			state.selectedTags = toggle(
 				state.selectedTags,
-				getContext().slug,
+				event.target.value,
 				event.target.checked
 			);
 			yield* applyFilters();
@@ -85,14 +90,14 @@ const { state } = store( 'wmpgf', {
 			}
 		},
 		// Enter in the search field: search now instead of after the pause.
-		*submitSearch( event ) {
+		submitSearch: withSyncEvent( function* ( event ) {
 			event.preventDefault();
 			const input = ++searchInput;
 			yield* applyFilters();
 			if ( input === searchInput ) {
 				searchPending = false;
 			}
-		},
+		} ),
 		// Saved on this browser; the attribute on <html> restyles every
 		// plugin block at once, and the inline script in render.php applies
 		// it again on the next page load before the blocks paint.
@@ -107,7 +112,7 @@ const { state } = store( 'wmpgf', {
 			}
 			state.colorScheme = next;
 		},
-		*clearFilters( event ) {
+		clearFilters: withSyncEvent( function* ( event ) {
 			event.preventDefault();
 			++searchInput;
 			state.selectedCategories = [];
@@ -115,7 +120,7 @@ const { state } = store( 'wmpgf', {
 			state.search = '';
 			yield* applyFilters();
 			searchPending = false;
-		},
+		} ),
 	},
 	callbacks: {
 		// The mode the blocks are showing: the saved choice, or else the

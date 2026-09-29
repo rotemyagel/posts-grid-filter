@@ -122,7 +122,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 					placeholder="<?php esc_attr_e( 'Search posts', 'wm-posts-grid-filter' ); ?>"
 					maxlength="<?php echo (int) WMPGF_Request::MAX_SEARCH_LENGTH; ?>"
 					autocomplete="off"
-					data-wp-on--input="actions.updateSearch"
+					data-wp-on-async--input="actions.updateSearch"
 					data-wp-bind--value="state.search"
 				/>
 			<?php endif; ?>
@@ -146,7 +146,7 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 					data-wp-init="callbacks.initColorScheme"
 					data-wp-bind--hidden="!state.colorScheme"
 					data-wp-bind--aria-pressed="state.isDark"
-					data-wp-on--click="actions.toggleColorScheme"
+					data-wp-on-async--click="actions.toggleColorScheme"
 				>
 					<?php // Moon in light mode (click for dark), sun in dark mode (click for light). ?>
 					<svg class="wmpgf-filter__scheme-icon wmpgf-filter__scheme-icon--moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -168,20 +168,17 @@ $wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'wmpgf-fil
 				continue;
 			}
 			?>
-			<fieldset class="wmpgf-filter__group">
+			<?php // One change handler per group: a checkbox's change event bubbles up to it. ?>
+			<fieldset class="wmpgf-filter__group" data-wp-on-async--change="<?php echo esc_attr( $group['action'] ); ?>">
 				<legend><?php echo esc_html( $group['legend'] ); ?></legend>
 				<div class="wmpgf-filter__options">
 					<?php foreach ( $group_terms as $group_term ) : ?>
-						<label
-							class="wmpgf-filter__option"
-							data-wp-context="<?php echo esc_attr( wp_json_encode( array( 'slug' => $group_term->slug ) ) ); ?>"
-						>
+						<label class="wmpgf-filter__option">
 							<input
 								type="checkbox"
 								name="<?php echo esc_attr( $group['param'] ); ?>[]"
 								value="<?php echo esc_attr( $group_term->slug ); ?>"
 								<?php checked( in_array( $group_term->slug, $group['selected'], true ) ); ?>
-								data-wp-on--change="<?php echo esc_attr( $group['action'] ); ?>"
 								data-wp-bind--checked="<?php echo esc_attr( $group['checked'] ); ?>"
 							/>
 							<?php echo esc_html( $group_term->name ); ?>
