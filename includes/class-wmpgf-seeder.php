@@ -19,6 +19,7 @@ class WMPGF_Seeder {
 
 	const SEEDED_OPTION    = 'wmpgf_seeded';
 	const DEMO_PAGE_OPTION = 'wmpgf_demo_page_id';
+	const DEMO_PAGE_SLUG   = 'posts-grid-filter-demo';
 
 	/**
 	 * What this seeder created, so uninstall.php deletes only that and never
@@ -28,6 +29,12 @@ class WMPGF_Seeder {
 	const SEEDED_ATTACHMENT_IDS_OPTION = 'wmpgf_seeded_attachment_ids';
 	const SEEDED_TERM_IDS_OPTION       = 'wmpgf_seeded_term_ids';
 	const DEMO_PAGE_OWNED_OPTION       = 'wmpgf_demo_page_owned';
+
+	/**
+	 * Post meta naming which demo-content.php entry a seeded post is. Only
+	 * read on posts in the "created" list, so a user's post can't claim it.
+	 */
+	const DEMO_KEY_META = '_wmpgf_demo_key';
 
 	/**
 	 * Category => color map used both as term data and as the seeded
@@ -57,9 +64,16 @@ class WMPGF_Seeder {
 	private $author_id = 0;
 
 	/**
-	 * Runs on plugin activation until one run completes. Every step reuses
-	 * what already exists (terms by name, posts by title, the page by slug),
-	 * so a retry after a partial failure fills the gaps without duplicates.
+	 * Runs on plugin activation until one run leaves complete demo content.
+	 *
+	 * Each run first repairs: it creates what is missing and fixes the
+	 * seeder's own posts and page (status, excerpt, cover, terms, blocks).
+	 * Then it re-reads everything and checks it. Only if every check passes
+	 * is seeding marked complete; otherwise the next activation tries again.
+	 *
+	 * Posts and pages are recognised as demo content only through the
+	 * seeder's own ownership records, never by title or slug, so a site
+	 * owner's content is never changed or counted as demo content.
 	 *
 	 * On multisite this seeds only the site it runs on; network activation
 	 * seeds the main site. See the README's known limitations.
@@ -72,44 +86,20 @@ class WMPGF_Seeder {
 		$this->author_id = $this->default_author_id();
 		$demo_posts      = require WMPGF_DIR . 'includes/demo-content.php';
 
-		$categories   = $this->create_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
-		$tags         = $this->create_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
-		$category_ids = $categories['ids'];
-		$tag_ids      = $tags['ids'];
+		$category_ids = $this->create_terms( array_keys( $this->categories ), WMPGF_Post_Type::TAX_CATEGORY );
+		$tag_ids      = $this->create_terms( $this->tags, WMPGF_Post_Type::TAX_TAG );
 
-		// Recorded before anything can stop the run, so uninstall still
-		// removes what this attempt created.
-		self::remember( self::SEEDED_TERM_IDS_OPTION, array_merge( $categories['created_ids'], $tags['created_ids'] ) );
-
-		if ( ! $category_ids || ! $tag_ids ) {
-			self::log( 'Seeding stopped: no usable categories or tags, so no demo posts were created. The next activation will retry.' );
-			return;
+		foreach ( $demo_posts as $index => $demo_post ) {
+			$this->repair_post( $demo_post, $index, $category_ids, $tag_ids );
 		}
+		$this->repair_demo_page();
 
-		$result = $this->create_posts( $demo_posts, $category_ids, $tag_ids );
-		self::remember( self::SEEDED_POST_IDS_OPTION, $result['created_post_ids'] );
-		self::remember( self::SEEDED_ATTACHMENT_IDS_OPTION, $result['attachment_ids'] );
-
-		$this->create_demo_page();
-
-		$complete = count( $category_ids ) === count( $this->categories )
-			&& count( $tag_ids ) === count( $this->tags )
-			&& count( $result['post_ids'] ) === count( $demo_posts )
-			&& get_option( self::DEMO_PAGE_OPTION );
-
-		if ( ! $complete ) {
-			self::log(
-				sprintf(
-					'Seeding incomplete: %d/%d categories, %d/%d tags, %d/%d posts, demo page %s. See the log lines above for each failure. The next activation will retry.',
-					count( $category_ids ),
-					count( $this->categories ),
-					count( $tag_ids ),
-					count( $this->tags ),
-					count( $result['post_ids'] ),
-					count( $demo_posts ),
-					get_option( self::DEMO_PAGE_OPTION ) ? 'created' : 'missing'
-				)
-			);
+		$problems = $this->problems( $demo_posts, $category_ids, $tag_ids );
+		if ( $problems ) {
+			foreach ( $problems as $problem ) {
+				self::log( 'Seeding incomplete: ' . $problem );
+			}
+			self::log( 'Not marking seeding complete. The next activation will repair what is missing.' );
 			return;
 		}
 
@@ -117,107 +107,133 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Adds IDs to one of the "created by the seeder" lists. Merged, not
-	 * replaced: on a retry, posts from the earlier attempt are adopted
-	 * rather than created, and must stay on the list for uninstall.
+	 * Adds IDs to one of the "created by the seeder" lists. Called right
+	 * after each insert, so a run that fails later still leaves a record,
+	 * and merged rather than replaced, so earlier runs' records survive.
 	 *
 	 * @param string $option Option name.
-	 * @param int[]  $ids    IDs created by this run.
+	 * @param int[]  $ids    IDs just created.
 	 */
 	private static function remember( $option, array $ids ) {
-		$known = get_option( $option, array() );
-		$known = is_array( $known ) ? $known : array();
+		if ( ! $ids ) {
+			return;
+		}
 
-		// Not autoloaded: only uninstall.php reads these.
-		update_option( $option, array_values( array_unique( array_merge( $known, $ids ) ) ), false );
+		// Not autoloaded: only the seeder and uninstall.php read these.
+		update_option( $option, array_values( array_unique( array_merge( self::owned( $option ), $ids ) ) ), false );
 	}
 
 	/**
-	 * Creates terms in one taxonomy, reusing any that already exist.
+	 * IDs on one of the "created by the seeder" lists.
+	 *
+	 * @param string $option Option name.
+	 * @return int[]
+	 */
+	private static function owned( $option ) {
+		$ids = get_option( $option, array() );
+
+		return is_array( $ids ) ? array_map( 'intval', $ids ) : array();
+	}
+
+	/**
+	 * Stable identifier of a demo-content.php entry.
+	 *
+	 * @param array $demo_post Entry.
+	 * @return string
+	 */
+	private static function demo_key( array $demo_post ) {
+		return sanitize_title( $demo_post['title'] );
+	}
+
+	/**
+	 * Creates terms in one taxonomy, reusing any that already exist. Reused
+	 * terms are used for assignment but not recorded as created, so
+	 * uninstall leaves them alone.
 	 *
 	 * @param string[] $names    Term names.
 	 * @param string   $taxonomy Taxonomy name.
-	 * @return array{ids: array<string, int>, created_ids: int[]} `ids` maps
-	 *              name => term_id for every usable term; `created_ids` holds
-	 *              only the ones inserted by this call.
+	 * @return array<string, int> Name => term ID, for every usable term.
 	 */
 	private function create_terms( array $names, $taxonomy ) {
-		$ids         = array();
-		$created_ids = array();
+		$ids = array();
 
 		foreach ( $names as $name ) {
 			$existing = term_exists( $name, $taxonomy );
-			$term     = $existing;
-			if ( ! $term ) {
-				$term = wp_insert_term( $name, $taxonomy );
-			}
-			if ( is_wp_error( $term ) ) {
-				self::log( sprintf( 'Failed to create %s term "%s": %s', $taxonomy, $name, $term->get_error_message() ) );
+			$term     = $existing ? $existing : wp_insert_term( $name, $taxonomy );
+			if ( is_wp_error( $term ) || ! $term ) {
+				self::log( sprintf( 'Failed to create %s term "%s": %s', $taxonomy, $name, is_wp_error( $term ) ? $term->get_error_message() : 'no term returned' ) );
 				continue;
 			}
+
 			$ids[ $name ] = (int) $term['term_id'];
 			if ( ! $existing ) {
-				$created_ids[] = (int) $term['term_id'];
+				self::remember( self::SEEDED_TERM_IDS_OPTION, array( (int) $term['term_id'] ) );
 			}
 		}
 
-		return array(
-			'ids'         => $ids,
-			'created_ids' => $created_ids,
-		);
+		return $ids;
 	}
 
 	/**
-	 * Inserts the demo posts.
+	 * The seeder's own post for a demo entry, in any status including the
+	 * trash, or 0. Only posts on the "created" list are considered.
 	 *
-	 * @param array[] $demo_posts   From includes/demo-content.php.
-	 * @param array   $category_ids Category name => term_id.
-	 * @param array   $tag_ids      Tag name => term_id.
-	 * @return array{post_ids: int[], created_post_ids: int[], attachment_ids: int[]}
-	 *              `post_ids` includes adopted posts; the other two hold only
-	 *              what this call inserted.
+	 * Posts seeded by 2.0.0 have no demo key yet; one of those whose title
+	 * matches is adopted as the entry's post and given the key.
+	 *
+	 * @param array $demo_post Entry from demo-content.php.
+	 * @return int Post ID, or 0.
 	 */
-	private function create_posts( array $demo_posts, $category_ids, $tag_ids ) {
-		$post_ids         = array();
-		$created_post_ids = array();
-		$attachment_ids   = array();
+	private function find_owned_post( array $demo_post ) {
+		$owned = self::owned( self::SEEDED_POST_IDS_OPTION );
+		if ( ! $owned ) {
+			return 0;
+		}
 
-		foreach ( $demo_posts as $index => $demo_post ) {
-			$title = $demo_post['title'];
+		$posts = get_posts(
+			array(
+				'post_type'        => WMPGF_Post_Type::POST_TYPE,
+				'post__in'         => $owned,
+				'post_status'      => array( 'publish', 'future', 'draft', 'pending', 'private', 'trash' ),
+				'numberposts'      => -1,
+				'orderby'          => 'ID',
+				'order'            => 'ASC',
+				'suppress_filters' => true,
+			)
+		);
 
-			// WP_Query 'title' replaces get_page_by_title(), deprecated in 6.2.
-			$existing = new WP_Query(
-				array(
-					'post_type'              => WMPGF_Post_Type::POST_TYPE,
-					'title'                  => $title,
-					'post_status'            => 'any',
-					'posts_per_page'         => 1,
-					'fields'                 => 'ids',
-					'no_found_rows'          => true,
-					'update_post_meta_cache' => false,
-					'update_post_term_cache' => false,
-				)
-			);
-			if ( $existing->have_posts() ) {
-				$post_ids[] = (int) $existing->posts[0];
-				continue;
+		$key = self::demo_key( $demo_post );
+		foreach ( $posts as $post ) {
+			if ( get_post_meta( $post->ID, self::DEMO_KEY_META, true ) === $key ) {
+				return $post->ID;
 			}
-
-			// In the listed order, primary category first; the category
-			// taxonomy is sorted, so WordPress keeps that order.
-			$assigned_categories = array();
-			foreach ( $demo_post['categories'] as $name ) {
-				if ( isset( $category_ids[ $name ] ) ) {
-					$assigned_categories[] = $category_ids[ $name ];
-				}
+		}
+		foreach ( $posts as $post ) {
+			if ( '' === get_post_meta( $post->ID, self::DEMO_KEY_META, true ) && $post->post_title === $demo_post['title'] ) {
+				update_post_meta( $post->ID, self::DEMO_KEY_META, $key );
+				return $post->ID;
 			}
-			$assigned_tags = array();
-			foreach ( $demo_post['tags'] as $name ) {
-				if ( isset( $tag_ids[ $name ] ) ) {
-					$assigned_tags[] = $tag_ids[ $name ];
-				}
-			}
+		}
 
+		return 0;
+	}
+
+	/**
+	 * Makes one demo post complete: creates it if the seeder has no post
+	 * for the entry, otherwise restores its status and excerpt, then makes
+	 * sure it has its terms and a cover. Each failure is logged; the
+	 * validation in problems() decides whether the run is complete.
+	 *
+	 * @param array $demo_post    Entry from demo-content.php.
+	 * @param int   $index        Entry index, seeds the cover pattern.
+	 * @param array $category_ids Category name => term ID.
+	 * @param array $tag_ids      Tag name => term ID.
+	 */
+	private function repair_post( array $demo_post, $index, array $category_ids, array $tag_ids ) {
+		$title   = $demo_post['title'];
+		$post_id = $this->find_owned_post( $demo_post );
+
+		if ( ! $post_id ) {
 			$post_id = wp_insert_post(
 				array(
 					'post_type'    => WMPGF_Post_Type::POST_TYPE,
@@ -226,43 +242,203 @@ class WMPGF_Seeder {
 					'post_author'  => $this->author_id,
 					'post_excerpt' => $demo_post['excerpt'],
 					'post_content' => $this->content_for( $demo_post['body'] ),
-				)
+					'meta_input'   => array( self::DEMO_KEY_META => self::demo_key( $demo_post ) ),
+				),
+				true
 			);
-
 			if ( is_wp_error( $post_id ) || ! $post_id ) {
-				$reason = is_wp_error( $post_id ) ? $post_id->get_error_message() : 'wp_insert_post() returned no ID';
-				self::log( sprintf( 'Failed to create seed post "%s": %s', $title, $reason ) );
+				self::log( sprintf( 'Failed to create seed post "%s": %s', $title, is_wp_error( $post_id ) ? $post_id->get_error_message() : 'no post ID returned' ) );
+				return;
+			}
+			self::remember( self::SEEDED_POST_IDS_OPTION, array( $post_id ) );
+		} else {
+			$this->restore_post_fields( $post_id, $demo_post );
+		}
+
+		$this->assign_terms( $post_id, $title, $demo_post['categories'], $category_ids, WMPGF_Post_Type::TAX_CATEGORY );
+		$this->assign_terms( $post_id, $title, $demo_post['tags'], $tag_ids, WMPGF_Post_Type::TAX_TAG );
+
+		if ( ! $this->has_valid_cover( $post_id ) ) {
+			$this->add_cover( $post_id, $demo_post, $index );
+		}
+	}
+
+	/**
+	 * Puts an existing seeded post back in the trash-free, published state
+	 * with an excerpt. Other fields, including a title or content the site
+	 * owner edited, are left as they are.
+	 *
+	 * @param int   $post_id   Seeded post ID.
+	 * @param array $demo_post Entry from demo-content.php.
+	 */
+	private function restore_post_fields( $post_id, array $demo_post ) {
+		if ( 'trash' === get_post_status( $post_id ) && ! wp_untrash_post( $post_id ) ) {
+			self::log( sprintf( 'Could not restore seed post %d from the trash.', $post_id ) );
+			return;
+		}
+
+		$post    = get_post( $post_id );
+		$changes = array();
+		if ( 'publish' !== $post->post_status ) {
+			$changes['post_status'] = 'publish';
+		}
+		if ( '' === trim( $post->post_excerpt ) ) {
+			$changes['post_excerpt'] = $demo_post['excerpt'];
+		}
+		if ( ! $changes ) {
+			return;
+		}
+
+		$result = wp_update_post( array( 'ID' => $post_id ) + $changes, true );
+		if ( is_wp_error( $result ) || ! $result ) {
+			self::log( sprintf( 'Could not repair seed post %d: %s', $post_id, is_wp_error( $result ) ? $result->get_error_message() : 'update failed' ) );
+		}
+	}
+
+	/**
+	 * Gives a post its intended terms, keeping any extra terms it has. The
+	 * intended ones come first, so the primary category stays first.
+	 *
+	 * @param int    $post_id  Post ID.
+	 * @param string $title    Post title, for the log.
+	 * @param array  $names    Intended term names.
+	 * @param array  $term_ids Name => term ID for the terms that exist.
+	 * @param string $taxonomy Taxonomy.
+	 */
+	private function assign_terms( $post_id, $title, array $names, array $term_ids, $taxonomy ) {
+		$intended = $this->intended_term_ids( $names, $term_ids );
+		$current  = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+		$current  = is_wp_error( $current ) ? array() : array_map( 'intval', $current );
+
+		if ( ! array_diff( $intended, $current ) ) {
+			return;
+		}
+
+		$result = wp_set_object_terms( $post_id, array_values( array_unique( array_merge( $intended, $current ) ) ), $taxonomy );
+		if ( is_wp_error( $result ) ) {
+			self::log( sprintf( 'Failed to assign %s terms to seed post "%s" (post ID %d): %s', $taxonomy, $title, $post_id, $result->get_error_message() ) );
+		}
+	}
+
+	/**
+	 * Term IDs for the names that exist.
+	 *
+	 * @param string[] $names    Term names.
+	 * @param array    $term_ids Name => term ID.
+	 * @return int[]
+	 */
+	private function intended_term_ids( array $names, array $term_ids ) {
+		$ids = array();
+		foreach ( $names as $name ) {
+			if ( isset( $term_ids[ $name ] ) ) {
+				$ids[] = $term_ids[ $name ];
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * Whether a post's featured image is an image attachment whose file
+	 * exists. Any valid image counts, including one the site owner chose.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	private function has_valid_cover( $post_id ) {
+		$attachment_id = (int) get_post_thumbnail_id( $post_id );
+		if ( ! $attachment_id || 'attachment' !== get_post_type( $attachment_id ) ) {
+			return false;
+		}
+		if ( 0 !== strpos( (string) get_post_mime_type( $attachment_id ), 'image/' ) ) {
+			return false;
+		}
+
+		$file = get_attached_file( $attachment_id );
+		return $file && file_exists( $file );
+	}
+
+	/**
+	 * Generates a cover and sets it as the featured image. If it can't be
+	 * set, the new attachment is deleted again rather than left unused.
+	 *
+	 * @param int   $post_id   Post ID.
+	 * @param array $demo_post Entry from demo-content.php.
+	 * @param int   $index     Entry index, seeds the pattern.
+	 */
+	private function add_cover( $post_id, array $demo_post, $index ) {
+		$attachment_id = $this->create_cover_image( $post_id, $demo_post['categories'][0], $index );
+		if ( ! $attachment_id ) {
+			self::log( sprintf( 'No cover image for seed post "%s" (post ID %d); see the line above.', $demo_post['title'], $post_id ) );
+			return;
+		}
+		self::remember( self::SEEDED_ATTACHMENT_IDS_OPTION, array( $attachment_id ) );
+
+		if ( ! set_post_thumbnail( $post_id, $attachment_id ) ) {
+			self::log( sprintf( 'Could not set the cover image of seed post %d.', $post_id ) );
+			wp_delete_attachment( $attachment_id, true );
+			return;
+		}
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $demo_post['title'] ) );
+	}
+
+	/**
+	 * Checks the demo content from scratch, reading everything back from
+	 * the database rather than trusting what this run believes it did.
+	 *
+	 * @param array[] $demo_posts   Entries from demo-content.php.
+	 * @param array   $category_ids Category name => term ID.
+	 * @param array   $tag_ids      Tag name => term ID.
+	 * @return string[] One line per problem; empty when complete.
+	 */
+	private function problems( array $demo_posts, array $category_ids, array $tag_ids ) {
+		$problems = array();
+
+		foreach ( array_diff( array_keys( $this->categories ), array_keys( $category_ids ) ) as $name ) {
+			$problems[] = sprintf( 'category "%s" is missing.', $name );
+		}
+		foreach ( array_diff( $this->tags, array_keys( $tag_ids ) ) as $name ) {
+			$problems[] = sprintf( 'tag "%s" is missing.', $name );
+		}
+
+		foreach ( $demo_posts as $demo_post ) {
+			$post_id = $this->find_owned_post( $demo_post );
+			if ( ! $post_id ) {
+				$problems[] = sprintf( 'post "%s" does not exist.', $demo_post['title'] );
 				continue;
 			}
 
-			$category_result = wp_set_object_terms( $post_id, $assigned_categories, WMPGF_Post_Type::TAX_CATEGORY );
-			if ( is_wp_error( $category_result ) ) {
-				self::log( sprintf( 'Failed to assign categories to seed post "%s" (post ID %d): %s', $title, $post_id, $category_result->get_error_message() ) );
+			clean_post_cache( $post_id );
+			$post = get_post( $post_id );
+			$name = sprintf( 'post "%s" (ID %d)', $demo_post['title'], $post_id );
+			if ( 'publish' !== $post->post_status ) {
+				$problems[] = $name . ' is not published.';
 			}
-
-			$tag_result = wp_set_object_terms( $post_id, $assigned_tags, WMPGF_Post_Type::TAX_TAG );
-			if ( is_wp_error( $tag_result ) ) {
-				self::log( sprintf( 'Failed to assign tags to seed post "%s" (post ID %d): %s', $title, $post_id, $tag_result->get_error_message() ) );
+			if ( '' === trim( $post->post_excerpt ) ) {
+				$problems[] = $name . ' has no excerpt.';
 			}
-
-			$attachment_id = $this->create_cover_image( $post_id, $demo_post['categories'][0], $index );
-			if ( $attachment_id ) {
-				set_post_thumbnail( $post_id, $attachment_id );
-				update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_strip_all_tags( $title ) );
-				$attachment_ids[] = $attachment_id;
-			} else {
-				self::log( sprintf( 'No featured image generated for seed post "%s" (post ID %d) -- see prior log line for the reason.', $title, $post_id ) );
+			if ( ! $this->has_valid_cover( $post_id ) ) {
+				$problems[] = $name . ' has no valid cover image.';
 			}
-
-			$post_ids[]         = $post_id;
-			$created_post_ids[] = $post_id;
+			foreach ( array(
+				WMPGF_Post_Type::TAX_CATEGORY => array( $demo_post['categories'], $category_ids ),
+				WMPGF_Post_Type::TAX_TAG      => array( $demo_post['tags'], $tag_ids ),
+			) as $taxonomy => list( $names, $term_ids ) ) {
+				$current = wp_get_object_terms( $post_id, $taxonomy, array( 'fields' => 'ids' ) );
+				$missing = is_wp_error( $current )
+					? $names
+					: array_diff( $this->intended_term_ids( $names, $term_ids ), array_map( 'intval', $current ) );
+				if ( $missing || count( $this->intended_term_ids( $names, $term_ids ) ) < count( $names ) ) {
+					$problems[] = sprintf( '%s is missing %s terms.', $name, $taxonomy );
+				}
+			}
 		}
 
-		return array(
-			'post_ids'         => $post_ids,
-			'created_post_ids' => $created_post_ids,
-			'attachment_ids'   => $attachment_ids,
-		);
+		$page_problem = $this->demo_page_problem();
+		if ( $page_problem ) {
+			$problems[] = $page_problem;
+		}
+
+		return $problems;
 	}
 
 	/**
@@ -316,8 +492,10 @@ class WMPGF_Seeder {
 		return implode( "\n\n", $blocks );
 	}
 
+
 	/**
-	 * Writes the post's cover SVG and registers it as an attachment.
+	 * Writes the post's cover SVG and registers it as an attachment. A file
+	 * that was written but couldn't be registered is deleted again.
 	 *
 	 * @param int    $post_id  Parent post ID.
 	 * @param string $category Primary category name, used to pick the colours.
@@ -326,6 +504,12 @@ class WMPGF_Seeder {
 	 */
 	private function create_cover_image( $post_id, $category, $index ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		$upload_dir = wp_upload_dir();
+		if ( ! empty( $upload_dir['error'] ) ) {
+			self::log( sprintf( 'Uploads folder unavailable for the cover of post %d: %s', $post_id, $upload_dir['error'] ) );
+			return 0;
+		}
 
 		$width  = 1200;
 		$height = 800;
@@ -336,9 +520,10 @@ class WMPGF_Seeder {
 			$height
 		);
 
-		$upload_dir = wp_upload_dir();
-		$filename   = 'wmpgf-cover-' . $post_id . '.svg';
-		$file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
+		// A unique name, so a retry never overwrites a file an older
+		// attachment still points at.
+		$filename  = wp_unique_filename( $upload_dir['path'], 'wmpgf-cover-' . $post_id . '.svg' );
+		$file_path = trailingslashit( $upload_dir['path'] ) . $filename;
 
 		if ( false === file_put_contents( $file_path, $svg ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 			self::log( sprintf( 'Could not write cover SVG to "%s".', $file_path ) );
@@ -359,11 +544,12 @@ class WMPGF_Seeder {
 			return $mimes;
 		};
 		add_filter( 'upload_mimes', $allow_svg_mime );
-		$attachment_id = wp_insert_attachment( $attachment, $file_path, $post_id );
+		$attachment_id = wp_insert_attachment( $attachment, $file_path, $post_id, true );
 		remove_filter( 'upload_mimes', $allow_svg_mime );
 
-		if ( is_wp_error( $attachment_id ) ) {
-			self::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, $attachment_id->get_error_message() ) );
+		if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+			self::log( sprintf( 'wp_insert_attachment() failed for post %d: %s', $post_id, is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : 'no ID returned' ) );
+			wp_delete_file( $file_path );
 			return 0;
 		}
 
@@ -476,43 +662,143 @@ class WMPGF_Seeder {
 	}
 
 	/**
-	 * Creates the demo page with both blocks placed, or adopts an existing
-	 * page at that slug. Only a page created here is flagged as owned, so
-	 * uninstall.php never deletes an adopted one.
+	 * The seeder's own demo page, or null. A page 2.0.0 recorded but merely
+	 * adopted (one already at the slug) is not the seeder's.
+	 *
+	 * @return WP_Post|null
 	 */
-	private function create_demo_page() {
-		if ( get_option( self::DEMO_PAGE_OPTION ) ) {
+	private function owned_demo_page() {
+		$page_id = (int) get_option( self::DEMO_PAGE_OPTION );
+		if ( ! $page_id || ! get_option( self::DEMO_PAGE_OWNED_OPTION ) ) {
+			return null;
+		}
+
+		clean_post_cache( $page_id );
+		$page = get_post( $page_id );
+
+		return $page && 'page' === $page->post_type ? $page : null;
+	}
+
+	/**
+	 * Creates the demo page, or repairs the seeder's own page (status and
+	 * blocks). A page someone else put at the slug is left untouched; the
+	 * seeder's page then gets the next free slug.
+	 */
+	private function repair_demo_page() {
+		$page = $this->owned_demo_page();
+
+		if ( ! $page ) {
+			$page_id = wp_insert_post(
+				array(
+					'post_type'    => 'page',
+					'post_title'   => __( 'Posts Grid + Filter Demo', 'wm-posts-grid-filter' ),
+					'post_name'    => self::DEMO_PAGE_SLUG,
+					'post_status'  => 'publish',
+					'post_author'  => $this->author_id,
+					'post_content' => self::demo_page_content(),
+				),
+				true
+			);
+			if ( is_wp_error( $page_id ) || ! $page_id ) {
+				self::log( 'Failed to create the demo page: ' . ( is_wp_error( $page_id ) ? $page_id->get_error_message() : 'no page ID returned' ) );
+				return;
+			}
+			update_option( self::DEMO_PAGE_OPTION, $page_id );
+			update_option( self::DEMO_PAGE_OWNED_OPTION, true );
 			return;
 		}
 
-		$existing = get_page_by_path( 'posts-grid-filter-demo' );
-		if ( $existing ) {
-			update_option( self::DEMO_PAGE_OPTION, $existing->ID );
+		if ( 'trash' === $page->post_status && ! wp_untrash_post( $page->ID ) ) {
+			self::log( sprintf( 'Could not restore the demo page (ID %d) from the trash.', $page->ID ) );
 			return;
 		}
 
-		$content = "<!-- wp:wmpgf/posts-filter {\"align\":\"wide\"} /-->\n\n" .
+		$changes = array();
+		if ( 'publish' !== get_post_status( $page->ID ) ) {
+			$changes['post_status'] = 'publish';
+		}
+		if ( ! self::has_demo_blocks( $page->post_content ) ) {
+			$changes['post_content'] = self::demo_page_content();
+		}
+		if ( ! $changes ) {
+			return;
+		}
+
+		$result = wp_update_post( array( 'ID' => $page->ID ) + $changes, true );
+		if ( is_wp_error( $result ) || ! $result ) {
+			self::log( sprintf( 'Could not repair the demo page (ID %d): %s', $page->ID, is_wp_error( $result ) ? $result->get_error_message() : 'update failed' ) );
+		}
+	}
+
+	/**
+	 * What is wrong with the demo page, read back from the database.
+	 *
+	 * @return string Empty when the page is complete.
+	 */
+	private function demo_page_problem() {
+		$page = $this->owned_demo_page();
+		if ( ! $page ) {
+			return 'the demo page does not exist.';
+		}
+		if ( 'publish' !== $page->post_status ) {
+			return sprintf( 'the demo page (ID %d) is not published.', $page->ID );
+		}
+		if ( ! self::has_demo_blocks( $page->post_content ) ) {
+			return sprintf( 'the demo page (ID %d) is missing the filter, the grid, or the pagination inside the grid.', $page->ID );
+		}
+		return '';
+	}
+
+	/**
+	 * Block markup of the demo page.
+	 *
+	 * @return string
+	 */
+	private static function demo_page_content() {
+		return "<!-- wp:wmpgf/posts-filter {\"align\":\"wide\"} /-->\n\n" .
 			"<!-- wp:wmpgf/posts-grid {\"columns\":3,\"postsPerPage\":6,\"align\":\"wide\"} -->\n" .
 			"<!-- wp:wmpgf/pagination /-->\n" .
 			'<!-- /wp:wmpgf/posts-grid -->';
+	}
 
-		$page_id = wp_insert_post(
-			array(
-				'post_type'    => 'page',
-				'post_title'   => __( 'Posts Grid + Filter Demo', 'wm-posts-grid-filter' ),
-				'post_name'    => 'posts-grid-filter-demo',
-				'post_status'  => 'publish',
-				'post_author'  => $this->author_id,
-				'post_content' => $content,
-			)
-		);
-
-		if ( ! is_wp_error( $page_id ) && $page_id ) {
-			update_option( self::DEMO_PAGE_OPTION, $page_id );
-			update_option( self::DEMO_PAGE_OWNED_OPTION, true );
-		} else {
-			$reason = is_wp_error( $page_id ) ? $page_id->get_error_message() : 'wp_insert_post() returned no ID';
-			self::log( 'Failed to create the demo page: ' . $reason );
+	/**
+	 * Whether content has the filter block and a grid block with the
+	 * pagination block inside it, at any nesting depth.
+	 *
+	 * @param string $content Post content.
+	 * @return bool
+	 */
+	private static function has_demo_blocks( $content ) {
+		$blocks = parse_blocks( $content );
+		if ( ! self::find_blocks( $blocks, 'wmpgf/posts-filter' ) ) {
+			return false;
 		}
+
+		foreach ( self::find_blocks( $blocks, 'wmpgf/posts-grid' ) as $grid ) {
+			if ( self::find_blocks( $grid['innerBlocks'], 'wmpgf/pagination' ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Every block with a given name, searching inner blocks too.
+	 *
+	 * @param array[] $blocks Parsed blocks.
+	 * @param string  $name   Block name.
+	 * @return array[]
+	 */
+	private static function find_blocks( array $blocks, $name ) {
+		$found = array();
+		foreach ( $blocks as $block ) {
+			if ( $name === $block['blockName'] ) {
+				$found[] = $block;
+			}
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$found = array_merge( $found, self::find_blocks( $block['innerBlocks'], $name ) );
+			}
+		}
+		return $found;
 	}
 }
