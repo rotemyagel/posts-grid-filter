@@ -77,7 +77,7 @@ It is also a visitor-facing extra: the posts-per-page setting in the Inspector, 
 
 **Server-rendered values instead of server directive processing.** The blocks don't declare `supports.interactivity`, so WordPress doesn't evaluate directives on the server. `render.php` prints the checked boxes, the count and the "Clear filters" visibility directly, from the same `WMPGF_Request::filters()` that drives the query. Three of those values are JavaScript getters (`isCategoryChecked`, `isTagChecked`, `hideClearFilters`). Server processing would need each one rewritten as a PHP closure, so the logic would exist in two languages either way.
 
-**`style`, not `viewStyle`.** The editor preview uses the same markup and classes as the frontend, so it needs the same CSS, and `viewStyle` only loads on the frontend. On classic themes that don't load block styles separately, this means the plugin's CSS (about 12 KB) loads on every page. The font file does not: browsers only download it where an element uses it.
+**`style`, not `viewStyle`.** The editor preview uses the same markup and classes as the frontend, so it needs the same CSS, and `viewStyle` only loads on the frontend. On classic themes that don't load block styles separately, this means the plugin's block CSS (about 11 KB) loads on every page. The font file does not: browsers only download it where an element uses it.
 
 **The blocks bring their own font, and a theme can turn it off.** The font is Bricolage Grotesque, self-hosted (41 KB, Latin, SIL Open Font License) so there is no third-party request. Overriding a theme's font is a real tradeoff, so the font is a single token scoped to the plugin's blocks, and a theme that prefers its own sets `--wmpgf-font: inherit`.
 
