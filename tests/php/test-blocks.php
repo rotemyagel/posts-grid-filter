@@ -52,5 +52,8 @@ class Test_WMPGF_Blocks extends WMPGF_TestCase {
 		// The font's relative URL is rewritten from the site root.
 		$this->assertStringContainsString( 'url(/wp-content/plugins/', str_replace( wp_parse_url( home_url(), PHP_URL_PATH ) ?? '', '', $inline ) );
 		$this->assertStringNotContainsString( 'url(../fonts/', $inline );
+		// A metric-matched stand-in keeps text in place when the font swaps in.
+		$this->assertMatchesRegularExpression( '/font-family:\s*"Bricolage Grotesque Fallback";\s*src:\s*local\("Arial"\)/', $inline );
+		$this->assertStringContainsString( '"Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui', $inline );
 	}
 }
