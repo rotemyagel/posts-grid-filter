@@ -82,6 +82,22 @@ class WMPGF_Seeder {
 	private $author_id = 0;
 
 	/**
+	 * While true, nothing is written: find_owned_post() keeps the demo keys
+	 * it would give 2.0.0 posts in $unsaved_keys instead of saving them.
+	 * Set for a repair dry run.
+	 *
+	 * @var bool
+	 */
+	private $read_only = false;
+
+	/**
+	 * Demo keys a read-only run would have saved, by post ID.
+	 *
+	 * @var array<int, string>
+	 */
+	private $unsaved_keys = array();
+
+	/**
 	 * Runs on plugin activation, and from WP-Cron after an update.
 	 *
 	 * A new install is seeded until one run leaves complete demo content;
@@ -229,12 +245,16 @@ class WMPGF_Seeder {
 	 * text are kept. Safe to run again: a failed run changes what it could,
 	 * reports the rest, and the next run picks it up.
 	 *
+	 * A dry run writes nothing at all: not the repairs, not the demo keys a
+	 * real run gives 2.0.0 posts, and not the lock.
+	 *
 	 * @param bool $dry_run Only report what would change.
 	 * @return array {
 	 *     @type string   $status   'repaired', 'planned' (dry run), 'nothing',
 	 *                              'failed', 'busy' (another run holds the
-	 *                              lock) or 'not-seeded' (activation hasn't
-	 *                              finished seeding; reactivating does that).
+	 *                              lock; never for a dry run) or 'not-seeded'
+	 *                              (activation hasn't finished seeding;
+	 *                              reactivating does that).
 	 *     @type string[] $changes  What was, or would be, restored.
 	 *     @type string[] $skipped  What was left alone, and why.
 	 *     @type string[] $problems What is still missing after the run.
@@ -251,6 +271,9 @@ class WMPGF_Seeder {
 			$result['status'] = 'not-seeded';
 			return $result;
 		}
+		if ( $dry_run ) {
+			return $this->preview_repair( $result );
+		}
 		if ( ! self::lock() ) {
 			$result['status'] = 'busy';
 			return $result;
@@ -264,9 +287,6 @@ class WMPGF_Seeder {
 					continue;
 				}
 				$result['changes'][] = $gap['description'];
-				if ( $dry_run ) {
-					continue;
-				}
 
 				$demo_post = $gap['demo_post'];
 				$this->assign_terms( $gap['post_id'], $demo_post['title'], $demo_post['categories'], $gap['category_ids'], WMPGF_Post_Type::TAX_CATEGORY );
@@ -274,11 +294,6 @@ class WMPGF_Seeder {
 				if ( ! $this->has_valid_cover( $gap['post_id'] ) ) {
 					$this->add_cover( $gap['post_id'], $demo_post, $gap['index'] );
 				}
-			}
-
-			if ( $dry_run ) {
-				$result['status'] = $result['changes'] ? 'planned' : 'nothing';
-				return $result;
 			}
 
 			// Read back, rather than trusting what this run believes it did.
@@ -299,10 +314,35 @@ class WMPGF_Seeder {
 	}
 
 	/**
+	 * The dry run of repair_demo_content(): what it would restore and leave
+	 * alone, found in read-only mode. It takes no lock, so it never waits
+	 * for another run, and it may describe content another run is changing.
+	 *
+	 * @param array $result The empty result to fill.
+	 * @return array Result, with status 'planned' or 'nothing'.
+	 */
+	private function preview_repair( array $result ) {
+		$this->read_only    = true;
+		$this->unsaved_keys = array();
+
+		try {
+			foreach ( $this->gaps() as $gap ) {
+				$result[ $gap['repairable'] ? 'changes' : 'skipped' ][] = $gap['description'];
+			}
+		} finally {
+			$this->read_only    = false;
+			$this->unsaved_keys = array();
+		}
+
+		$result['status'] = $result['changes'] ? 'planned' : 'nothing';
+		return $result;
+	}
+
+	/**
 	 * What the seeder's own demo posts lack by the current rules: a usable
 	 * featured image, or intended categories and tags that still exist.
 	 * Read-only, apart from find_owned_post() giving a 2.0.0 post its demo
-	 * key. A term that no longer exists is mentioned but never counts as
+	 * key, which it doesn't save in read-only mode. A term that no longer exists is mentioned but never counts as
 	 * missing: it can't be restored without recreating it.
 	 *
 	 * @return array[] One entry per post with something to restore: post_id,
@@ -508,7 +548,9 @@ class WMPGF_Seeder {
 	 * trash, or 0. Only posts on the "created" list are considered.
 	 *
 	 * Posts seeded by 2.0.0 have no demo key yet; one of those whose title
-	 * matches is adopted as the entry's post and given the key.
+	 * matches is adopted as the entry's post and given the key. In
+	 * read-only mode the key is only remembered for this run, so the post
+	 * is still found, and not adopted twice, but nothing is saved.
 	 *
 	 * @param array $demo_post Entry from demo-content.php.
 	 * @return int Post ID, or 0.
@@ -531,15 +573,24 @@ class WMPGF_Seeder {
 			)
 		);
 
-		$key = self::demo_key( $demo_post );
+		$key    = self::demo_key( $demo_post );
+		$stored = array();
 		foreach ( $posts as $post ) {
-			if ( get_post_meta( $post->ID, self::DEMO_KEY_META, true ) === $key ) {
+			$stored[ $post->ID ] = get_post_meta( $post->ID, self::DEMO_KEY_META, true );
+			if ( '' === $stored[ $post->ID ] && isset( $this->unsaved_keys[ $post->ID ] ) ) {
+				$stored[ $post->ID ] = $this->unsaved_keys[ $post->ID ];
+			}
+			if ( $stored[ $post->ID ] === $key ) {
 				return $post->ID;
 			}
 		}
 		foreach ( $posts as $post ) {
-			if ( '' === get_post_meta( $post->ID, self::DEMO_KEY_META, true ) && $post->post_title === $demo_post['title'] ) {
-				update_post_meta( $post->ID, self::DEMO_KEY_META, $key );
+			if ( '' === $stored[ $post->ID ] && $post->post_title === $demo_post['title'] ) {
+				if ( $this->read_only ) {
+					$this->unsaved_keys[ $post->ID ] = $key;
+				} else {
+					update_post_meta( $post->ID, self::DEMO_KEY_META, $key );
+				}
 				return $post->ID;
 			}
 		}

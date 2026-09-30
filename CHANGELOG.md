@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: `wp wmpgf repair-demo-content --dry-run` wrote to the database. It saved the demo key on posts seeded by 2.0.0 and took the repair lock. A dry run now writes nothing: those posts are still recognised and listed, with their keys kept in memory, and the lock is left alone.
+
 ## 2.5.0 (2026-09-30)
 
 - Fixed: paging through the grid could show a post twice and skip another. The demo posts share one creation time, and sorting by date alone let the database order them differently for each page (seen in 5 of 10 runs on 2.4.0). The grid's query and the editor preview's REST request now add the post ID as the last sort key.

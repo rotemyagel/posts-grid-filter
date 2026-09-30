@@ -337,6 +337,76 @@ class Test_WMPGF_Seeder_Upgrade extends WMPGF_TestCase {
 		$this->assertSame( $images, $this->attachment_ids() );
 	}
 
+	/**
+	 * Everything a repair could change, straight from the database: the
+	 * owned posts' fields, meta and terms, the plugin's options (ownership
+	 * records, lock, validated version), attachments and the cron schedule.
+	 *
+	 * @return array
+	 */
+	private function database_state() {
+		global $wpdb;
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reads the rows themselves, past every cache.
+		$ids = implode( ',', array_map( 'intval', $this->owned( WMPGF_Seeder::SEEDED_POST_IDS_OPTION ) ) );
+		return array(
+			'posts'   => $wpdb->get_results( "SELECT ID, post_status, post_title, post_content, post_excerpt, post_modified_gmt FROM {$wpdb->posts} WHERE ID IN ($ids) ORDER BY ID", ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integers.
+			'meta'    => $wpdb->get_results( "SELECT post_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id IN ($ids) ORDER BY meta_id", ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integers.
+			'terms'   => $wpdb->get_results( "SELECT object_id, term_taxonomy_id FROM {$wpdb->term_relationships} WHERE object_id IN ($ids) ORDER BY object_id, term_taxonomy_id", ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integers.
+			'options' => $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'wmpgf%' OR option_name = 'cron' ORDER BY option_name", ARRAY_A ),
+			'images'  => $this->attachment_ids(),
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	public function test_a_dry_run_on_a_legacy_install_writes_nothing() {
+		list( $legacy ) = $this->legacy_install();
+		// A recorded 2.0.0 post: no demo key, and its image and terms gone.
+		$this->assertSame( '', get_post_meta( $legacy, WMPGF_Seeder::DEMO_KEY_META, true ) );
+		$this->remove_directly( $legacy );
+		$before = $this->database_state();
+
+		$writes = array();
+		$record = static function ( $query ) use ( &$writes ) {
+			if ( preg_match( '/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', $query ) ) {
+				$writes[] = $query;
+			}
+			return $query;
+		};
+		add_filter( 'query', $record );
+		$plan = ( new WMPGF_Seeder() )->repair_demo_content( true );
+		remove_filter( 'query', $record );
+
+		// An accurate preview: the legacy post is found through the ownership
+		// records and title, and everything it lacks is listed.
+		$this->assertSame( 'planned', $plan['status'] );
+		$this->assertCount( 1, $plan['changes'] );
+		$entry = $this->entry( get_post( $legacy )->post_title );
+		$this->assertStringContainsString( sprintf( '(ID %d) is missing a featured image', $legacy ), $plan['changes'][0] );
+		foreach ( array_merge( $entry['categories'], $entry['tags'] ) as $name ) {
+			$this->assertStringContainsString( '"' . $name . '"', $plan['changes'][0] );
+		}
+
+		// And nothing written: no query, and the same rows as before.
+		$this->assertSame( array(), $writes );
+		$this->assertSame( $before, $this->database_state() );
+		wp_cache_flush();
+		$this->assertSame( '', get_post_meta( $legacy, WMPGF_Seeder::DEMO_KEY_META, true ) );
+		$this->assertFalse( has_post_thumbnail( $legacy ) );
+		$this->assertSame( array(), $this->term_names( $legacy, WMPGF_Post_Type::TAX_TAG ) );
+
+		// A dry run never waits for the lock, and doesn't touch it.
+		add_option( WMPGF_Seeder::LOCK_OPTION, 12345, '', false );
+		$this->assertSame( 'planned', ( new WMPGF_Seeder() )->repair_demo_content( true )['status'] );
+		$this->assertSame( 12345, (int) get_option( WMPGF_Seeder::LOCK_OPTION ) );
+		delete_option( WMPGF_Seeder::LOCK_OPTION );
+
+		// The real run still adopts the post and restores it.
+		$this->assertSame( 'repaired', ( new WMPGF_Seeder() )->repair_demo_content()['status'] );
+		$this->assertNotSame( '', get_post_meta( $legacy, WMPGF_Seeder::DEMO_KEY_META, true ) );
+		$this->assertTrue( $this->has_cover_file( $legacy ) );
+		$this->assertNotSame( array(), $this->term_names( $legacy, WMPGF_Post_Type::TAX_TAG ) );
+	}
+
 	public function test_a_failed_repair_can_be_run_again() {
 		list( $no_cover ) = $this->legacy_install();
 		delete_post_thumbnail( $no_cover );

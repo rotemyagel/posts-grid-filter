@@ -27,7 +27,7 @@ class WMPGF_CLI {
 	 * ## OPTIONS
 	 *
 	 * [--dry-run]
-	 * : List what would be restored, and change nothing.
+	 * : List what would be restored, and write nothing to the database.
 	 *
 	 * ## EXAMPLES
 	 *
