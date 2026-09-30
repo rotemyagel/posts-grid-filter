@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed: `wp wmpgf repair-demo-content --dry-run` wrote to the database. It saved the demo key on posts seeded by 2.0.0 and took the repair lock. A dry run now writes nothing: those posts are still recognised and listed, with their keys kept in memory, and the lock is left alone.
+- Docs: the README said pagination was the grid's `parent`; it's the child, and its `block.json` names the grid as its parent.
 
 ## 2.5.0 (2026-09-30)
 

@@ -44,7 +44,7 @@ Filter rules: several categories match any of them (OR), and the same goes for t
 | Two blocks; demo content seeded on activation; no manual setup | `WMPGF_Seeder`, run from the activation hook |
 | Grid loads posts dynamically: title, featured image, excerpt | `posts-grid/render.php`, a server-rendered dynamic block |
 | Inspector controls for columns (2, 3 or 4) and posts per page | `posts-grid/edit.js` |
-| Pagination as an inner block of the grid | `wmpgf/pagination`, `parent` of the grid, locked by the grid's template |
+| Pagination as an inner block of the grid | `wmpgf/pagination`, a child block: its `block.json` declares the grid as its `parent`, and the grid's template locks it in place |
 | Category and tag filters, multiple selections each | `posts-filter/render.php` (checkboxes) |
 | OR within a type, AND across types | `WMPGF_Query` (`tax_query` with `IN` per taxonomy, `AND` between) |
 | Filter updates the grid; blocks placed independently, not nested | A shared Interactivity API store and router region; see below |
@@ -128,7 +128,7 @@ Performance decisions, with measurements (hydration, lazy loading, fonts, the ph
 To restore them on purpose:
 
 ```bash
-wp wmpgf repair-demo-content --dry-run   # list what would change
+wp wmpgf repair-demo-content --dry-run   # list what would change; writes nothing
 wp wmpgf repair-demo-content
 ```
 
